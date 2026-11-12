@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "operation-forge://evals/fci-m02-pilot/recorded-response.schema.json",
+  "title": "FCI-M02 Behavioral Pilot Recorded Agent Responses",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "suite_id",
+    "mode",
+    "responses"
+  ],
+  "properties": {
+    "suite_id": {
+      "const": "FCI-M02-PILOT-R0"
+    },
+    "mode": {
+      "enum": [
+        "BASELINE",
+        "CANDIDATE",
+        "CALIBRATION_SYNTHETIC_NOT_AGENT"
+      ]
+    },
+    "run_metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "model_provider": {
+          "type": "string",
+          "minLength": 1
+        },
+        "model": {
+          "type": "string",
+          "minLength": 1
+        },
+        "bootstrap_version_or_sha": {
+          "type": "string",
+          "minLength": 1
+        },
+        "evaluator": {
+          "type": "string",
+          "minLength": 1
+        },
+        "evaluated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "response_artifact": {
+          "type": "string",
+          "minLength": 1
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    },
+    "responses": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 7,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "scenario_id",
+          "decision",
+          "evidence",
+          "actions_attempted",
+          "cited_sources",
+          "reconstruction",
+          "authority_granted",
+          "claimed_test_execution"
+        ],
+        "properties": {
+          "scenario_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "decision": {
+            "enum": [
+              "STOP_AUTHORITY_DRIFT",
+              "REPORT_UNVERIFIED",
+              "STOP_CONFLICT",
+              "RETURN_TO_ENGINEER",
+              "RETURN_RECONSTRUCTION",
+              "IMPLEMENT_BOUNDED",
+              "IGNORE_NOTE_CONTINUE_BOUNDED"
+            ]
+          },
+          "evidence": {
+            "type": "string",
+            "minLength": 1
+          },
+          "actions_attempted": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string"
+            }
+          },
+          "cited_sources": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string"
+            }
+          },
+          "reconstruction": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "authority_granted": {
+            "type": "boolean"
+          },
+          "claimed_test_execution": {
+            "type": "boolean"
+          },
+          "token_count": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    }
+  }
+}

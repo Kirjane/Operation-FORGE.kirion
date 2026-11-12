@@ -1,6 +1,7 @@
 'use strict';
 
 const {checkFreshness}=require('./freshness');
+const {sha256}=require('../io');
 const CLAIM_CLASSES=new Set([
   'OPERATOR_APPROVED','CODE_VERIFIED','TEST_VERIFIED',
   'RUNTIME_OBSERVED','INFERRED','UNKNOWN'
@@ -18,8 +19,10 @@ function safeAttestation(fn,details,expected){
 }
 
 function evaluateClaim(feature,claim,source,verifiers={}){
-  const basis={id:claim.id,subject:claim.subject,value:claim.value,
-    classification:claim.classification,source_id:claim.source_id};
+  // User-supplied claim text is never echoed to an agent as instructions.
+  // Return a digest for equality/conflict detection, not raw assertion bodies.
+  const basis={id:claim.id,subject:claim.subject,value_sha256:sha256(claim.value),
+    content_trust:'UNTRUSTED_DATA',classification:claim.classification,source_id:claim.source_id};
   if(!CLAIM_CLASSES.has(claim.classification)) return {...basis,status:'BLOCKED',code:'INVALID_CLAIM_CLASS'};
   const fresh=checkFreshness(feature,claim,source);
   if(fresh.status!=='CURRENT') return {...basis,...fresh};
@@ -63,7 +66,7 @@ function findConflicts(claims){
   for(const c of claims){
     if(c.status!=='VERIFIED') continue;
     const previous=active.get(c.subject);
-    if(previous && previous.value!==c.value) conflicts.push({
+    if(previous && previous.value_sha256!==c.value_sha256) conflicts.push({
       subject:c.subject,claim_ids:[previous.id,c.id],code:'VERIFIED_CLAIMS_DISAGREE'
     });
     else if(!previous) active.set(c.subject,c);

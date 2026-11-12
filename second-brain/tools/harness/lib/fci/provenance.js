@@ -45,7 +45,8 @@ function evaluateClaim(feature,claim,source,verifiers={}){
   }
   if(claim.classification==='CODE_VERIFIED'){
     if(source.kind!=='CODE') return {...basis,status:'BLOCKED',code:'CODE_SOURCE_KIND_MISMATCH'};
-    const expected={verified:true,repository_head:feature.repository.head,
+    const expected={verified:true,feature_id:feature.feature_id,
+      contract_revision:feature.contract.revision,repository_head:feature.repository.head,
       source_sha256:source.sha256,claim_id:claim.id};
     return safeAttestation(verifiers.code,details,expected)
       ? {...basis,status:'VERIFIED',code:'EXTERNAL_CODE_CHECK_ATTESTED'}
@@ -53,7 +54,8 @@ function evaluateClaim(feature,claim,source,verifiers={}){
   }
   if(!claim.evidence_ref||source.kind!==(claim.classification==='TEST_VERIFIED'?'TEST':'RUNTIME'))
     return {...basis,status:'BLOCKED',code:'EVIDENCE_CONTEXT_INCOMPLETE'};
-  const expected={verified:true,repository_head:feature.repository.head,
+  const expected={verified:true,feature_id:feature.feature_id,
+    contract_revision:feature.contract.revision,repository_head:feature.repository.head,
     source_sha256:source.sha256,evidence_ref:claim.evidence_ref,claim_id:claim.id};
   const type=claim.classification==='TEST_VERIFIED'?'execution':'runtime';
   return safeAttestation(verifiers[type],details,expected)

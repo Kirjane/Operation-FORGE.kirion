@@ -252,23 +252,60 @@ test('truncated context is a WARN below CRITICAL rigor and a BLOCK at CRITICAL',
   assert.equal(blockOnly.verdict,'BLOCK');
 });
 
+function assertCompleteShippedPack(c,route,root,label){
+  // Status must be checked FIRST. BLOCKED context omits truncated on some paths,
+  // so !c.truncated alone creates a false-positive regression.
+  assert.strictEqual(c.status,'RESOLVED',label+' status='+c.status+'; reason='+(c.reason||'none'));
+  assert.strictEqual(c.truncated,false,label+' truncated at '+c.document_count+'/'+c.document_budget+' docs, '+c.total_bytes+'/'+c.byte_budget+' bytes');
+  assert.deepStrictEqual(c.missing_required,[],label+' missing required sources');
+  assert.deepStrictEqual(c.required_not_loaded,[],label+' required sources not loaded');
+  assert.deepStrictEqual(c.omitted_optional,[],label+' optional sources not loaded');
+  const required=[...new Set([...route.control_roots,...route.lanes.map(x=>x.path)])];
+  const docs=new Map(c.documents.map(x=>[x.path,x]));
+  for(const source of required){
+    const doc=docs.get(source);
+    assert(doc,label+' missing mandatory document '+source);
+    assert.strictEqual(doc.source,'REQUIRED_SEED',label+' unmarked required seed '+source);
+    assert.strictEqual(doc.sha256,require('../lib/io').sha256(fs.readFileSync(path.join(root,...source.split('/')),'utf8')),label+' stale content hash '+source);
+  }
+  assert.strictEqual(c.documents.length,c.document_count,label+' inconsistent document count');
+}
+
+test('complete-pack assertion rejects BLOCKED missing-required context',()=>{
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'fci-completeness-negative-'));
+  const route={rigor_mode:'LOW',control_roots:['mandatory-authority.md'],lanes:[]};
+  const c=compileContext(root,route,{context:{...cfg.manifest.context,ignored_directories:[],max_documents:4,max_bytes:128}});
+  assert.strictEqual(c.status,'BLOCKED');
+  assert.strictEqual(c.truncated,undefined);
+  assert.throws(()=>assertCompleteShippedPack(c,route,root,'negative fixture'),assert.AssertionError);
+});
+
 test('no rigor mode or lifecycle stage truncates the compiled context for the shipped mesh',()=>{
-  const {compileContext}=require('../lib/context');
-  const {routeTask}=require('../lib/route');
-  const routing=require('../../../harness/config/routing-rules.json');
-  const registry=require('../../../harness/config/lane-registry.json');
-  const manifest=require('../../../harness/HARNESS_MANIFEST.json');
+  const routing=cfg.routing,registry=cfg.lanes,manifest=cfg.manifest;
+  const allSignals=Object.fromEntries(Object.keys(routing.by_signal).map(key=>[key,true]));
+  const allLaneIds=Object.values(registry.families).flat().map(lane=>lane.id).sort();
+  assert.strictEqual(Object.keys(allSignals).length,19,'CRITICAL fixture must cover the 19 configured signal keys');
+  assert(allSignals.performance&&allSignals.commercial,'critical capacity test must exercise performance and commercial signals');
   const sigSets={
     LOW:{ui:true}, MEDIUM:{ui:true,data:true},
     HIGH:{ui:true,data:true,auth:true,security:true,offline:true,recovery:true,deployment:true,production:true},
-    CRITICAL:{ui:true,data:true,auth:true,security:true,offline:true,recovery:true,deployment:true,production:true,privacy:true,supply_chain:true,distributed:true,ai:true,incident:true}
+    CRITICAL:allSignals
   };
   const typesByMode={LOW:'BUG_FIX',MEDIUM:'EXISTING_SYSTEM_FEATURE',HIGH:'GREENFIELD_SYSTEM',CRITICAL:'GREENFIELD_SYSTEM'};
+  const root=path.join(__dirname,'..','..','..');
   for(const mode of ['LOW','MEDIUM','HIGH','CRITICAL']){
     for(const stage of ['PRE_DESIGN','PRE_IMPLEMENTATION','PRE_DELIVERY','POST_DEPLOY']){
       const route=routeTask(typesByMode[mode],sigSets[mode],mode,routing,registry,manifest.control_roots,{stage});
-      const c=compileContext(path.join(__dirname,'..','..','..'),route,manifest);
-      assert(!c.truncated,`${mode}/${stage} truncated at ${c.document_count}/${c.document_budget} docs, ${c.total_bytes}/${c.byte_budget} bytes`);
+      if(mode==='CRITICAL'){
+        const routed=[...route.lanes,...route.deferred_lanes].map(lane=>lane.id).sort();
+        assert.deepStrictEqual(routed,allLaneIds,'CRITICAL all-signals route must include every registered lane at '+stage);
+      }
+      const c=compileContext(root,route,manifest);
+      // Print measured headroom; budget calibration cannot rely on a silent PASS.
+      console.log('FCI-CAPACITY '+mode+'/'+stage+' routed='+route.routed_lane_count+
+        ' active='+route.active_lane_count+' docs='+c.document_count+'/'+c.document_budget+
+        ' bytes='+c.total_bytes+'/'+c.byte_budget+' status='+c.status+' truncated='+c.truncated);
+      assertCompleteShippedPack(c,route,root,mode+'/'+stage);
     }
   }
 });

@@ -117,6 +117,130 @@ test('context compiler follows resolvable graph links and hashes content',()=>{
   assert.equal(c.status,'RESOLVED');assert.equal(c.documents.length,2);assert.equal(c.documents[0].sha256.length,64);
 });
 
+test('required roots and lane seeds are loaded before optional graph documents',()=>{
+  const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'fci-required-first-'));
+  fs.writeFileSync(path.join(tmp,'root.md'),'[[Extra]]');
+  fs.writeFileSync(path.join(tmp,'lane.md'),'mandatory lane');
+  fs.writeFileSync(path.join(tmp,'Extra.md'),'optional neighbour');
+  const route={rigor_mode:'LOW',control_roots:['root.md'],lanes:[{path:'lane.md'}]};
+  const c=compileContext(tmp,route,{context:{...cfg.manifest.context,ignored_directories:[],max_documents:2,max_bytes:128}});
+  assert.equal(c.status,'RESOLVED');
+  assert.deepEqual(c.documents.map(x=>x.path),['root.md','lane.md']);
+  assert(c.documents.every(x=>x.source==='REQUIRED_SEED'));
+  assert.equal(c.truncated,true);
+  assert.deepEqual(c.omitted_optional,[{path:'Extra.md',reason:'DOCUMENT_BUDGET'}]);
+  assert.deepEqual(c.required_not_loaded,[]);
+});
+
+test('required seeds fail closed when document count exceeds budget even at LOW rigor',()=>{
+  const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'fci-required-count-'));
+  fs.writeFileSync(path.join(tmp,'root.md'),'authority');
+  fs.writeFileSync(path.join(tmp,'lane.md'),'writer');
+  const route={rigor_mode:'LOW',control_roots:['root.md'],lanes:[{path:'lane.md'}]};
+  const c=compileContext(tmp,route,{context:{...cfg.manifest.context,ignored_directories:[],max_documents:1,max_bytes:128}});
+  assert.equal(c.status,'BLOCKED');
+  assert.match(c.reason,/Required context sources exceed document budget/);
+  assert.deepEqual(c.required_not_loaded,['root.md','lane.md']);
+  assert.equal(c.documents.length,0);
+});
+
+test('required seed byte overflow blocks instead of reporting RESOLVED',()=>{
+  const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'fci-required-bytes-'));
+  fs.writeFileSync(path.join(tmp,'root.md'),'authority-required');
+  fs.writeFileSync(path.join(tmp,'lane.md'),'writer-required');
+  const route={rigor_mode:'MEDIUM',control_roots:['root.md'],lanes:[{path:'lane.md'}]};
+  const c=compileContext(tmp,route,{context:{...cfg.manifest.context,ignored_directories:[],max_documents:4,max_bytes:12}});
+  assert.equal(c.status,'BLOCKED');
+  assert.match(c.reason,/Required context sources exceed byte budget/);
+  assert.deepEqual(c.required_not_loaded,['root.md','lane.md']);
+  assert.deepEqual(c.missing_required,[]);
+});
+
+test('optional byte omission is visible instead of falsely complete',()=>{
+  const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'fci-optional-bytes-'));
+  fs.writeFileSync(path.join(tmp,'root.md'),'[[Extra]]');
+  fs.writeFileSync(path.join(tmp,'Extra.md'),'x'.repeat(100));
+  const route={rigor_mode:'MEDIUM',control_roots:['root.md'],lanes:[]};
+  const c=compileContext(tmp,route,{context:{...cfg.manifest.context,ignored_directories:[],max_documents:4,max_bytes:20}});
+  assert.equal(c.status,'RESOLVED');
+  assert.equal(c.truncated,true);
+  assert.deepEqual(c.omitted_optional,[{path:'Extra.md',reason:'BYTE_BUDGET'}]);
+  assert.deepEqual(c.documents.map(x=>x.path),['root.md']);
+  const rendered=require('../lib/render').renderContext(c,{harnessVersion:'test',taskId:'fci-omission',type:'BUG_FIX',mode:'MEDIUM'});
+  assert(rendered.includes('## Omitted optional context (budget)'));
+  assert(rendered.includes('Extra.md'));
+  assert(rendered.includes('NOT LOADED'));
+});
+
+test('MCP bootstrap text and structured output disclose optional byte omissions even with PASS gate',()=>{
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'fci-mcp-optional-'));
+  fs.writeFileSync(path.join(root,'control.md'),'[[Optional]]');
+  fs.writeFileSync(path.join(root,'Optional.md'),'x'.repeat(100));
+  const route={rigor_mode:'LOW',control_roots:['control.md'],lanes:[]};
+  const c=compileContext(root,route,{context:{...cfg.manifest.context,ignored_directories:[],max_documents:5,max_bytes:24}});
+  assert.strictEqual(c.status,'RESOLVED');
+  assert.strictEqual(c.truncated,true);
+  const {buildBootstrapToolResponse}=require('../lib/mcp-bootstrap');
+  const run={run_id:'fci-mcp-fixture',manifest:{},task:{},
+    classification:{status:'RESOLVED',type:'BUG_FIX'},signals:{},
+    risk:{mode:'LOW'},route,gates:{verdict:'PASS'},
+    context:c,context_manifest:require('../lib/runtime').contextManifest(c)};
+  const response=buildBootstrapToolResponse(run,false);
+  assert(response.content[0].text.includes('context=RESOLVED, gate=PASS, truncated=YES, omitted_optional=1'));
+  assert(response.content[0].text.includes('WARNING: NOT LOADED optional context'));
+  assert(response.content[0].text.includes('Optional.md'));
+  assert.deepStrictEqual(response.structuredContent.context_manifest.omitted_optional,c.omitted_optional);
+  assert(!Object.hasOwn(response.structuredContent,'context_documents'));
+  const withDocuments=buildBootstrapToolResponse(run,true);
+  assert.strictEqual(withDocuments.structuredContent.context_documents.length,1);
+  assert(withDocuments.content[0].text.includes('NOT LOADED'));
+  // The server must use the same tested response builder, not a divergent summary.
+  const server=fs.readFileSync(path.join(__dirname,'../mcp/server.mjs'),'utf8');
+  assert(server.includes('return buildBootstrapToolResponse(r,include_context);'));
+});
+
+test('MCP bootstrap reports blocked mandatory context and complete-context control',()=>{
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'fci-mcp-blocked-'));
+  const route={rigor_mode:'LOW',control_roots:['missing.md'],lanes:[]};
+  const c=compileContext(root,route,{context:{...cfg.manifest.context,ignored_directories:[],max_documents:5,max_bytes:100}});
+  const {buildBootstrapToolResponse}=require('../lib/mcp-bootstrap');
+  const base={run_id:'fci-mcp-blocked-fixture',manifest:{},task:{},
+    classification:{status:'RESOLVED',type:'BUG_FIX'},signals:{},risk:{mode:'LOW'},
+    route,gates:{verdict:'BLOCK'},context:c,context_manifest:require('../lib/runtime').contextManifest(c)};
+  const blocked=buildBootstrapToolResponse(base,false);
+  assert(blocked.content[0].text.includes('BLOCKED: REQUIRED CONTEXT NOT LOADED'));
+  assert(blocked.content[0].text.includes('missing.md'));
+  fs.writeFileSync(path.join(root,'missing.md'),'required and complete');
+  const complete=compileContext(root,route,{context:{...cfg.manifest.context,ignored_directories:[],max_documents:5,max_bytes:100}});
+  const green=buildBootstrapToolResponse({...base,context:complete,context_manifest:require('../lib/runtime').contextManifest(complete),gates:{verdict:'PASS'}},false);
+  assert(green.content[0].text.includes('truncated=NO, omitted_optional=0'));
+  assert(!green.content[0].text.includes('NOT LOADED'));
+});
+
+test('complete context preserves required and graph provenance without truncation',()=>{
+  const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'fci-complete-'));
+  fs.writeFileSync(path.join(tmp,'root.md'),'[[Extra]]');
+  fs.writeFileSync(path.join(tmp,'Extra.md'),'additional context');
+  const route={rigor_mode:'MEDIUM',control_roots:['root.md'],lanes:[]};
+  const c=compileContext(tmp,route,{context:{...cfg.manifest.context,ignored_directories:[],max_documents:4,max_bytes:128}});
+  assert.equal(c.status,'RESOLVED');
+  assert.equal(c.truncated,false);
+  assert.deepEqual(c.omitted_optional,[]);
+  assert.deepEqual(c.documents.map(x=>x.source),['REQUIRED_SEED','GRAPH_EXPANSION']);
+  assert(c.documents.every(x=>x.sha256.length===64));
+});
+
+test('duplicate control and lane seed is compiled once with control-root authority',()=>{
+  const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'fci-dedup-'));
+  fs.writeFileSync(path.join(tmp,'root.md'),'authority');
+  const route={rigor_mode:'LOW',control_roots:['root.md'],lanes:[{path:'root.md'}]};
+  const c=compileContext(tmp,route,{context:{...cfg.manifest.context,ignored_directories:[],max_documents:1,max_bytes:128}});
+  assert.equal(c.status,'RESOLVED');
+  assert.equal(c.documents.length,1);
+  assert.equal(c.documents[0].source,'REQUIRED_SEED');
+  assert.equal(c.truncated,false);
+});
+
 test('run id is deterministic for unchanged cognition state',()=>{
   const task=bugTask(),a=computeRun(buildTask(task)),b=computeRun(buildTask(task));
   assert.equal(a.run_id,b.run_id);assert.equal(a.task_sha256,b.task_sha256);assert.equal(a.context_sha256,b.context_sha256);
@@ -173,23 +297,60 @@ test('truncated context is a WARN below CRITICAL rigor and a BLOCK at CRITICAL',
   assert.equal(blockOnly.verdict,'BLOCK');
 });
 
+function assertCompleteShippedPack(c,route,root,label){
+  // Status must be checked FIRST. BLOCKED context omits truncated on some paths,
+  // so !c.truncated alone creates a false-positive regression.
+  assert.strictEqual(c.status,'RESOLVED',label+' status='+c.status+'; reason='+(c.reason||'none'));
+  assert.strictEqual(c.truncated,false,label+' truncated at '+c.document_count+'/'+c.document_budget+' docs, '+c.total_bytes+'/'+c.byte_budget+' bytes');
+  assert.deepStrictEqual(c.missing_required,[],label+' missing required sources');
+  assert.deepStrictEqual(c.required_not_loaded,[],label+' required sources not loaded');
+  assert.deepStrictEqual(c.omitted_optional,[],label+' optional sources not loaded');
+  const required=[...new Set([...route.control_roots,...route.lanes.map(x=>x.path)])];
+  const docs=new Map(c.documents.map(x=>[x.path,x]));
+  for(const source of required){
+    const doc=docs.get(source);
+    assert(doc,label+' missing mandatory document '+source);
+    assert.strictEqual(doc.source,'REQUIRED_SEED',label+' unmarked required seed '+source);
+    assert.strictEqual(doc.sha256,require('../lib/io').sha256(fs.readFileSync(path.join(root,...source.split('/')),'utf8')),label+' stale content hash '+source);
+  }
+  assert.strictEqual(c.documents.length,c.document_count,label+' inconsistent document count');
+}
+
+test('complete-pack assertion rejects BLOCKED missing-required context',()=>{
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'fci-completeness-negative-'));
+  const route={rigor_mode:'LOW',control_roots:['mandatory-authority.md'],lanes:[]};
+  const c=compileContext(root,route,{context:{...cfg.manifest.context,ignored_directories:[],max_documents:4,max_bytes:128}});
+  assert.strictEqual(c.status,'BLOCKED');
+  assert.strictEqual(c.truncated,undefined);
+  assert.throws(()=>assertCompleteShippedPack(c,route,root,'negative fixture'),assert.AssertionError);
+});
+
 test('no rigor mode or lifecycle stage truncates the compiled context for the shipped mesh',()=>{
-  const {compileContext}=require('../lib/context');
-  const {routeTask}=require('../lib/route');
-  const routing=require('../../../harness/config/routing-rules.json');
-  const registry=require('../../../harness/config/lane-registry.json');
-  const manifest=require('../../../harness/HARNESS_MANIFEST.json');
+  const routing=cfg.routing,registry=cfg.lanes,manifest=cfg.manifest;
+  const allSignals=Object.fromEntries(Object.keys(routing.by_signal).map(key=>[key,true]));
+  const allLaneIds=Object.values(registry.families).flat().map(lane=>lane.id).sort();
+  assert.strictEqual(Object.keys(allSignals).length,19,'CRITICAL fixture must cover the 19 configured signal keys');
+  assert(allSignals.performance&&allSignals.commercial,'critical capacity test must exercise performance and commercial signals');
   const sigSets={
     LOW:{ui:true}, MEDIUM:{ui:true,data:true},
     HIGH:{ui:true,data:true,auth:true,security:true,offline:true,recovery:true,deployment:true,production:true},
-    CRITICAL:{ui:true,data:true,auth:true,security:true,offline:true,recovery:true,deployment:true,production:true,privacy:true,supply_chain:true,distributed:true,ai:true,incident:true}
+    CRITICAL:allSignals
   };
   const typesByMode={LOW:'BUG_FIX',MEDIUM:'EXISTING_SYSTEM_FEATURE',HIGH:'GREENFIELD_SYSTEM',CRITICAL:'GREENFIELD_SYSTEM'};
+  const root=path.join(__dirname,'..','..','..');
   for(const mode of ['LOW','MEDIUM','HIGH','CRITICAL']){
     for(const stage of ['PRE_DESIGN','PRE_IMPLEMENTATION','PRE_DELIVERY','POST_DEPLOY']){
       const route=routeTask(typesByMode[mode],sigSets[mode],mode,routing,registry,manifest.control_roots,{stage});
-      const c=compileContext(path.join(__dirname,'..','..','..'),route,manifest);
-      assert(!c.truncated,`${mode}/${stage} truncated at ${c.document_count}/${c.document_budget} docs, ${c.total_bytes}/${c.byte_budget} bytes`);
+      if(mode==='CRITICAL'){
+        const routed=[...route.lanes,...route.deferred_lanes].map(lane=>lane.id).sort();
+        assert.deepStrictEqual(routed,allLaneIds,'CRITICAL all-signals route must include every registered lane at '+stage);
+      }
+      const c=compileContext(root,route,manifest);
+      // Print measured headroom; budget calibration cannot rely on a silent PASS.
+      console.log('FCI-CAPACITY '+mode+'/'+stage+' routed='+route.routed_lane_count+
+        ' active='+route.active_lane_count+' docs='+c.document_count+'/'+c.document_budget+
+        ' bytes='+c.total_bytes+'/'+c.byte_budget+' status='+c.status+' truncated='+c.truncated);
+      assertCompleteShippedPack(c,route,root,mode+'/'+stage);
     }
   }
 });

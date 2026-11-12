@@ -16,6 +16,7 @@ const here=path.dirname(fileURLToPath(import.meta.url));
 const repoRoot=path.resolve(here,'..','..','..');
 const runtime=require('../lib/runtime.js');
 const lifecycle=require('../lib/lifecycle.js');
+const {buildBootstrapToolResponse}=require('../lib/mcp-bootstrap.js');
 const store=new SessionStore();
 
 const journeySchema=z.object({id:z.string().regex(/^[a-z0-9][a-z0-9._-]*$/),description:z.string().min(1),method:z.string().optional(),path:z.string().optional()});
@@ -68,9 +69,7 @@ function createHarnessServer(){
 
   server.registerTool('second_brain_bootstrap',{title:'Second Brain Cognition Bootstrap',description:'Use this after intake and before architecture selection or implementation. It compiles the deterministic routed Second Brain context pack, exact source hashes, risk result, Git reality, and current gates for the supplied normalized task.',inputSchema:z.object({task:taskSchema,include_context:z.boolean().default(true)}),annotations:{readOnlyHint:true,idempotentHint:true,openWorldHint:false}},toolHandler(async({task,include_context})=>{
     task=normalizeServerTask(task);const r=runtime.bootstrapTask(task,{root:repoRoot,taskBaseDir:process.cwd(),writeArtifacts:false});
-    const data={run_id:r.run_id,manifest:r.manifest,task:r.task,classification:r.classification,signals:r.signals,risk:r.risk,route:r.route,gates:r.gates,context_manifest:r.context_manifest};
-    if(include_context&&r.context.status==='RESOLVED') data.context_documents=r.context.documents;
-    return output(data,`Cognition run ${r.run_id}: classification=${r.classification.status==='RESOLVED'?r.classification.type:'BLOCKED'}, rigor=${r.risk?.mode||'UNRESOLVED'}, context=${r.context.status}, gate=${r.gates.verdict}.`);
+    return buildBootstrapToolResponse(r,include_context);
   }));
 
   server.registerTool('second_brain_evaluate',{title:'Second Brain Gate Evaluation',description:'Use this whenever evidence changes and before making an engineering stage or delivery claim. It evaluates evidence against all applicable gates through the requested lifecycle stage.',inputSchema:z.object({task:taskSchema,evidence:evidenceSchema,through_stage:stageSchema.default('PRE_DELIVERY')}),annotations:{readOnlyHint:true,idempotentHint:true,openWorldHint:false}},toolHandler(async({task,evidence,through_stage})=>{task=normalizeServerTask(task);const r=runtime.evaluateTask(task,evidence,{root:repoRoot,taskBaseDir:process.cwd(),throughStage:through_stage});return output(r,`Gate evaluation through ${through_stage}: ${r.verdict}; ${r.blocking_failures} blocking failure(s).`);}));

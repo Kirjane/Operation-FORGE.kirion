@@ -30,33 +30,41 @@ function evaluateClaim(feature,claim,source,verifiers={}){
   if(claim.classification==='UNKNOWN') return {...basis,status:'UNKNOWN',code:'UNKNOWN_NOT_EVIDENCE'};
   if(!claim.source_sha256 || claim.contract_revision===undefined) return {...basis,status:'UNVERIFIED',code:'CLAIM_PROVENANCE_INCOMPLETE'};
 
+  // Bind a proof to the assertion itself, not merely to a Git source that
+  // happens to contain other statements. All proof fields must originate
+  // from a separately trusted host record, never be echoed from this request.
+  const commonExpected={
+    verified:true,feature_id:feature.feature_id,
+    contract_revision:feature.contract.revision,
+    repository_head:feature.repository.head,
+    source_sha256:source.sha256,
+    claim_id:claim.id,subject:claim.subject,value_sha256:basis.value_sha256
+  };
   const details={feature_id:feature.feature_id,repository_head:feature.repository.head,
-    contract_revision:feature.contract.revision,claim,source};
+    contract_revision:feature.contract.revision,
+    claim:Object.freeze({...claim}),source:Object.freeze({...source})};
   if(claim.classification==='OPERATOR_APPROVED'){
     if(source.kind!=='CONTRACT'||claim.source_id!==feature.contract.source_id||
        !claim.approval_ref || claim.contract_revision!==feature.contract.revision)
       return {...basis,status:'BLOCKED',code:'APPROVAL_CONTEXT_INCOMPLETE'};
-    const expected={verified:true,feature_id:feature.feature_id,
-      approval_ref:claim.approval_ref,revision:feature.contract.revision,
-      source_sha256:source.sha256};
+    // CURRENT must be independently attested against a live/authoritative
+    // decision history; lack of a self-declared superseded_by is NOT enough.
+    const expected={...commonExpected,approval_ref:claim.approval_ref,
+      decision_state:'CURRENT'};
     return safeAttestation(verifiers.authority,details,expected)
       ? {...basis,status:'VERIFIED',code:'EXTERNAL_AUTHORITY_ATTESTED'}
       : {...basis,status:'UNVERIFIED',code:'AUTHORITY_NOT_ATTESTED'};
   }
   if(claim.classification==='CODE_VERIFIED'){
     if(source.kind!=='CODE') return {...basis,status:'BLOCKED',code:'CODE_SOURCE_KIND_MISMATCH'};
-    const expected={verified:true,feature_id:feature.feature_id,
-      contract_revision:feature.contract.revision,repository_head:feature.repository.head,
-      source_sha256:source.sha256,claim_id:claim.id};
+    const expected=commonExpected;
     return safeAttestation(verifiers.code,details,expected)
       ? {...basis,status:'VERIFIED',code:'EXTERNAL_CODE_CHECK_ATTESTED'}
       : {...basis,status:'UNVERIFIED',code:'CODE_CLAIM_NOT_ATTESTED'};
   }
   if(!claim.evidence_ref||source.kind!==(claim.classification==='TEST_VERIFIED'?'TEST':'RUNTIME'))
     return {...basis,status:'BLOCKED',code:'EVIDENCE_CONTEXT_INCOMPLETE'};
-  const expected={verified:true,feature_id:feature.feature_id,
-    contract_revision:feature.contract.revision,repository_head:feature.repository.head,
-    source_sha256:source.sha256,evidence_ref:claim.evidence_ref,claim_id:claim.id};
+  const expected={...commonExpected,evidence_ref:claim.evidence_ref};
   const type=claim.classification==='TEST_VERIFIED'?'execution':'runtime';
   return safeAttestation(verifiers[type],details,expected)
     ? {...basis,status:'VERIFIED',code:'EXTERNAL_'+type.toUpperCase()+'_ATTESTED'}

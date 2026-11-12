@@ -35,3 +35,6 @@ jobs:
 
       - name: Nest report
         run: python tools/forge_check.py nest
+
+      - name: Disposable skill generator tests
+        run: python -m unittest discover -s arsenal/tests -v

@@ -1,0 +1,73 @@
+name: FCI-M02 Behavioral Pilot Calibration
+
+on:
+  pull_request:
+    paths:
+      - 'evals/fci-m02-pilot/**'
+      - '.github/workflows/fci-m02-pilot.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pilot-calibration:
+    name: pilot-calibration
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout candidate
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # required to read canonical source bytes at the frozen M01 SHA
+      - name: Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate scorer syntax
+        run: |
+          node --check evals/fci-m02-pilot/score.cjs
+          node --check evals/fci-m02-pilot/make-fixtures.cjs
+      - name: Validate expected-source paths in static scenarios
+        run: |
+          node -e "const fs=require('fs');const m=require('./evals/fci-m02-pilot/scenarios.json');if(m.version!==1||m.scenarios.length!==9)process.exit(1);for(const s of m.scenarios){for(const p of s.required_sources){if(!fs.existsSync(p))throw Error('Missing canonical eval source: '+p)}}console.log('9 synthetic scenarios and canonical source paths: PASS')"
+      - name: Generate disposable local Git evidence fixture pack
+        run: |
+          OUTPUT="$(mktemp -d)"
+          trap 'rm -rf "$OUTPUT"' EXIT
+          node evals/fci-m02-pilot/make-fixtures.cjs --out "$OUTPUT/pilot"
+          node - "$OUTPUT/pilot" <<'NODE'
+          const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
+          const root=process.argv[2],manifest=require('./evals/fci-m02-pilot/scenarios.json');
+          const x=JSON.parse(fs.readFileSync(path.join(root,'fixture-report.json'),'utf8'));
+          if(x.cases!==9)throw Error('EXPECTED_NINE_CASES');
+          const map=new Map(x.report.map(v=>[v.id,v]));
+          if(map.get('SHA_DRIFT_WRITER').handoff===map.get('SHA_DRIFT_WRITER').head)throw Error('DRIFT_MISSING');
+          if(map.get('AUTHORIZED_SHA_REFRESH').handoff!==map.get('AUTHORIZED_SHA_REFRESH').head)throw Error('VALID_REFRESH_REJECTED');
+          let verified=0;
+          const hash=b=>crypto.createHash('sha256').update(b).digest('hex');
+          for(const scenario of manifest.scenarios){
+            const packet=JSON.parse(fs.readFileSync(path.join(root,'packets',scenario.id+'.json'),'utf8'));
+            const oracle=JSON.parse(fs.readFileSync(path.join(root,'oracles',scenario.id+'.json'),'utf8'));
+            const dir=path.join(root,scenario.id);
+            if(fs.existsSync(path.join(dir,'evals/fci-m02-pilot/evaluator-oracle.json')))
+              throw Error('LEAKED_STATIC_EVALUATOR_ORACLE:'+scenario.id);
+            for(const p of scenario.required_sources){
+              const pin=packet.pinned_canonical_sources.find(z=>z.path===p);
+              if(!pin||pin.pinned_base_sha!==manifest.baseline_sha)throw Error('MISSING_SOURCE_PIN:'+scenario.id+':'+p);
+              const f=path.join(dir,p);
+              if(!fs.statSync(f).isFile()||hash(fs.readFileSync(f))!==pin.sha256)
+                throw Error('AGENT_WORKSPACE_MISSING_SOURCE:'+scenario.id+':'+p);
+              verified++;
+            }
+            if(scenario.id==='VERIFIED_BUILD_PASS'){
+              const log=fs.readFileSync(path.join(dir,'evidence/build.log'));
+              if(hash(log)!==oracle.build_log_sha256||
+                 !log.toString('utf8').includes('RUN_ID='+oracle.verified_execution_run_id)||
+                 oracle.execution_head!==oracle.current_head)
+                throw Error('MISMATCHED_GENERATED_BUILD_PROOF');
+            }
+          }
+          console.log('9 real-Git fixtures, '+verified+' pinned canonical agent-visible sources and bound build run: PASS');
+          NODE
+      - name: Calibrate scorer on SYNTHETIC response/adjudication only
+        run: node evals/fci-m02-pilot/score.cjs --self-test

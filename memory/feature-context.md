@@ -20,11 +20,19 @@ The FCI resolver reads a feature-context input with `feature_id`, an exact local
 
 **Trusted-host boundary:** this first wave does not implement or establish the identity/trust of external approval/execution attestation providers. A same-process caller can construct a fake callback; a production system must obtain the callback from a separately authenticated and authorized control plane, never from a worker or memory payload. Thus the current library is an inspectable **candidate primitive**, not a complete verified-authority solution. Default use without a trusted verifier fails closed.
 
+## Nox R1 targeted security rework
+
+- Attestations are now bound to **exact claim meaning** (`claim_id`, restricted `subject`, and `value_sha256`), as well as feature ID, contract revision, local Git HEAD, and the checked source digest. Decision approvals also require the exact `approval_ref` and `decision_state: CURRENT`; execution/runtime evidence requires its exact `evidence_ref`.
+- A decision is *not* current merely because writable memory omitted `superseded_by`. The independently trusted authority adapter must consult a current, non-revoked decision record and return `decision_state: CURRENT`. An old static approval with `REVOKED`, `SUPERSEDED`, or missing state cannot establish `VERIFIED`. The repository itself does not implement this host decision database.
+- The resolver snapshots its declarative feature input, verifies local Git state before checking sources, after reading source content, **and after invoking every external verifier**. Mutation of HEAD, branch, or worktree during an attestation blocks evidence readiness. This is a best-effort synchronous snapshot, not an atomic transaction across Git and external systems.
+- Runtime validation now rejects unknown keys and validates required fields, types, bounds, identifiers, and optional source/claim metadata against the two shipped JSON Schemas. Supersession references use non-narrative identifiers and are not emitted as raw strings in resolver output.
+- Adversarial fixtures reuse historical proof records without regenerating them after subject/value/ID/HEAD changes, exercise concealed revocation, and mutate Git inside a verifier callback. These are synthetic proof adapters, **not live authenticated Engineer approval**.
+
 ## Known limitations
 
 1. Repository verification is local-only and requires a trusted host-supplied `allowed_roots` list. Local `main` is not remote `main`, and an unpushed commit is not a GitHub approval.
 2. All declared source pins are required in this first wave; role-based optional-source loading and continuity compaction are later work. FCI-M01's separate graph-truncation policy remains unchanged.
-3. Approval and execution verifiers are **interfaces**, not live connector integrations. No remote account identity, runtime, CI authenticity or deployment is independently verified by the library.
+3. Approval and execution verifiers are **interfaces**, not live connector integrations. A verifier that merely mirrors the supplied claim fields is **not** trustworthy; it must look up an independent, immutable proof and an up-to-date decision status. No remote account identity, runtime, CI authenticity or deployment is independently verified by the library.
 4. Conflicts among concurrently VERIFIED, non-superseded claims are blocked. Unverified and inferred contradictions remain non-actionable under the claim guard.
 5. The new library is **not wired into** the existing CLI/MCP/lifecycle acceptance path. Integration and role projections require independent review and an explicit later work package.
 6. Only source filenames/digests/status codes are returned from Git inspection; document bodies are not returned for agents to treat as instructions. Claim values are represented by SHA-256 digests (rather than copied into responses), and subjects use restricted identifiers to reduce prompt-injection exposure. This is not a universal defense when a later agent independently opens untrusted files.

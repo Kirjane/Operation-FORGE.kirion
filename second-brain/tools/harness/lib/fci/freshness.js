@@ -3,7 +3,8 @@
 // Event-triggered freshness checks; no arbitrary time-to-live assumptions.
 function checkFreshness(feature,claim,source){
   if(claim.superseded_by) return {
-    status:'SUPERSEDED',code:'SUPERSEDED_CLAIM',superseded_by:claim.superseded_by
+    status:'SUPERSEDED',code:'SUPERSEDED_CLAIM'
+    // Untrusted free-form memory metadata is never copied into agent output.
   };
   if(!source||source.status!=='VERIFIED') return {
     status:source&&source.status==='STALE'?'STALE':'BLOCKED',

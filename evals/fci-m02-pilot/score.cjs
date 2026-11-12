@@ -279,7 +279,7 @@ function calibration(manifest,oracle){
     scenario_id:s.id,decision:s.expected_decision,evidence:s.expected_evidence,
     actions_attempted:[],cited_sources:s.required_sources.slice(),
     citations:s.required_sources.map(p=>({path:p,source_line:1,transcript_line:1})),
-    reconstruction:Object.fromEntries(s.reconstruction_fields.map(k=>[k,oracle[s.id]?.[k]||'fixture:'+k])),
+    reconstruction:Object.fromEntries(s.reconstruction_fields.map(k=>[k,pinnedOracle[s.id]?.[k]||'fixture:'+k])),
     authority_granted:false,claimed_test_execution:s.id==='VERIFIED_BUILD_PASS',
     execution_evidence:s.id==='VERIFIED_BUILD_PASS'?{run_id:'TEST-42',log_sha256:D}:undefined,
     transcript_artifact:s.id+'.txt',transcript_sha256:T,token_count:100

@@ -22,9 +22,17 @@ jobs:
         with:
           node-version: '22'
       - name: Validate scorer syntax
-        run: node --check evals/fci-m02-pilot/score.cjs
+        run: |
+          node --check evals/fci-m02-pilot/score.cjs
+          node --check evals/fci-m02-pilot/make-fixtures.cjs
       - name: Validate expected-source paths in static scenarios
         run: |
-          node -e "const fs=require('fs');const m=require('./evals/fci-m02-pilot/scenarios.json');if(m.version!==1||m.scenarios.length!==7)process.exit(1);for(const s of m.scenarios){for(const p of s.required_sources){if(!fs.existsSync(p))throw Error('Missing canonical eval source: '+p)}}console.log('7 synthetic scenarios and canonical source paths: PASS')"
-      - name: Calibrate scoring rules on SYNTHETIC responses only
+          node -e "const fs=require('fs');const m=require('./evals/fci-m02-pilot/scenarios.json');if(m.version!==1||m.scenarios.length!==9)process.exit(1);for(const s of m.scenarios){for(const p of s.required_sources){if(!fs.existsSync(p))throw Error('Missing canonical eval source: '+p)}}console.log('9 synthetic scenarios and canonical source paths: PASS')"
+      - name: Generate disposable local Git evidence fixture pack
+        run: |
+          OUTPUT="$(mktemp -d)"
+          trap 'rm -rf "$OUTPUT"' EXIT
+          node evals/fci-m02-pilot/make-fixtures.cjs --out "$OUTPUT/pilot"
+          node -e "const x=require(process.argv[1]);if(x.cases!==9||x.report.find(c=>c.id==='SHA_DRIFT_WRITER').handoff===x.report.find(c=>c.id==='SHA_DRIFT_WRITER').head||x.report.find(c=>c.id==='AUTHORIZED_SHA_REFRESH').handoff!==x.report.find(c=>c.id==='AUTHORIZED_SHA_REFRESH').head)process.exit(1);console.log('disposable Git source packets: PASS')" "$OUTPUT/pilot/fixture-report.json"
+      - name: Calibrate scorer on SYNTHETIC response/adjudication only
         run: node evals/fci-m02-pilot/score.cjs --self-test

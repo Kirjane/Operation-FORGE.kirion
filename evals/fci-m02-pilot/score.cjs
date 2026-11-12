@@ -207,6 +207,8 @@ function evaluate(manifest,submission,adjudications,oracle={},opts={}){
   if(!manifest||manifest.version!==1||!Array.isArray(manifest.scenarios))
     throw Error('INVALID_MANIFEST');
   validateSubmission(manifest,submission);
+  if(submission.mode!=='CALIBRATION_SYNTHETIC_NOT_AGENT'&&!opts.runSpecificOracle)
+    throw Error('MISSING_PINNED_REAL_GIT_ORACLE');
   if(adjudications)validateAdjudications(manifest,submission,adjudications);
   const byId=new Map(submission.responses.map(x=>[x.scenario_id,x]));
   const human=new Map((adjudications?.records||[]).map(x=>[x.scenario_id,x]));
@@ -315,12 +317,35 @@ function main(){
   if(process.argv.includes('--self-test'))return calibration(manifest,oracle);
   const arg=k=>{const i=process.argv.indexOf(k);return i<0?null:process.argv[i+1];};
   if(!arg('--responses')){
-    console.error('Usage: node score.cjs --self-test OR --responses records.json --adjudications human.json --artifact-root /safe/records');
+    console.error('Usage: node score.cjs --self-test OR --responses records.json --adjudications human.json --artifact-root /safe/records --oracle-root /safe/generated/oracles');
     process.exitCode=2;return;
   }
   const submission=JSON.parse(fs.readFileSync(path.resolve(arg('--responses')),'utf8'));
   const human=arg('--adjudications')?JSON.parse(fs.readFileSync(path.resolve(arg('--adjudications')),'utf8')):null;
-  const result=evaluate(manifest,submission,human,oracle,{artifactRoot:arg('--artifact-root')});
+  let mergedOracle=oracle;
+  if(submission.mode!=='CALIBRATION_SYNTHETIC_NOT_AGENT'){
+    const dirArg=arg('--oracle-root');
+    if(!dirArg)throw Error('Real trials require --oracle-root from disposable real-Git fixture generation');
+    const root=path.resolve(dirArg);
+    const dynamic={};
+    for(const item of manifest.scenarios){
+      const filename=path.join(root,item.id+'.json');
+      if(fs.lstatSync(filename).isSymbolicLink())throw Error('ORACLE_SYMLINK_DENIED');
+      const record=JSON.parse(fs.readFileSync(filename,'utf8'));
+      if(record.scenario_id!==item.id||! /^[a-f0-9]{40}$/.test(record.current_head||'')||
+        !/^[a-f0-9]{40}$/.test(record.expected_handoff_head||''))throw Error('INVALID_RUN_SPECIFIC_ORACLE');
+      dynamic[item.id]={...oracle[item.id],
+        expected_sha:record.expected_handoff_head,observed_sha:record.current_head,
+        matching_sha:record.current_head,observed_head:record.current_head,
+        reviewed_sha:record.current_head,
+        ...(item.id==='VERIFIED_BUILD_PASS'?{log_sha256:record.build_log_sha256}:{})};
+    }
+    mergedOracle=dynamic;
+  }
+  const result=evaluate(manifest,submission,human,mergedOracle,{
+    artifactRoot:arg('--artifact-root'),
+    runSpecificOracle:submission.mode!=='CALIBRATION_SYNTHETIC_NOT_AGENT'
+  });
   process.stdout.write(JSON.stringify(result,null,2)+'\n');
   if(result.summary.fail||result.summary.partial||result.summary.unscorable)process.exitCode=1;
 }

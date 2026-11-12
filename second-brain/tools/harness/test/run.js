@@ -166,6 +166,10 @@ test('optional byte omission is visible instead of falsely complete',()=>{
   assert.equal(c.truncated,true);
   assert.deepEqual(c.omitted_optional,[{path:'Extra.md',reason:'BYTE_BUDGET'}]);
   assert.deepEqual(c.documents.map(x=>x.path),['root.md']);
+  const rendered=require('../lib/render').renderContext(c,{harnessVersion:'test',taskId:'fci-omission',type:'BUG_FIX',mode:'MEDIUM'});
+  assert(rendered.includes('## Omitted optional context (budget)'));
+  assert(rendered.includes('Extra.md'));
+  assert(rendered.includes('NOT LOADED'));
 });
 
 test('complete context preserves required and graph provenance without truncation',()=>{

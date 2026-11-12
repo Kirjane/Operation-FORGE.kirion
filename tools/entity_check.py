@@ -83,6 +83,7 @@ def main() -> int:
         ("Forge NEST mechanical predicates", [sys.executable, "tools/forge_check.py", "nest"], ROOT),
         ("Second Brain graph", [sys.executable, "tools/brain_health.py", "--check"], BRAIN),
         ("Second Brain harness", ["node", "tools/harness/test/run.js"], BRAIN),
+        ("FCI-M02 provenance adversarial fixtures", ["node", "tools/harness/test/fci-memory.js"], BRAIN),
         ("Second Brain Notion adversarial provider", ["node", "tools/harness/test/semantic-provider.js"], BRAIN),
         ("Second Brain MCP adapter syntax", ["node", "--check", "tools/harness/mcp/server.mjs"], BRAIN),
     ]

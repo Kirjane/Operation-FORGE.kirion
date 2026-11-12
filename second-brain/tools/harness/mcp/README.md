@@ -74,6 +74,10 @@ MCP  http://127.0.0.1:4318/mcp
 
 Override the port with `PSB_MCP_PORT` or `PORT`.
 
+## FCI-M01 bootstrap context disclosure
+
+The `second_brain_bootstrap` tool returns `structuredContent.context_manifest.omitted_optional` and **always** places `truncated=YES`, `omitted_optional=N` and `WARNING: NOT LOADED` with bounded source paths in its plain-text response whenever optional context was omitted. This warning applies even when a LOW/MEDIUM/HIGH partial context is permitted by a WARN gate and the overall verdict is `PASS`. When mandatory sources are missing and compilation is `BLOCKED`, the text states `REQUIRED CONTEXT NOT LOADED`. Do not infer current project rules or test results from those sources. The no-dependency harness unit suite checks this response builder and the server wiring; the integrated entity check also verifies MCP adapter syntax. **A full installed MCP client/transport interaction is not part of these fixture tests.**
+
 ## Canonical agent flow
 
 ```text

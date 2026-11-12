@@ -137,6 +137,7 @@
         "role",
         "repository",
         "source_basis",
+        "observed_head",
         "unresolved_work",
         "next_action"
       ],

@@ -65,6 +65,8 @@ function makeOne(out,s,p){
   };
   const oracle={scenario_id:s.id,old_head:oldHead,current_head:currentHead,
     branch,expected_handoff_head:handoffHead,
+    expected_sha:handoffHead,observed_sha:currentHead,matching_sha:currentHead,
+    observed_head:currentHead,reviewed_sha:currentHead,
     stale_handoff:stale,refresh_authorized:refreshed,
     build_log_sha256:s.id==='VERIFIED_BUILD_PASS'?H(fs.readFileSync(path.join(root,'evidence/build.log'))):null,
     expected_decision:s.expected_decision,

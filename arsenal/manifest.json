@@ -1,0 +1,17 @@
+{
+  "name": "kirion-skill-arsenal",
+  "version": "0.2.0",
+  "status": "draft-not-adopted",
+  "primary": "chatgpt-github-connector-plus-session-vm",
+  "hosts": [
+    "chatgpt",
+    "codex",
+    "antigravity"
+  ],
+  "skills": 16,
+  "default": "kirion-core",
+  "dispatcher": "kirion-dispatch",
+  "generator": "arsenal/scripts/make-disposable-skill.py",
+  "noAutomaticMerge": true,
+  "noAutomaticProjectPolicyAdoption": true
+}

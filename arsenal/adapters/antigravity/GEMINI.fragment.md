@@ -1,0 +1,2 @@
+# Optional Antigravity GEMINI.md pointer
+Use the shared `.agents/skills` contracts: kirion-core, kirion-dispatch and selected specialists. Antigravity's user-wide skill directory is `~/.gemini/config/skills`, a local setting **not** shared with Codex or ChatGPT worker conversations. Preserve actual Git, project contract, role and source scope; no skill-created acceptance rules, fake PASS, merge, production mutation or auto-promotion of disposable task skills.

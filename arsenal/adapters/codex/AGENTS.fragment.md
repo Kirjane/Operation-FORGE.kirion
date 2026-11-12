@@ -1,0 +1,2 @@
+# Optional Codex AGENTS.md pointer
+Load the current project's constitution and feature contract first. Use `.agents/skills/kirion-core/SKILL.md` and `kirion-dispatch`, then the minimum relevant specialist skills. Codex may discover user-wide `~/.agents/skills`. Never treat a skill as a new permission or acceptance gate. Confirm exact SHA, approved paths, actual tests and durable GitHub issue/PR status. A session handback is not a new feature acceptance unless target policy requires it. Do not merge, deploy or reset production without separate authorization.

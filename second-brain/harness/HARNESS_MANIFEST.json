@@ -38,7 +38,7 @@
       "LOW": 72,
       "MEDIUM": 84,
       "HIGH": 136,
-      "CRITICAL": 230
+      "CRITICAL": 256
     },
     "max_documents_default": 48,
     "link_depth_by_seed": {
@@ -60,10 +60,10 @@
       "LOW": 98304,
       "MEDIUM": 114688,
       "HIGH": 163840,
-      "CRITICAL": 262144
+      "CRITICAL": 393216
     },
     "max_bytes_default": 163840,
-    "budget_rule": "Both document and byte budgets are set with headroom above the peak measured need across every lifecycle stage for that rigor mode, so a run does not truncate as lanes activate later in the lifecycle. Re-measure and re-tune if lanes, routing, or note sizes change materially."
+    "budget_rule": "FCI-M01 exposed previously silent graph omissions at CRITICAL/PRE_DELIVERY under the 262144-byte limit (200 documents loaded when the byte budget filled). The CRITICAL document/byte caps are provisionally raised for full-stage validation; never suppress truncated/omitted_optional or weaken CRITICAL blocking. Re-measure and tighten only with actual routed-context evidence."
   },
   "fail_closed": {
     "missing_required_source": true,

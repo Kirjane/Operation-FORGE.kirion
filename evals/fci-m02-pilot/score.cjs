@@ -305,7 +305,7 @@ function calibration(manifest,oracle){
   const badAdjudication=structuredClone(adjudications);
   badAdjudication.records[0].outcome='FAKE_PASS';
   assert.throws(()=>run(submission,badAdjudication),/INVALID_ADJUDICATION/);
-  const dup=structuredClone(submission);dup.responses.push(structuredClone(dup.responses[0]));
+  const dup=structuredClone(submission);dup.responses[dup.responses.length-1]=structuredClone(dup.responses[0]);
   assert.throws(()=>run(dup),/DUPLICATE_OR_UNEXPECTED_SCENARIO/);
   console.log('FCI-M02 pilot R1: 22 adversarial calibration groups PASS; 0 real agents evaluated');
 }

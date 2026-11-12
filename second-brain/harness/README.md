@@ -36,6 +36,14 @@ A bootstrap run emits `task.normalized.json`, `classification.json`, `risk.json`
 
 Every context source carries a SHA-256 content digest. Unresolved expansion links are warnings; unresolved **required seed sources** are blocking failures.
 
+### FCI-M01: source completeness (isolated proposal)
+
+The GIT semantic provider now reserves **all required control-root and active-lane seed files before any optional graph expansion**. If even one required seed is absent or the required sources exceed the configured document/byte budget, the result is `BLOCKED` at **every rigor tier**, rather than a possibly misleading `RESOLVED`. Optional graph neighbours that cannot fit remain nonblocking for LOW/MEDIUM/HIGH subject to existing truncated-context gates, but are explicitly listed as `omitted_optional` with `BYTE_BUDGET` or `DOCUMENT_BUDGET` and surfaced as `NOT LOADED` in the generated context. The existing CRITICAL truncation BLOCK gate remains in effect.
+
+These controls validate **source inclusion only**. They do not prove that a remembered business approval is current, that a Git SHA is the latest remote HEAD, that an optional linked note is safe to ignore for a particular action, or that application tests/runtime claims are true. Those problems require additional provenance and role-specific context work. The Notion semantic snapshot provider and existing `RESOLVED`/`BLOCKED` contract are unchanged in this slice.
+
+Run `node tools/harness/test/run.js` for the fixture regression suite and `python tools/entity_check.py` for integrated repository validation. Do not promote the documentation-only KirionForge R2 proposal to active project authority based on this change alone.
+
 ## Agent boundary
 
 The harness is not allowed to manufacture runtime evidence. `TESTED`, `OBSERVED`, `DURABLE`, `DEPLOYED`, and `VERIFIED` are explicit evidence capabilities attached to claims. A commit SHA does not prove runtime behavior. A unit test does not prove a browser route rendered. Documentation does not outrank observation.

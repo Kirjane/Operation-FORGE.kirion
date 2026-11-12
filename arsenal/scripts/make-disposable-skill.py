@@ -11,7 +11,8 @@ for field in ('task_id', 'repo', 'objective', 'allow', 'forbid', 'proof'):
     p.add_argument('--' + field.replace('_', '-'), required=True)
 p.add_argument('--sha', default='UNVERIFIED')
 p.add_argument('--workspace')
-p.add_argument('--authorize-workspace-write', action='store_true')
+p.add_argument('--authorize-workspace-write', action='store_true',
+               help='Caller opt-in only; does not verify Engineer or repository authorization')
 a = p.parse_args()
 
 if not re.fullmatch(r'[A-Za-z][A-Za-z0-9_-]{1,63}', a.task_id):

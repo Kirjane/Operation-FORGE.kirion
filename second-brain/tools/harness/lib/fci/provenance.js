@@ -25,6 +25,7 @@ function evaluateClaim(feature,claim,source,verifiers={}){
   if(fresh.status!=='CURRENT') return {...basis,...fresh};
   if(claim.classification==='INFERRED') return {...basis,status:'INFERRED',code:'INFERENCE_NOT_EVIDENCE'};
   if(claim.classification==='UNKNOWN') return {...basis,status:'UNKNOWN',code:'UNKNOWN_NOT_EVIDENCE'};
+  if(!claim.source_sha256 || claim.contract_revision===undefined) return {...basis,status:'UNVERIFIED',code:'CLAIM_PROVENANCE_INCOMPLETE'};
 
   const details={feature_id:feature.feature_id,repository_head:feature.repository.head,
     contract_revision:feature.contract.revision,claim,source};

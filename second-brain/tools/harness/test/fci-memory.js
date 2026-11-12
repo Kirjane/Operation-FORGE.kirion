@@ -166,12 +166,42 @@ test('fabricated test PASS is unverified absent trustworthy execution evidence',
   assert.strictEqual(reportOnly.action_gate.status,'BLOCKED');
   const bad=run(f,{verifiers:{execution:()=>({verified:true,claim_id:'test-pass',repository_head:'0'.repeat(40)})}});
   assert.strictEqual(get(bad.claims,'test-pass').status,'UNVERIFIED');
-  const verified=run(f,{verifiers:{execution:({claim,source,repository_head})=>({
-    verified:true,repository_head,source_sha256:source.sha256,
+  const replayed=run(f,{verifiers:{execution:({claim,source,repository_head})=>({
+    verified:true,feature_id:'OTHER-FEATURE',contract_revision:3,
+    repository_head,source_sha256:source.sha256,evidence_ref:claim.evidence_ref,claim_id:claim.id
+  })}});
+  assert.strictEqual(get(replayed.claims,'test-pass').status,'UNVERIFIED');
+  const verified=run(f,{verifiers:{execution:({feature_id,contract_revision,claim,source,repository_head})=>({
+    verified:true,feature_id,contract_revision,repository_head,source_sha256:source.sha256,
     evidence_ref:claim.evidence_ref,claim_id:claim.id
   })}});
   assert.strictEqual(get(verified.claims,'test-pass').status,'VERIFIED');
   assert.strictEqual(verified.action_gate.authority_granted,false);
+});
+
+test('reported code-fact requires a feature-bound trusted code verifier',()=>{
+  const f=makeFixture();
+  f.feature.claims=[{
+    id:'code-fact',subject:'source.feature.export',value:'ready',
+    classification:'CODE_VERIFIED',source_id:'code',
+    source_sha256:f.feature.sources[1].sha256,contract_revision:3
+  }];
+  f.feature.required_claim_ids=['code-fact'];
+  const reported=run(f);
+  assert.strictEqual(reported.claims[0].status,'UNVERIFIED');
+  assert.strictEqual(reported.action_gate.status,'BLOCKED');
+  const forged=run(f,{verifiers:{code:({claim,source,repository_head})=>({
+    verified:true,feature_id:'WRONG-FEATURE',contract_revision:3,
+    repository_head,source_sha256:source.sha256,claim_id:claim.id
+  })}});
+  assert.strictEqual(forged.claims[0].status,'UNVERIFIED');
+  const checked=run(f,{verifiers:{code:({feature_id,contract_revision,claim,source,repository_head})=>({
+    verified:true,feature_id,contract_revision,repository_head,
+    source_sha256:source.sha256,claim_id:claim.id
+  })}});
+  assert.strictEqual(checked.claims[0].status,'VERIFIED');
+  assert.strictEqual(checked.action_gate.status,'EVIDENCE_READY');
+  assert.strictEqual(checked.authority_granted,false);
 });
 
 test('inferred and unknown claims are never executable authority',()=>{

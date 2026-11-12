@@ -61,7 +61,8 @@
     "superseded_by": {
       "type": "string",
       "minLength": 1,
-      "maxLength": 240
+      "maxLength": 240,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,239}$"
     }
   }
 }

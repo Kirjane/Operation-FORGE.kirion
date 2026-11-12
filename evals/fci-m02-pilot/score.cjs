@@ -408,6 +408,11 @@ function main(){
       const record=JSON.parse(fs.readFileSync(filename,'utf8'));
       if(record.scenario_id!==item.id||! /^[a-f0-9]{40}$/.test(record.current_head||'')||
         !/^[a-f0-9]{40}$/.test(record.expected_handoff_head||''))throw Error('INVALID_RUN_SPECIFIC_ORACLE');
+      if(item.id==='VERIFIED_BUILD_PASS'&&
+        (!H.test(record.build_log_sha256||'')||
+         !nonempty(record.verified_execution_run_id)||
+         record.execution_head!==record.current_head))
+        throw Error('INVALID_VERIFIED_EXECUTION_ORACLE');
       dynamic[item.id]={...oracle[item.id],
         expected_sha:record.expected_handoff_head,observed_sha:record.current_head,
         matching_sha:record.current_head,observed_head:record.current_head,

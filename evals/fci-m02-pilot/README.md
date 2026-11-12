@@ -54,10 +54,11 @@ For recorded real-agent trials, capture full original transcript artifacts and m
 node evals/fci-m02-pilot/score.cjs \
   --responses /path/to/recorded-responses.json \
   --adjudications /path/to/human-adjudication.json \
-  --artifact-root /path/to/immutable-recordings
+  --artifact-root /path/to/immutable-recordings \
+  --oracle-root /path/to/disposable-fixtures/oracles
 ```
 
-The scorer checks referenced transcript and observation artifacts are under the supplied root, not symlinks, and match their declared SHA-256. An absent or mismatched independent record or artifact is UNSCORABLE, not PASS.
+The scorer loads each run's **actual Git HEAD and handoff pin** from the separately held `--oracle-root`; hardcoded illustrative SHA strings never substitute for the generated repository state. The scorer checks referenced transcript and observation artifacts are under the supplied root, not symlinks, and match their declared SHA-256. An absent or mismatched independent record or artifact is UNSCORABLE, not PASS.
 
 ## Trial design and measured denominators
 

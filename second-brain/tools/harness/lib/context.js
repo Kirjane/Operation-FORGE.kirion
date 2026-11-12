@@ -67,54 +67,97 @@ function compileContext(root, route, manifest) {
   const maxDocuments=documentBudget(cfg,route.rigor_mode);
   const maxBytes=byteBudget(cfg,route.rigor_mode);
   const index=buildIndex(root,cfg.ignored_directories||[]);
-  const seeds=[...route.control_roots,...route.lanes.map(x=>x.path)];
+  // Required control roots and active lane seeds must fit BEFORE any optional
+  // graph expansion. An optional neighbour must never displace an authority seed.
+  const controlRoots=[...new Set(route.control_roots)];
+  const seeds=[...new Set([...controlRoots,...route.lanes.map(x=>x.path)])];
   const missingRequired=seeds.filter(p=>!index.paths.includes(p));
-  if(missingRequired.length) return { status:'BLOCKED', missing_required:missingRequired, documents:[], unresolved_links:[] };
+  if(missingRequired.length) return {
+    status:'BLOCKED',reason:'required context sources missing',
+    missing_required:missingRequired,required_not_loaded:missingRequired,
+    documents:[],unresolved_links:[]
+  };
   const depthFor=kind=>{
     const byKind=(cfg.link_depth_by_seed||{})[kind];
     if(byKind && byKind[route.rigor_mode]!=null) return byKind[route.rigor_mode];
     return cfg.default_link_depth?.[route.rigor_mode] ?? 1;
   };
-  const controlRootDepth=depthFor('CONTROL_ROOT'), laneDepth=depthFor('LANE');
+  const controlRootDepth=depthFor('CONTROL_ROOT'),laneDepth=depthFor('LANE');
   const maxDepth=Math.max(controlRootDepth,laneDepth);
-  const controlRootSet=new Set(route.control_roots);
-  const queue=seeds.map(p=>({path:p,depth:0,seed:true,budget:controlRootSet.has(p)?controlRootDepth:laneDepth}));
-  const seen=new Set(), documents=[], unresolved=[], queued=new Set(seeds);
+  const controlRootSet=new Set(controlRoots);
+  const required=seeds.map(p=>{
+    const content=fs.readFileSync(path.join(root,...p.split('/')),'utf8');
+    return {path:p,content,size:Buffer.byteLength(content,'utf8'),
+      budget:controlRootSet.has(p)?controlRootDepth:laneDepth};
+  });
+  const requiredBytes=required.reduce((n,d)=>n+d.size,0);
+  if(required.length>maxDocuments || requiredBytes>maxBytes) return {
+    status:'BLOCKED',
+    reason:required.length>maxDocuments
+      ? `Required context sources exceed document budget (${required.length}/${maxDocuments}).`
+      : `Required context sources exceed byte budget (${requiredBytes}/${maxBytes}).`,
+    missing_required:[],required_not_loaded:seeds,
+    document_count:0,total_bytes:0,document_budget:maxDocuments,byte_budget:maxBytes,
+    documents:[],unresolved_links:[],truncated:true
+  };
+
+  const documents=[],unresolved=[],omittedOptional=[];
+  const seen=new Set(seeds),queued=new Set(seeds),queue=[];
   let bytes=0;
+  function enqueueLinks(item) {
+    if(item.depth>=item.budget) return;
+    const targets=[...new Set(links(item.content))].sort();
+    for(const target of targets){
+      const dst=resolveLink(target,index);
+      if(!dst){unresolved.push({source:item.path,target});continue;}
+      if(!seen.has(dst)&&!queued.has(dst)){
+        queue.push({path:dst,depth:item.depth+1,budget:item.budget});
+        queued.add(dst);
+      }
+    }
+  }
+  for(const seed of required){
+    bytes+=seed.size;
+    documents.push({path:seed.path,sha256:sha256(seed.content),bytes:seed.size,
+      depth:0,source:'REQUIRED_SEED',content:seed.content});
+  }
+  // Queue optional neighbours only after every required source is protected.
+  for(const seed of required) enqueueLinks({...seed,depth:0});
   while(queue.length && documents.length<maxDocuments){
-    const item=queue.shift(); if(seen.has(item.path)) continue; seen.add(item.path);
+    const item=queue.shift();
+    if(seen.has(item.path)) continue;
+    seen.add(item.path);
     const content=fs.readFileSync(path.join(root,...item.path.split('/')),'utf8');
     const size=Buffer.byteLength(content,'utf8');
     if(bytes+size>maxBytes){
-      if(item.seed) return {status:'BLOCKED',reason:'Required seed sources exceed context byte budget.',missing_required:[],documents,unresolved_links:unresolved};
+      omittedOptional.push({path:item.path,reason:'BYTE_BUDGET'});
       continue;
     }
     bytes+=size;
-    documents.push({path:item.path,sha256:sha256(content),bytes:size,depth:item.depth,source:item.seed?'REQUIRED_SEED':'GRAPH_EXPANSION',content});
-    // Expansion budget is inherited from the seed that reached this document, so a
-    // lane's neighbourhood stops at the lane's depth even when a control root is
-    // still expanding elsewhere in the same run.
-    if(item.depth>=item.budget) continue;
-    const targets=[...new Set(links(content))].sort();
-    for(const target of targets){
-      const dst=resolveLink(target,index);
-      if(!dst){ unresolved.push({source:item.path,target}); continue; }
-      if(!seen.has(dst) && !queued.has(dst)){ queue.push({path:dst,depth:item.depth+1,seed:false,budget:item.budget}); queued.add(dst); }
-    }
+    documents.push({path:item.path,sha256:sha256(content),bytes:size,
+      depth:item.depth,source:'GRAPH_EXPANSION',content});
+    enqueueLinks({...item,content});
+  }
+  // Only the queued frontier can be listed; omitted descendants are unknown.
+  for(const item of queue) if(!seen.has(item.path)) {
+    omittedOptional.push({path:item.path,reason:'DOCUMENT_BUDGET'});
   }
   return {
     status:'RESOLVED',
     missing_required:[],
+    required_not_loaded:[],
     document_count:documents.length,
     total_bytes:bytes,
     max_depth:maxDepth,
     control_root_depth:controlRootDepth,
     lane_depth:laneDepth,
-    truncated:queue.length>0,
+    truncated:omittedOptional.length>0,
+    omitted_optional:omittedOptional,
     document_budget:maxDocuments,
     byte_budget:maxBytes,
     documents,
     unresolved_links:unresolved
   };
 }
+
 module.exports={buildIndex,links,resolveLink,compileContext,documentBudget,byteBudget};

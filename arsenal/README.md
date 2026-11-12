@@ -19,3 +19,6 @@ Loading a skill does not prove an agent complied. CI, review and source inspecti
 
 ## Delivery state
 16 skills staged in this draft branch, not on main. No auto merge, deployment, client policy migration, production changes, or model/VM privileges are granted.
+
+## Executable disposable-skill regression checks
+From the repository root, run `python -m unittest discover -s arsenal/tests -v` (Python 3 standard library). This covers malicious task text staying quoted, invalid identity/SHA input, unauthorized workspace writes and accidental overwrites. These tests exercise the generator, **not** coding effectiveness, hallucination-rate improvement or other hosts' skill-loading behavior. Temporary mission output is **not automatically deleted**; inspect and remove it when the mission ends.

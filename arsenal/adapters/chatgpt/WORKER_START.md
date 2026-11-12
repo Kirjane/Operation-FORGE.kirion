@@ -12,7 +12,7 @@ Owned paths: [authorized allowlist]
 Skill source: Kirch-Nairu/Operation-FORGE.kirion, proposal/kirion-skill-arsenal-multihost-v0-2
 Do not adopt this proposed skill set as new project policy.
 Use the connected GitHub app first. Verify its login. Read target AGENTS.md,
-contract/issue, current remote SHA; then fetch arsenal/.agents/skills skill
+contract/issue, current remote SHA; then fetch .agents/skills skill
 source at verified ref (repository root path is .agents/skills/<name>/SKILL.md).
 Load kirion-core, kirion-dispatch, kirion-session-host and only relevant specialists.
 Use this chat's available VM for safe disposable source/tests. No assumption

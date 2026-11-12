@@ -37,8 +37,8 @@ function validateFeature(feature){
   for(const c of feature.claims){
     if(!c||!ID.test(c.id||'')||claimIds.has(c.id)||
        !sourceIds.has(c.source_id)||!CLAIM_CLASSES.has(c.classification)||
-       typeof c.subject!=='string'||!c.subject.trim()||
-       typeof c.value!=='string'||!c.value.trim()||
+       typeof c.subject!=='string'||!/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,239}$/.test(c.subject)||
+       typeof c.value!=='string'||!c.value.trim()||c.value.length>2000||
        (c.source_sha256!==undefined&&!SHA256.test(c.source_sha256))||
        (c.contract_revision!==undefined&&(!Number.isSafeInteger(c.contract_revision)||c.contract_revision<1)))
       return 'INVALID_OR_DUPLICATE_CLAIM';
@@ -77,6 +77,13 @@ function resolveFeatureContext(feature,options={}){
     sources
   };
   const sourceMap=new Map(sources.map(source=>[source.id,source]));
+  // Recheck local Git reality after reading sources, preventing a source/HEAD
+  // transition during compilation from being reported as a coherent snapshot.
+  const stable=inspectProject(feature.repository);
+  if(stable.status!=='VERIFIED') return {
+    ...blocked('SOURCE_CHANGED_DURING_VERIFICATION'),status:stable.status,
+    feature_id:feature.feature_id,repository:stable,sources
+  };
   const claims=feature.claims.map(claim=>evaluateClaim(feature,claim,sourceMap.get(claim.source_id),options.verifiers||{}));
   const conflicts=findConflicts(claims);
   const state=conflicts.length?'CONFLICTED':'RESOLVED';

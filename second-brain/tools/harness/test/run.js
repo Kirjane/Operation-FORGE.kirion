@@ -172,6 +172,51 @@ test('optional byte omission is visible instead of falsely complete',()=>{
   assert(rendered.includes('NOT LOADED'));
 });
 
+test('MCP bootstrap text and structured output disclose optional byte omissions even with PASS gate',()=>{
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'fci-mcp-optional-'));
+  fs.writeFileSync(path.join(root,'control.md'),'[[Optional]]');
+  fs.writeFileSync(path.join(root,'Optional.md'),'x'.repeat(100));
+  const route={rigor_mode:'LOW',control_roots:['control.md'],lanes:[]};
+  const c=compileContext(root,route,{context:{...cfg.manifest.context,ignored_directories:[],max_documents:5,max_bytes:24}});
+  assert.strictEqual(c.status,'RESOLVED');
+  assert.strictEqual(c.truncated,true);
+  const {buildBootstrapToolResponse}=require('../lib/mcp-bootstrap');
+  const run={run_id:'fci-mcp-fixture',manifest:{},task:{},
+    classification:{status:'RESOLVED',type:'BUG_FIX'},signals:{},
+    risk:{mode:'LOW'},route,gates:{verdict:'PASS'},
+    context:c,context_manifest:require('../lib/runtime').contextManifest(c)};
+  const response=buildBootstrapToolResponse(run,false);
+  assert(response.content[0].text.includes('context=RESOLVED, gate=PASS, truncated=YES, omitted_optional=1'));
+  assert(response.content[0].text.includes('WARNING: NOT LOADED optional context'));
+  assert(response.content[0].text.includes('Optional.md'));
+  assert.deepStrictEqual(response.structuredContent.context_manifest.omitted_optional,c.omitted_optional);
+  assert(!Object.hasOwn(response.structuredContent,'context_documents'));
+  const withDocuments=buildBootstrapToolResponse(run,true);
+  assert.strictEqual(withDocuments.structuredContent.context_documents.length,1);
+  assert(withDocuments.content[0].text.includes('NOT LOADED'));
+  // The server must use the same tested response builder, not a divergent summary.
+  const server=fs.readFileSync(path.join(__dirname,'../mcp/server.mjs'),'utf8');
+  assert(server.includes('return buildBootstrapToolResponse(r,include_context);'));
+});
+
+test('MCP bootstrap reports blocked mandatory context and complete-context control',()=>{
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'fci-mcp-blocked-'));
+  const route={rigor_mode:'LOW',control_roots:['missing.md'],lanes:[]};
+  const c=compileContext(root,route,{context:{...cfg.manifest.context,ignored_directories:[],max_documents:5,max_bytes:100}});
+  const {buildBootstrapToolResponse}=require('../lib/mcp-bootstrap');
+  const base={run_id:'fci-mcp-blocked-fixture',manifest:{},task:{},
+    classification:{status:'RESOLVED',type:'BUG_FIX'},signals:{},risk:{mode:'LOW'},
+    route,gates:{verdict:'BLOCK'},context:c,context_manifest:require('../lib/runtime').contextManifest(c)};
+  const blocked=buildBootstrapToolResponse(base,false);
+  assert(blocked.content[0].text.includes('BLOCKED: REQUIRED CONTEXT NOT LOADED'));
+  assert(blocked.content[0].text.includes('missing.md'));
+  fs.writeFileSync(path.join(root,'missing.md'),'required and complete');
+  const complete=compileContext(root,route,{context:{...cfg.manifest.context,ignored_directories:[],max_documents:5,max_bytes:100}});
+  const green=buildBootstrapToolResponse({...base,context:complete,context_manifest:require('../lib/runtime').contextManifest(complete),gates:{verdict:'PASS'}},false);
+  assert(green.content[0].text.includes('truncated=NO, omitted_optional=0'));
+  assert(!green.content[0].text.includes('NOT LOADED'));
+});
+
 test('complete context preserves required and graph provenance without truncation',()=>{
   const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'fci-complete-'));
   fs.writeFileSync(path.join(tmp,'root.md'),'[[Extra]]');

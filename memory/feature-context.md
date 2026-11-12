@@ -27,7 +27,8 @@ The FCI resolver reads a feature-context input with `feature_id`, an exact local
 3. Approval and execution verifiers are **interfaces**, not live connector integrations. No remote account identity, runtime, CI authenticity or deployment is independently verified by the library.
 4. Conflicts among concurrently VERIFIED, non-superseded claims are blocked. Unverified and inferred contradictions remain non-actionable under the claim guard.
 5. The new library is **not wired into** the existing CLI/MCP/lifecycle acceptance path. Integration and role projections require independent review and an explicit later work package.
-6. Only source filenames/digests/status codes are returned from Git inspection; document bodies are not returned for agents to treat as instructions.
+6. Only source filenames/digests/status codes are returned from Git inspection; document bodies are not returned for agents to treat as instructions. Claim values are represented by SHA-256 digests (rather than copied into responses), and subjects use restricted identifiers to reduce prompt-injection exposure. This is not a universal defense when a later agent independently opens untrusted files.
+7. After source compilation, the resolver checks the local HEAD and worktree again to detect obvious state changes during reconstruction. It cannot provide a transactional snapshot across external systems.
 
 ## Test command and acceptance
 

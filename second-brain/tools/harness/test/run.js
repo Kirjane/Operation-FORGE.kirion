@@ -117,6 +117,81 @@ test('context compiler follows resolvable graph links and hashes content',()=>{
   assert.equal(c.status,'RESOLVED');assert.equal(c.documents.length,2);assert.equal(c.documents[0].sha256.length,64);
 });
 
+test('required roots and lane seeds are loaded before optional graph documents',()=>{
+  const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'fci-required-first-'));
+  fs.writeFileSync(path.join(tmp,'root.md'),'[[Extra]]');
+  fs.writeFileSync(path.join(tmp,'lane.md'),'mandatory lane');
+  fs.writeFileSync(path.join(tmp,'Extra.md'),'optional neighbour');
+  const route={rigor_mode:'LOW',control_roots:['root.md'],lanes:[{path:'lane.md'}]};
+  const c=compileContext(tmp,route,{context:{...cfg.manifest.context,ignored_directories:[],max_documents:2,max_bytes:128}});
+  assert.equal(c.status,'RESOLVED');
+  assert.deepEqual(c.documents.map(x=>x.path),['root.md','lane.md']);
+  assert(c.documents.every(x=>x.source==='REQUIRED_SEED'));
+  assert.equal(c.truncated,true);
+  assert.deepEqual(c.omitted_optional,[{path:'Extra.md',reason:'DOCUMENT_BUDGET'}]);
+  assert.deepEqual(c.required_not_loaded,[]);
+});
+
+test('required seeds fail closed when document count exceeds budget even at LOW rigor',()=>{
+  const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'fci-required-count-'));
+  fs.writeFileSync(path.join(tmp,'root.md'),'authority');
+  fs.writeFileSync(path.join(tmp,'lane.md'),'writer');
+  const route={rigor_mode:'LOW',control_roots:['root.md'],lanes:[{path:'lane.md'}]};
+  const c=compileContext(tmp,route,{context:{...cfg.manifest.context,ignored_directories:[],max_documents:1,max_bytes:128}});
+  assert.equal(c.status,'BLOCKED');
+  assert.match(c.reason,/Required context sources exceed document budget/);
+  assert.deepEqual(c.required_not_loaded,['root.md','lane.md']);
+  assert.equal(c.documents.length,0);
+});
+
+test('required seed byte overflow blocks instead of reporting RESOLVED',()=>{
+  const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'fci-required-bytes-'));
+  fs.writeFileSync(path.join(tmp,'root.md'),'authority-required');
+  fs.writeFileSync(path.join(tmp,'lane.md'),'writer-required');
+  const route={rigor_mode:'MEDIUM',control_roots:['root.md'],lanes:[{path:'lane.md'}]};
+  const c=compileContext(tmp,route,{context:{...cfg.manifest.context,ignored_directories:[],max_documents:4,max_bytes:12}});
+  assert.equal(c.status,'BLOCKED');
+  assert.match(c.reason,/Required context sources exceed byte budget/);
+  assert.deepEqual(c.required_not_loaded,['root.md','lane.md']);
+  assert.deepEqual(c.missing_required,[]);
+});
+
+test('optional byte omission is visible instead of falsely complete',()=>{
+  const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'fci-optional-bytes-'));
+  fs.writeFileSync(path.join(tmp,'root.md'),'[[Extra]]');
+  fs.writeFileSync(path.join(tmp,'Extra.md'),'x'.repeat(100));
+  const route={rigor_mode:'MEDIUM',control_roots:['root.md'],lanes:[]};
+  const c=compileContext(tmp,route,{context:{...cfg.manifest.context,ignored_directories:[],max_documents:4,max_bytes:20}});
+  assert.equal(c.status,'RESOLVED');
+  assert.equal(c.truncated,true);
+  assert.deepEqual(c.omitted_optional,[{path:'Extra.md',reason:'BYTE_BUDGET'}]);
+  assert.deepEqual(c.documents.map(x=>x.path),['root.md']);
+});
+
+test('complete context preserves required and graph provenance without truncation',()=>{
+  const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'fci-complete-'));
+  fs.writeFileSync(path.join(tmp,'root.md'),'[[Extra]]');
+  fs.writeFileSync(path.join(tmp,'Extra.md'),'additional context');
+  const route={rigor_mode:'MEDIUM',control_roots:['root.md'],lanes:[]};
+  const c=compileContext(tmp,route,{context:{...cfg.manifest.context,ignored_directories:[],max_documents:4,max_bytes:128}});
+  assert.equal(c.status,'RESOLVED');
+  assert.equal(c.truncated,false);
+  assert.deepEqual(c.omitted_optional,[]);
+  assert.deepEqual(c.documents.map(x=>x.source),['REQUIRED_SEED','GRAPH_EXPANSION']);
+  assert(c.documents.every(x=>x.sha256.length===64));
+});
+
+test('duplicate control and lane seed is compiled once with control-root authority',()=>{
+  const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'fci-dedup-'));
+  fs.writeFileSync(path.join(tmp,'root.md'),'authority');
+  const route={rigor_mode:'LOW',control_roots:['root.md'],lanes:[{path:'root.md'}]};
+  const c=compileContext(tmp,route,{context:{...cfg.manifest.context,ignored_directories:[],max_documents:1,max_bytes:128}});
+  assert.equal(c.status,'RESOLVED');
+  assert.equal(c.documents.length,1);
+  assert.equal(c.documents[0].source,'REQUIRED_SEED');
+  assert.equal(c.truncated,false);
+});
+
 test('run id is deterministic for unchanged cognition state',()=>{
   const task=bugTask(),a=computeRun(buildTask(task)),b=computeRun(buildTask(task));
   assert.equal(a.run_id,b.run_id);assert.equal(a.task_sha256,b.task_sha256);assert.equal(a.context_sha256,b.context_sha256);

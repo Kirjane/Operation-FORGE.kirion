@@ -13,6 +13,26 @@ SKILLS = ROOT / ".agents" / "skills"
 ADAPTERS = ROOT / "arsenal" / "adapters"
 
 
+# Match concrete repository-local skill references, including the entire leaf
+# path, rather than accepting an existing skill directory as proof of the leaf.
+CANONICAL_SKILL_REF = re.compile(
+    r"(?<![\w/])\.agents/skills/(?P<name>kirion-[a-z0-9-]+)"
+    r"(?P<suffix>(?:/[A-Za-z0-9._-]+)*)"
+)
+
+
+def invalid_canonical_skill_references(content):
+    """Return references that are neither real skill directories nor SKILL.md."""
+    invalid = []
+    for match in CANONICAL_SKILL_REF.finditer(content):
+        name, suffix = match.group("name", "suffix")
+        canonical = SKILLS / name / "SKILL.md"
+        if not canonical.is_file() or suffix not in ("", "/SKILL.md"):
+            invalid.append(match.group(0))
+    return invalid
+
+
+
 class SkillManifestContractTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -82,11 +102,22 @@ class SkillManifestContractTests(unittest.TestCase):
                         (SKILLS / name / "SKILL.md").is_file(),
                         f"{relative} references missing skill: {name}",
                     )
-                for name in re.findall(r"\.agents/skills/(kirion-[a-z0-9-]+)", content):
-                    self.assertTrue(
-                        (SKILLS / name / "SKILL.md").is_file(),
-                        f"{relative} contains invalid canonical path: {name}",
-                    )
+                invalid = invalid_canonical_skill_references(content)
+                self.assertFalse(
+                    invalid, f"{relative} contains invalid canonical path(s): {invalid}"
+                )
+
+
+    def test_rejects_missing_skill_leaf_and_typo_paths(self):
+        canonical = ".agents/skills/kirion-core/SKILL.md"
+        self.assertEqual(invalid_canonical_skill_references(canonical), [])
+        for broken in (
+            ".agents/skills/kirion-core/NOT-SKILL.md",
+            ".agents/skills/kirion-core/SKILL.md.backup",
+            ".agents/skills/kirion-nonexistent/SKILL.md",
+        ):
+            with self.subTest(broken=broken):
+                self.assertEqual(invalid_canonical_skill_references(broken), [broken])
 
 
 if __name__ == "__main__":

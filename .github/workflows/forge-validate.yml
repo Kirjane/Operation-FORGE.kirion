@@ -36,8 +36,5 @@ jobs:
       - name: Nest report
         run: python tools/forge_check.py nest
 
-      - name: Skill manifest and host adapter contract
-        run: python -m unittest discover -s arsenal/tests -p 'test_skill_manifest.py' -v
-
-      - name: Disposable skill generator tests
-        run: python -m unittest discover -s arsenal/tests -p 'test_skill_smith.py' -v
+      - name: All arsenal contract and generator tests
+        run: python -m unittest discover -s arsenal/tests -v

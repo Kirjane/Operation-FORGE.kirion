@@ -4,6 +4,8 @@ Attach or provide the Forge repository plus the target project. Operate role-fir
 
 ## Start
 
+For a **ChatGPT-first, GitHub-connected workflow**, begin with the [one-message ChatGPT bootstrap](arsenal/CHATGPT_BOOTSTRAP.md). It verifies the actual account, pins the Forge skill source, reads the target project's current authority and **classifies origin and work mode independently** using [project-state routing](arsenal/PROJECT_STATES.md). This is a prompt convention, not an automatic installation or a new approval gate. A separate worker can use [WORKER_START](arsenal/adapters/chatgpt/WORKER_START.md).
+
 Accept a Role Call:
 
 ```text

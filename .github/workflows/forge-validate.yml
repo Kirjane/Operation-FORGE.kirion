@@ -35,3 +35,6 @@ jobs:
 
       - name: Nest report
         run: python tools/forge_check.py nest
+
+      - name: All arsenal contract and generator tests
+        run: python -m unittest discover -s arsenal/tests -v

@@ -85,6 +85,8 @@ Unknown values stay `UNKNOWN`/`UNAVAILABLE`. Do not require capabilities the age
 
 Determine NEW versus EXISTING project, reconstruct observable truth, load current project memory, check active work, and select risk/validation. Existing repositories begin read-only unless authorized otherwise. Use [checklists/maintainer-preflight.md](checklists/maintainer-preflight.md).
 
+For precise context selection, distinguish **GREENFIELD versus BROWNFIELD codebase origin** from the current **DISCOVERY, IN_FLIGHT, MAINTENANCE, RECOVERY or PAUSED work mode**. This extends the NEW/EXISTING reconnaissance distinction without introducing new authority gates. An existing Forge-governed project does not require a fresh Nest installation whenever a new ChatGPT conversation starts. See [project-state routing](arsenal/PROJECT_STATES.md); in ChatGPT use the [one-message bootstrap](arsenal/CHATGPT_BOOTSTRAP.md).
+
 ## Code Writer startup
 
 Require a bounded handoff, verify exact authority, load relevant project state, check ownership/dependencies, execute only scope, validate honestly, and return a structured report. Use [checklists/writer-preflight.md](checklists/writer-preflight.md).

@@ -15,6 +15,8 @@ This repository is an engineering control system and reference implementation—
 | Start a project or act as Maintainer | [00_START_HERE](00_START_HERE/README.md) | Launch the existing Forge role and authority handshake |
 | Execute an already-authorized coding task | [Code Writer launcher](00_START_HERE/CODE_WRITER_BOOTSTRAP_HANDOFF.md) | Reconstruct the approved scope and source before writing |
 | Integrate authorized branches | [Integration Writer launcher](00_START_HERE/INTEGRATION_WRITER_BOOTSTRAP_HANDOFF.md) | Reconcile ancestry, ownership, conflicts and acceptance boundaries |
+| Bootstrap Forge in a new ChatGPT conversation | [ChatGPT-first bootstrap](arsenal/CHATGPT_BOOTSTRAP.md) | Verify GitHub identity, detect project state and load minimum applicable skills |
+| Choose greenfield versus active/maintenance/recovery routing | [Project-state guide](arsenal/PROJECT_STATES.md) | Route by project origin and current work mode without re-nesting an existing project |
 | Use portable specialist skills in ChatGPT, Codex or Antigravity | [Skill Arsenal handbook](arsenal/README.md) | Find the correct skills, pin source, configure a host and use evidence |
 | Launch a connected ChatGPT worker | [ChatGPT Worker Start](arsenal/adapters/chatgpt/WORKER_START.md) | Create a bounded mission with authenticated GitHub identity |
 | Evaluate adoption or a release | [Adoption and promotion runbook](arsenal/ADOPTION.md) | Keep skill availability, worker defaults, merge and release separate |

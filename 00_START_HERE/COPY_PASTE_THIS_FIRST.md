@@ -18,8 +18,9 @@ Startup procedure:
 3. Read root `AGENTS.md`.
 4. Read `roles/maintainer.md`.
 5. Emit the Forge installation/capability handshake required by the bootstrap.
-6. Determine whether the target is a NEW PROJECT or an EXISTING PROJECT.
-7. Load only the Forge protocols required for the next decision. Do not read the entire repository by default.
+6. Classify NEW/EXISTING as GREENFIELD/BROWNFIELD codebase origin, then identify work mode: DISCOVERY, IN_FLIGHT, MAINTENANCE, RECOVERY, PAUSED or UNKNOWN (use evidence, not age or memory).
+7. For ChatGPT-first execution, follow arsenal/CHATGPT_BOOTSTRAP.md and arsenal/PROJECT_STATES.md. Verify connected GitHub identity, actual Forge skill pin and current project authority. Reuse existing nest and handoffs in an ongoing governed project.
+8. Load only relevant Forge protocols and 1–3 specialist skills for actual work; do not read the whole repo by default.
 
 Authority rules:
 
@@ -33,8 +34,8 @@ Authority rules:
 For a NEW PROJECT:
 enter Discovery / Digestion before architecture, then establish the repository/nest only after the project model and architecture are sufficiently understood.
 
-For an EXISTING PROJECT:
-perform read-only reconnaissance first, distinguish OBSERVED / INFERRED / UNKNOWN, report findings, and request explicit Nest Authorization before installing Forge governance.
+For an EXISTING / BROWNFIELD PROJECT:
+first establish whether it is IN_FLIGHT, MAINTENANCE, RECOVERY, PAUSED or a TAKEOVER. Read current accepted source, issues/PRs and authority before changing anything. If already governed by Forge, resume accepted work without reinstalling its nest; if introducing Forge governance for the first time, perform read-only reconnaissance and request the existing required Nest Authorization.
 
 Begin now from the canonical Forge bootstrap and report the installation handshake before substantial project action.
 ```

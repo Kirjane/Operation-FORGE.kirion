@@ -4,7 +4,7 @@
 
 The Skill Arsenal contains **sixteen plain-text Agent Skills** inside the repository's .agents/skills tree. Each skill is a canonical SKILL.md file with a name and description in frontmatter. The arsenal is a **supporting execution layer**, not a new Forge constitution, a privileged plugin, a replacement for a feature contract, or a license to mutate a repository.
 
-**Navigation:** [Forge home](../README.md) · [Adoption and promotion](ADOPTION.md) · [Practical launch examples](EXAMPLES.md) · [ChatGPT worker start](adapters/chatgpt/WORKER_START.md) · [Manifest](manifest.json).
+**Navigation:** [Forge home](../README.md) · [One-message ChatGPT bootstrap](CHATGPT_BOOTSTRAP.md) · [Project-state routing](PROJECT_STATES.md) · [Adoption and promotion](ADOPTION.md) · [Practical launch examples](EXAMPLES.md) · [ChatGPT worker start](adapters/chatgpt/WORKER_START.md) · [Manifest](manifest.json).
 
 ## Contents
 

@@ -1,0 +1,22 @@
+name: Validate Forge Obsidian Vault
+on:
+  push:
+    paths:
+      - 'obsidian/**'
+      - '.github/workflows/obsidian-validate.yml'
+  pull_request:
+    paths:
+      - 'obsidian/**'
+      - '.github/workflows/obsidian-validate.yml'
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m unittest discover -s obsidian/tests -v
+      - run: python obsidian/scripts/build_vault.py --repo-root . --check

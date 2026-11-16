@@ -1,0 +1,537 @@
+{
+  "accepted_source_ref": "ac7285d7cd866b4728c28d64a7c145a6bc43f812",
+  "candidate_source_ref": "eabbfbabdbb22d8684fb2c3d80767b8547852b83",
+  "notes": [
+    {
+      "id": "forge.00.home",
+      "note": "00 HOME.md",
+      "source_path": "AGENTS.md",
+      "source_ref": "ac7285d7cd866b4728c28d64a7c145a6bc43f812",
+      "source_repo": "Kirch-Nairu/Operation-FORGE.kirion",
+      "source_status": "ACCEPTED",
+      "source_url": "https://github.com/Kirch-Nairu/Operation-FORGE.kirion/blob/ac7285d7cd866b4728c28d64a7c145a6bc43f812/AGENTS.md"
+    },
+    {
+      "id": "forge.brownfield.in.flight",
+      "note": "01 START HERE/Brownfield In-Flight.md",
+      "source_path": "arsenal/PROJECT_STATES.md",
+      "source_ref": "eabbfbabdbb22d8684fb2c3d80767b8547852b83",
+      "source_repo": "Kirch-Nairu/Operation-FORGE.kirion",
+      "source_status": "CANDIDATE",
+      "source_url": "https://github.com/Kirch-Nairu/Operation-FORGE.kirion/blob/eabbfbabdbb22d8684fb2c3d80767b8547852b83/arsenal/PROJECT_STATES.md"
+    },
+    {
+      "id": "forge.chatgpt.first.bootstrap",
+      "note": "01 START HERE/ChatGPT-First Bootstrap.md",
+      "source_path": "arsenal/CHATGPT_BOOTSTRAP.md",
+      "source_ref": "eabbfbabdbb22d8684fb2c3d80767b8547852b83",
+      "source_repo": "Kirch-Nairu/Operation-FORGE.kirion",
+      "source_status": "CANDIDATE",
+      "source_url": "https://github.com/Kirch-Nairu/Operation-FORGE.kirion/blob/eabbfbabdbb22d8684fb2c3d80767b8547852b83/arsenal/CHATGPT_BOOTSTRAP.md"
+    },
+    {
+      "id": "forge.greenfield.project",
+      "note": "01 START HERE/Greenfield Project.md",
+      "source_path": "arsenal/PROJECT_STATES.md",
+      "source_ref": "eabbfbabdbb22d8684fb2c3d80767b8547852b83",
+      "source_repo": "Kirch-Nairu/Operation-FORGE.kirion",
+      "source_status": "CANDIDATE",
+      "source_url": "https://github.com/Kirch-Nairu/Operation-FORGE.kirion/blob/eabbfbabdbb22d8684fb2c3d80767b8547852b83/arsenal/PROJECT_STATES.md"
+    },
+    {
+      "id": "forge.maintenance.and.recovery",
+      "note": "01 START HERE/Maintenance and Recovery.md",
+      "source_path": "arsenal/PROJECT_STATES.md",
+      "source_ref": "eabbfbabdbb22d8684fb2c3d80767b8547852b83",
+      "source_repo": "Kirch-Nairu/Operation-FORGE.kirion",
+      "source_status": "CANDIDATE",
+      "source_url": "https://github.com/Kirch-Nairu/Operation-FORGE.kirion/blob/eabbfbabdbb22d8684fb2c3d80767b8547852b83/arsenal/PROJECT_STATES.md"
+    },
+    {
+      "id": "forge.constitution.and.authority",
+      "note": "02 FORGE CORE/Constitution and Authority.md",
+      "source_path": "AGENTS.md",
+      "source_ref": "ac7285d7cd866b4728c28d64a7c145a6bc43f812",
+      "source_repo": "Kirch-Nairu/Operation-FORGE.kirion",
+      "source_status": "ACCEPTED",
+      "source_url": "https://github.com/Kirch-Nairu/Operation-FORGE.kirion/blob/ac7285d7cd866b4728c28d64a7c145a6bc43f812/AGENTS.md"
+    },
+    {
+      "id": "forge.evidence.semantics",
+      "note": "02 FORGE CORE/Evidence Semantics.md",
+      "source_path": "AGENTS.md",
+      "source_ref": "ac7285d7cd866b4728c28d64a7c145a6bc43f812",
+      "source_repo": "Kirch-Nairu/Operation-FORGE.kirion",
+      "source_status": "ACCEPTED",
+      "source_url": "https://github.com/Kirch-Nairu/Operation-FORGE.kirion/blob/ac7285d7cd866b4728c28d64a7c145a6bc43f812/AGENTS.md"
+    },
+    {
+      "id": "forge.forge.and.second.brain",
+      "note": "02 FORGE CORE/Forge and Second Brain.md",
+      "source_path": "AGENTS.md",
+      "source_ref": "ac7285d7cd866b4728c28d64a7c145a6bc43f812",
+      "source_repo": "Kirch-Nairu/Operation-FORGE.kirion",
+      "source_status": "ACCEPTED",
+      "source_url": "https://github.com/Kirch-Nairu/Operation-FORGE.kirion/blob/ac7285d7cd866b4728c28d64a7c145a6bc43f812/AGENTS.md"
+    },
+    {
+      "id": "forge.github.source.truth",
+      "note": "02 FORGE CORE/GitHub Source Truth.md",
+      "source_path": "AGENTS.md",
+      "source_ref": "ac7285d7cd866b4728c28d64a7c145a6bc43f812",
+      "source_repo": "Kirch-Nairu/Operation-FORGE.kirion",
+      "source_status": "ACCEPTED",
+      "source_url": "https://github.com/Kirch-Nairu/Operation-FORGE.kirion/blob/ac7285d7cd866b4728c28d64a7c145a6bc43f812/AGENTS.md"
+    },
+    {
+      "id": "forge.role.ownership.and.handoffs",
+      "note": "02 FORGE CORE/Role Ownership and Handoffs.md",
+      "source_path": "AGENTS.md",
+      "source_ref": "ac7285d7cd866b4728c28d64a7c145a6bc43f812",
+      "source_repo": "Kirch-Nairu/Operation-FORGE.kirion",
+      "source_status": "ACCEPTED",
+      "source_url": "https://github.com/Kirch-Nairu/Operation-FORGE.kirion/blob/ac7285d7cd866b4728c28d64a7c145a6bc43f812/AGENTS.md"
+    },
+    {
+      "id": "forge.00.skill.index",
+      "note": "03 SKILL ARSENAL/00 Skill Index.md",
+      "source_path": "arsenal/manifest.json",
+      "source_ref": "eabbfbabdbb22d8684fb2c3d80767b8547852b83",
+      "source_repo": "Kirch-Nairu/Operation-FORGE.kirion",
+      "source_status": "CANDIDATE",
+      "source_url": "https://github.com/Kirch-Nairu/Operation-FORGE.kirion/blob/eabbfbabdbb22d8684fb2c3d80767b8547852b83/arsenal/manifest.json"
+    },
+    {
+      "id": "forge.skill.kirion-architecture",
+      "note": "03 SKILL ARSENAL/Kirion Architecture.md",
+      "source_blob_sha": "e47da0edcd885e83925c63e3f8f1252eb1748b33",
+      "source_path": ".agents/skills/kirion-architecture/SKILL.md",
+      "source_ref": "eabbfbabdbb22d8684fb2c3d80767b8547852b83",
+      "source_repo": "Kirch-Nairu/Operation-FORGE.kirion",
+      "source_status": "CANDIDATE",
+      "source_url": "https://github.com/Kirch-Nairu/Operation-FORGE.kirion/blob/eabbfbabdbb22d8684fb2c3d80767b8547852b83/.agents/skills/kirion-architecture/SKILL.md"
+    },
+    {
+      "id": "forge.skill.kirion-business-logic",
+      "note": "03 SKILL ARSENAL/Kirion Business Logic.md",
+      "source_blob_sha": "a748f358ccbfebc0d59b9a056da0150d33f49b98",
+      "source_path": ".agents/skills/kirion-business-logic/SKILL.md",
+      "source_ref": "eabbfbabdbb22d8684fb2c3d80767b8547852b83",
+      "source_repo": "Kirch-Nairu/Operation-FORGE.kirion",
+      "source_status": "CANDIDATE",
+      "source_url": "https://github.com/Kirch-Nairu/Operation-FORGE.kirion/blob/eabbfbabdbb22d8684fb2c3d80767b8547852b83/.agents/skills/kirion-business-logic/SKILL.md"
+    },
+    {
+      "id": "forge.skill.kirion-cognition",
+      "note": "03 SKILL ARSENAL/Kirion Cognition.md",
+      "source_blob_sha": "06ffd911a441228195e64a905149ad42fd7ceb93",
+      "source_path": ".agents/skills/kirion-cognition/SKILL.md",
+      "source_ref": "eabbfbabdbb22d8684fb2c3d80767b8547852b83",
+      "source_repo": "Kirch-Nairu/Operation-FORGE.kirion",
+      "source_status": "CANDIDATE",
+      "source_url": "https://github.com/Kirch-Nairu/Operation-FORGE.kirion/blob/eabbfbabdbb22d8684fb2c3d80767b8547852b83/.agents/skills/kirion-cognition/SKILL.md"
+    },
+    {
+      "id": "forge.skill.kirion-core",
+      "note": "03 SKILL ARSENAL/Kirion Core.md",
+      "source_blob_sha": "712fa8e7e525cda6dd1725dc9ebbb34e5f8b139d",
+      "source_path": ".agents/skills/kirion-core/SKILL.md",
+      "source_ref": "eabbfbabdbb22d8684fb2c3d80767b8547852b83",
+      "source_repo": "Kirch-Nairu/Operation-FORGE.kirion",
+      "source_status": "CANDIDATE",
+      "source_url": "https://github.com/Kirch-Nairu/Operation-FORGE.kirion/blob/eabbfbabdbb22d8684fb2c3d80767b8547852b83/.agents/skills/kirion-core/SKILL.md"
+    },
+    {
+      "id": "forge.skill.kirion-debug",
+      "note": "03 SKILL ARSENAL/Kirion Debug.md",
+      "source_blob_sha": "e3110f4a7b46c1b48567a339979590161d5cfca9",
+      "source_path": ".agents/skills/kirion-debug/SKILL.md",
+      "source_ref": "eabbfbabdbb22d8684fb2c3d80767b8547852b83",
+      "source_repo": "Kirch-Nairu/Operation-FORGE.kirion",
+      "source_status": "CANDIDATE",
+      "source_url": "https://github.com/Kirch-Nairu/Operation-FORGE.kirion/blob/eabbfbabdbb22d8684fb2c3d80767b8547852b83/.agents/skills/kirion-debug/SKILL.md"
+    },
+    {
+      "id": "forge.skill.kirion-dispatch",
+      "note": "03 SKILL ARSENAL/Kirion Dispatch.md",
+      "source_blob_sha": "ab65104357eaa9d07218aac07e2d22c97129e8a7",
+      "source_path": ".agents/skills/kirion-dispatch/SKILL.md",
+      "source_ref": "eabbfbabdbb22d8684fb2c3d80767b8547852b83",
+      "source_repo": "Kirch-Nairu/Operation-FORGE.kirion",
+      "source_status": "CANDIDATE",
+      "source_url": "https://github.com/Kirch-Nairu/Operation-FORGE.kirion/blob/eabbfbabdbb22d8684fb2c3d80767b8547852b83/.agents/skills/kirion-dispatch/SKILL.md"
+    },
+    {
+      "id": "forge.skill.kirion-evidence",
+      "note": "03 SKILL ARSENAL/Kirion Evidence.md",
+      "source_blob_sha": "c4cb895e68ab5c4e4431b49698480b3fcdbd1c39",
+      "source_path": ".agents/skills/kirion-evidence/SKILL.md",
+      "source_ref": "eabbfbabdbb22d8684fb2c3d80767b8547852b83",
+      "source_repo": "Kirch-Nairu/Operation-FORGE.kirion",
+      "source_status": "CANDIDATE",
+      "source_url": "https://github.com/Kirch-Nairu/Operation-FORGE.kirion/blob/eabbfbabdbb22d8684fb2c3d80767b8547852b83/.agents/skills/kirion-evidence/SKILL.md"
+    },
+    {
+      "id": "forge.skill.kirion-frontend",
+      "note": "03 SKILL ARSENAL/Kirion Frontend.md",
+      "source_blob_sha": "0770185284121d8634b9b2dd9bbb0173a0fb61fe",
+      "source_path": ".agents/skills/kirion-frontend/SKILL.md",
+      "source_ref": "eabbfbabdbb22d8684fb2c3d80767b8547852b83",
+      "source_repo": "Kirch-Nairu/Operation-FORGE.kirion",
+      "source_status": "CANDIDATE",
+      "source_url": "https://github.com/Kirch-Nairu/Operation-FORGE.kirion/blob/eabbfbabdbb22d8684fb2c3d80767b8547852b83/.agents/skills/kirion-frontend/SKILL.md"
+    },
+    {
+      "id": "forge.skill.kirion-integrator",
+      "note": "03 SKILL ARSENAL/Kirion Integrator.md",
+      "source_blob_sha": "b94ce28ff46681bd24e60240c5a32502154b5524",
+      "source_path": ".agents/skills/kirion-integrator/SKILL.md",
+      "source_ref": "eabbfbabdbb22d8684fb2c3d80767b8547852b83",
+      "source_repo": "Kirch-Nairu/Operation-FORGE.kirion",
+      "source_status": "CANDIDATE",
+      "source_url": "https://github.com/Kirch-Nairu/Operation-FORGE.kirion/blob/eabbfbabdbb22d8684fb2c3d80767b8547852b83/.agents/skills/kirion-integrator/SKILL.md"
+    },
+    {
+      "id": "forge.skill.kirion-qa",
+      "note": "03 SKILL ARSENAL/Kirion QA.md",
+      "source_blob_sha": "37ce76213345b1cbb396539441261699825d1dba",
+      "source_path": ".agents/skills/kirion-qa/SKILL.md",
+      "source_ref": "eabbfbabdbb22d8684fb2c3d80767b8547852b83",
+      "source_repo": "Kirch-Nairu/Operation-FORGE.kirion",
+      "source_status": "CANDIDATE",
+      "source_url": "https://github.com/Kirch-Nairu/Operation-FORGE.kirion/blob/eabbfbabdbb22d8684fb2c3d80767b8547852b83/.agents/skills/kirion-qa/SKILL.md"
+    },
+    {
+      "id": "forge.skill.kirion-review",
+      "note": "03 SKILL ARSENAL/Kirion Review.md",
+      "source_blob_sha": "f2cb9bbbf6abdce2538a639e227cf627785286ae",
+      "source_path": ".agents/skills/kirion-review/SKILL.md",
+      "source_ref": "eabbfbabdbb22d8684fb2c3d80767b8547852b83",
+      "source_repo": "Kirch-Nairu/Operation-FORGE.kirion",
+      "source_status": "CANDIDATE",
+      "source_url": "https://github.com/Kirch-Nairu/Operation-FORGE.kirion/blob/eabbfbabdbb22d8684fb2c3d80767b8547852b83/.agents/skills/kirion-review/SKILL.md"
+    },
+    {
+      "id": "forge.skill.kirion-runtime",
+      "note": "03 SKILL ARSENAL/Kirion Runtime.md",
+      "source_blob_sha": "a45ed5cfaaac8711b7d3a9aee5cc97b861434a5d",
+      "source_path": ".agents/skills/kirion-runtime/SKILL.md",
+      "source_ref": "eabbfbabdbb22d8684fb2c3d80767b8547852b83",
+      "source_repo": "Kirch-Nairu/Operation-FORGE.kirion",
+      "source_status": "CANDIDATE",
+      "source_url": "https://github.com/Kirch-Nairu/Operation-FORGE.kirion/blob/eabbfbabdbb22d8684fb2c3d80767b8547852b83/.agents/skills/kirion-runtime/SKILL.md"
+    },
+    {
+      "id": "forge.skill.kirion-security",
+      "note": "03 SKILL ARSENAL/Kirion Security.md",
+      "source_blob_sha": "7e1340c6df35ad246ae6f4ae60476d97a57ef029",
+      "source_path": ".agents/skills/kirion-security/SKILL.md",
+      "source_ref": "eabbfbabdbb22d8684fb2c3d80767b8547852b83",
+      "source_repo": "Kirch-Nairu/Operation-FORGE.kirion",
+      "source_status": "CANDIDATE",
+      "source_url": "https://github.com/Kirch-Nairu/Operation-FORGE.kirion/blob/eabbfbabdbb22d8684fb2c3d80767b8547852b83/.agents/skills/kirion-security/SKILL.md"
+    },
+    {
+      "id": "forge.skill.kirion-session-host",
+      "note": "03 SKILL ARSENAL/Kirion Session Host.md",
+      "source_blob_sha": "0c37a217ecd88b8b94e02b9dce683611b34ac528",
+      "source_path": ".agents/skills/kirion-session-host/SKILL.md",
+      "source_ref": "eabbfbabdbb22d8684fb2c3d80767b8547852b83",
+      "source_repo": "Kirch-Nairu/Operation-FORGE.kirion",
+      "source_status": "CANDIDATE",
+      "source_url": "https://github.com/Kirch-Nairu/Operation-FORGE.kirion/blob/eabbfbabdbb22d8684fb2c3d80767b8547852b83/.agents/skills/kirion-session-host/SKILL.md"
+    },
+    {
+      "id": "forge.skill.kirion-skill-smith",
+      "note": "03 SKILL ARSENAL/Kirion Skill Smith.md",
+      "source_blob_sha": "d0e0e05ed52748e6b718e4d346d5776faad22b06",
+      "source_path": ".agents/skills/kirion-skill-smith/SKILL.md",
+      "source_ref": "eabbfbabdbb22d8684fb2c3d80767b8547852b83",
+      "source_repo": "Kirch-Nairu/Operation-FORGE.kirion",
+      "source_status": "CANDIDATE",
+      "source_url": "https://github.com/Kirch-Nairu/Operation-FORGE.kirion/blob/eabbfbabdbb22d8684fb2c3d80767b8547852b83/.agents/skills/kirion-skill-smith/SKILL.md"
+    },
+    {
+      "id": "forge.skill.kirion-worker",
+      "note": "03 SKILL ARSENAL/Kirion Worker.md",
+      "source_blob_sha": "af8f21c82a6e6a065f73d9d36ec22483b3351eab",
+      "source_path": ".agents/skills/kirion-worker/SKILL.md",
+      "source_ref": "eabbfbabdbb22d8684fb2c3d80767b8547852b83",
+      "source_repo": "Kirch-Nairu/Operation-FORGE.kirion",
+      "source_status": "CANDIDATE",
+      "source_url": "https://github.com/Kirch-Nairu/Operation-FORGE.kirion/blob/eabbfbabdbb22d8684fb2c3d80767b8547852b83/.agents/skills/kirion-worker/SKILL.md"
+    },
+    {
+      "id": "forge.specialist.selection",
+      "note": "03 SKILL ARSENAL/Specialist Selection.md",
+      "source_path": "arsenal/README.md",
+      "source_ref": "eabbfbabdbb22d8684fb2c3d80767b8547852b83",
+      "source_repo": "Kirch-Nairu/Operation-FORGE.kirion",
+      "source_status": "CANDIDATE",
+      "source_url": "https://github.com/Kirch-Nairu/Operation-FORGE.kirion/blob/eabbfbabdbb22d8684fb2c3d80767b8547852b83/arsenal/README.md"
+    },
+    {
+      "id": "forge.acceptance.gate",
+      "note": "04 WORKERS AND OPERATIONS/Acceptance Gate.md",
+      "source_path": "protocols/promotion.md",
+      "source_ref": "ac7285d7cd866b4728c28d64a7c145a6bc43f812",
+      "source_repo": "Kirch-Nairu/Operation-FORGE.kirion",
+      "source_status": "ACCEPTED",
+      "source_url": "https://github.com/Kirch-Nairu/Operation-FORGE.kirion/blob/ac7285d7cd866b4728c28d64a7c145a6bc43f812/protocols/promotion.md"
+    },
+    {
+      "id": "forge.controlled.recovery",
+      "note": "04 WORKERS AND OPERATIONS/Controlled Recovery.md",
+      "source_path": ".agents/skills/kirion-runtime/SKILL.md",
+      "source_ref": "eabbfbabdbb22d8684fb2c3d80767b8547852b83",
+      "source_repo": "Kirch-Nairu/Operation-FORGE.kirion",
+      "source_status": "CANDIDATE",
+      "source_url": "https://github.com/Kirch-Nairu/Operation-FORGE.kirion/blob/eabbfbabdbb22d8684fb2c3d80767b8547852b83/.agents/skills/kirion-runtime/SKILL.md"
+    },
+    {
+      "id": "forge.engineering.qa",
+      "note": "04 WORKERS AND OPERATIONS/Engineering QA.md",
+      "source_path": ".agents/skills/kirion-qa/SKILL.md",
+      "source_ref": "eabbfbabdbb22d8684fb2c3d80767b8547852b83",
+      "source_repo": "Kirch-Nairu/Operation-FORGE.kirion",
+      "source_status": "CANDIDATE",
+      "source_url": "https://github.com/Kirch-Nairu/Operation-FORGE.kirion/blob/eabbfbabdbb22d8684fb2c3d80767b8547852b83/.agents/skills/kirion-qa/SKILL.md"
+    },
+    {
+      "id": "forge.financial.integrity",
+      "note": "04 WORKERS AND OPERATIONS/Financial Integrity.md",
+      "source_path": ".agents/skills/kirion-business-logic/SKILL.md",
+      "source_ref": "eabbfbabdbb22d8684fb2c3d80767b8547852b83",
+      "source_repo": "Kirch-Nairu/Operation-FORGE.kirion",
+      "source_status": "CANDIDATE",
+      "source_url": "https://github.com/Kirch-Nairu/Operation-FORGE.kirion/blob/eabbfbabdbb22d8684fb2c3d80767b8547852b83/.agents/skills/kirion-business-logic/SKILL.md"
+    },
+    {
+      "id": "forge.independent.review",
+      "note": "04 WORKERS AND OPERATIONS/Independent Review.md",
+      "source_path": "protocols/promotion.md",
+      "source_ref": "ac7285d7cd866b4728c28d64a7c145a6bc43f812",
+      "source_repo": "Kirch-Nairu/Operation-FORGE.kirion",
+      "source_status": "ACCEPTED",
+      "source_url": "https://github.com/Kirch-Nairu/Operation-FORGE.kirion/blob/ac7285d7cd866b4728c28d64a7c145a6bc43f812/protocols/promotion.md"
+    },
+    {
+      "id": "forge.integration.and.recovery",
+      "note": "04 WORKERS AND OPERATIONS/Integration and Recovery.md",
+      "source_path": "protocols/promotion.md",
+      "source_ref": "ac7285d7cd866b4728c28d64a7c145a6bc43f812",
+      "source_repo": "Kirch-Nairu/Operation-FORGE.kirion",
+      "source_status": "ACCEPTED",
+      "source_url": "https://github.com/Kirch-Nairu/Operation-FORGE.kirion/blob/ac7285d7cd866b4728c28d64a7c145a6bc43f812/protocols/promotion.md"
+    },
+    {
+      "id": "forge.jane",
+      "note": "04 WORKERS AND OPERATIONS/Jane.md",
+      "source_path": "AGENTS.md",
+      "source_ref": "ac7285d7cd866b4728c28d64a7c145a6bc43f812",
+      "source_repo": "Kirch-Nairu/Operation-FORGE.kirion",
+      "source_status": "ACCEPTED",
+      "source_url": "https://github.com/Kirch-Nairu/Operation-FORGE.kirion/blob/ac7285d7cd866b4728c28d64a7c145a6bc43f812/AGENTS.md"
+    },
+    {
+      "id": "forge.lucien",
+      "note": "04 WORKERS AND OPERATIONS/Lucien.md",
+      "source_path": "AGENTS.md",
+      "source_ref": "ac7285d7cd866b4728c28d64a7c145a6bc43f812",
+      "source_repo": "Kirch-Nairu/Operation-FORGE.kirion",
+      "source_status": "ACCEPTED",
+      "source_url": "https://github.com/Kirch-Nairu/Operation-FORGE.kirion/blob/ac7285d7cd866b4728c28d64a7c145a6bc43f812/AGENTS.md"
+    },
+    {
+      "id": "forge.maintainer",
+      "note": "04 WORKERS AND OPERATIONS/Maintainer.md",
+      "source_path": "AGENTS.md",
+      "source_ref": "ac7285d7cd866b4728c28d64a7c145a6bc43f812",
+      "source_repo": "Kirch-Nairu/Operation-FORGE.kirion",
+      "source_status": "ACCEPTED",
+      "source_url": "https://github.com/Kirch-Nairu/Operation-FORGE.kirion/blob/ac7285d7cd866b4728c28d64a7c145a6bc43f812/AGENTS.md"
+    },
+    {
+      "id": "forge.nox",
+      "note": "04 WORKERS AND OPERATIONS/Nox.md",
+      "source_path": "AGENTS.md",
+      "source_ref": "ac7285d7cd866b4728c28d64a7c145a6bc43f812",
+      "source_repo": "Kirch-Nairu/Operation-FORGE.kirion",
+      "source_status": "ACCEPTED",
+      "source_url": "https://github.com/Kirch-Nairu/Operation-FORGE.kirion/blob/ac7285d7cd866b4728c28d64a7c145a6bc43f812/AGENTS.md"
+    },
+    {
+      "id": "forge.root.cause.debugging",
+      "note": "04 WORKERS AND OPERATIONS/Root-Cause Debugging.md",
+      "source_path": ".agents/skills/kirion-debug/SKILL.md",
+      "source_ref": "eabbfbabdbb22d8684fb2c3d80767b8547852b83",
+      "source_repo": "Kirch-Nairu/Operation-FORGE.kirion",
+      "source_status": "CANDIDATE",
+      "source_url": "https://github.com/Kirch-Nairu/Operation-FORGE.kirion/blob/eabbfbabdbb22d8684fb2c3d80767b8547852b83/.agents/skills/kirion-debug/SKILL.md"
+    },
+    {
+      "id": "forge.source.writer.workflow",
+      "note": "04 WORKERS AND OPERATIONS/Source Writer Workflow.md",
+      "source_path": "AGENTS.md",
+      "source_ref": "ac7285d7cd866b4728c28d64a7c145a6bc43f812",
+      "source_repo": "Kirch-Nairu/Operation-FORGE.kirion",
+      "source_status": "ACCEPTED",
+      "source_url": "https://github.com/Kirch-Nairu/Operation-FORGE.kirion/blob/ac7285d7cd866b4728c28d64a7c145a6bc43f812/AGENTS.md"
+    },
+    {
+      "id": "forge.static.ui.showcase",
+      "note": "04 WORKERS AND OPERATIONS/Static UI Showcase.md",
+      "source_path": ".agents/skills/kirion-frontend/SKILL.md",
+      "source_ref": "eabbfbabdbb22d8684fb2c3d80767b8547852b83",
+      "source_repo": "Kirch-Nairu/Operation-FORGE.kirion",
+      "source_status": "CANDIDATE",
+      "source_url": "https://github.com/Kirch-Nairu/Operation-FORGE.kirion/blob/eabbfbabdbb22d8684fb2c3d80767b8547852b83/.agents/skills/kirion-frontend/SKILL.md"
+    },
+    {
+      "id": "forge.worker.identity.and.handoffs",
+      "note": "04 WORKERS AND OPERATIONS/Worker Identity and Handoffs.md",
+      "source_path": "AGENTS.md",
+      "source_ref": "ac7285d7cd866b4728c28d64a7c145a6bc43f812",
+      "source_repo": "Kirch-Nairu/Operation-FORGE.kirion",
+      "source_status": "ACCEPTED",
+      "source_url": "https://github.com/Kirch-Nairu/Operation-FORGE.kirion/blob/ac7285d7cd866b4728c28d64a7c145a6bc43f812/AGENTS.md"
+    },
+    {
+      "id": "forge.greenfield.and.discovery",
+      "note": "05 PROJECT STATES/Greenfield and Discovery.md",
+      "source_path": "arsenal/PROJECT_STATES.md",
+      "source_ref": "eabbfbabdbb22d8684fb2c3d80767b8547852b83",
+      "source_repo": "Kirch-Nairu/Operation-FORGE.kirion",
+      "source_status": "CANDIDATE",
+      "source_url": "https://github.com/Kirch-Nairu/Operation-FORGE.kirion/blob/eabbfbabdbb22d8684fb2c3d80767b8547852b83/arsenal/PROJECT_STATES.md"
+    },
+    {
+      "id": "forge.in.flight",
+      "note": "05 PROJECT STATES/In-Flight.md",
+      "source_path": "arsenal/PROJECT_STATES.md",
+      "source_ref": "eabbfbabdbb22d8684fb2c3d80767b8547852b83",
+      "source_repo": "Kirch-Nairu/Operation-FORGE.kirion",
+      "source_status": "CANDIDATE",
+      "source_url": "https://github.com/Kirch-Nairu/Operation-FORGE.kirion/blob/eabbfbabdbb22d8684fb2c3d80767b8547852b83/arsenal/PROJECT_STATES.md"
+    },
+    {
+      "id": "forge.maintenance",
+      "note": "05 PROJECT STATES/Maintenance.md",
+      "source_path": "arsenal/PROJECT_STATES.md",
+      "source_ref": "eabbfbabdbb22d8684fb2c3d80767b8547852b83",
+      "source_repo": "Kirch-Nairu/Operation-FORGE.kirion",
+      "source_status": "CANDIDATE",
+      "source_url": "https://github.com/Kirch-Nairu/Operation-FORGE.kirion/blob/eabbfbabdbb22d8684fb2c3d80767b8547852b83/arsenal/PROJECT_STATES.md"
+    },
+    {
+      "id": "forge.origin.vs.work.mode",
+      "note": "05 PROJECT STATES/Origin vs Work Mode.md",
+      "source_path": "arsenal/PROJECT_STATES.md",
+      "source_ref": "eabbfbabdbb22d8684fb2c3d80767b8547852b83",
+      "source_repo": "Kirch-Nairu/Operation-FORGE.kirion",
+      "source_status": "CANDIDATE",
+      "source_url": "https://github.com/Kirch-Nairu/Operation-FORGE.kirion/blob/eabbfbabdbb22d8684fb2c3d80767b8547852b83/arsenal/PROJECT_STATES.md"
+    },
+    {
+      "id": "forge.paused.and.takeover",
+      "note": "05 PROJECT STATES/Paused and Takeover.md",
+      "source_path": "arsenal/PROJECT_STATES.md",
+      "source_ref": "eabbfbabdbb22d8684fb2c3d80767b8547852b83",
+      "source_repo": "Kirch-Nairu/Operation-FORGE.kirion",
+      "source_status": "CANDIDATE",
+      "source_url": "https://github.com/Kirch-Nairu/Operation-FORGE.kirion/blob/eabbfbabdbb22d8684fb2c3d80767b8547852b83/arsenal/PROJECT_STATES.md"
+    },
+    {
+      "id": "forge.recovery",
+      "note": "05 PROJECT STATES/Recovery.md",
+      "source_path": "arsenal/PROJECT_STATES.md",
+      "source_ref": "eabbfbabdbb22d8684fb2c3d80767b8547852b83",
+      "source_repo": "Kirch-Nairu/Operation-FORGE.kirion",
+      "source_status": "CANDIDATE",
+      "source_url": "https://github.com/Kirch-Nairu/Operation-FORGE.kirion/blob/eabbfbabdbb22d8684fb2c3d80767b8547852b83/arsenal/PROJECT_STATES.md"
+    },
+    {
+      "id": "forge.accepted.vs.candidate",
+      "note": "06 GOVERNANCE/Accepted vs Candidate.md",
+      "source_path": "AGENTS.md",
+      "source_ref": "ac7285d7cd866b4728c28d64a7c145a6bc43f812",
+      "source_repo": "Kirch-Nairu/Operation-FORGE.kirion",
+      "source_status": "ACCEPTED",
+      "source_url": "https://github.com/Kirch-Nairu/Operation-FORGE.kirion/blob/ac7285d7cd866b4728c28d64a7c145a6bc43f812/AGENTS.md"
+    },
+    {
+      "id": "forge.promotion.and.adoption",
+      "note": "06 GOVERNANCE/Promotion and Adoption.md",
+      "source_path": "protocols/promotion.md",
+      "source_ref": "ac7285d7cd866b4728c28d64a7c145a6bc43f812",
+      "source_repo": "Kirch-Nairu/Operation-FORGE.kirion",
+      "source_status": "ACCEPTED",
+      "source_url": "https://github.com/Kirch-Nairu/Operation-FORGE.kirion/blob/ac7285d7cd866b4728c28d64a7c145a6bc43f812/protocols/promotion.md"
+    },
+    {
+      "id": "forge.bounded.writer.mission",
+      "note": "07 MISSION TEMPLATES/Bounded Writer Mission.md",
+      "source_path": "arsenal/CHATGPT_BOOTSTRAP.md",
+      "source_ref": "eabbfbabdbb22d8684fb2c3d80767b8547852b83",
+      "source_repo": "Kirch-Nairu/Operation-FORGE.kirion",
+      "source_status": "CANDIDATE",
+      "source_url": "https://github.com/Kirch-Nairu/Operation-FORGE.kirion/blob/eabbfbabdbb22d8684fb2c3d80767b8547852b83/arsenal/CHATGPT_BOOTSTRAP.md"
+    },
+    {
+      "id": "forge.evidence.close.handoff",
+      "note": "07 MISSION TEMPLATES/Evidence CLOSE Handoff.md",
+      "source_path": "AGENTS.md",
+      "source_ref": "ac7285d7cd866b4728c28d64a7c145a6bc43f812",
+      "source_repo": "Kirch-Nairu/Operation-FORGE.kirion",
+      "source_status": "ACCEPTED",
+      "source_url": "https://github.com/Kirch-Nairu/Operation-FORGE.kirion/blob/ac7285d7cd866b4728c28d64a7c145a6bc43f812/AGENTS.md"
+    },
+    {
+      "id": "forge.maintainer.bootstrap",
+      "note": "07 MISSION TEMPLATES/Maintainer Bootstrap.md",
+      "source_path": "arsenal/CHATGPT_BOOTSTRAP.md",
+      "source_ref": "eabbfbabdbb22d8684fb2c3d80767b8547852b83",
+      "source_repo": "Kirch-Nairu/Operation-FORGE.kirion",
+      "source_status": "CANDIDATE",
+      "source_url": "https://github.com/Kirch-Nairu/Operation-FORGE.kirion/blob/eabbfbabdbb22d8684fb2c3d80767b8547852b83/arsenal/CHATGPT_BOOTSTRAP.md"
+    },
+    {
+      "id": "forge.nox.reviewer",
+      "note": "07 MISSION TEMPLATES/Nox Reviewer.md",
+      "source_path": "arsenal/CHATGPT_BOOTSTRAP.md",
+      "source_ref": "eabbfbabdbb22d8684fb2c3d80767b8547852b83",
+      "source_repo": "Kirch-Nairu/Operation-FORGE.kirion",
+      "source_status": "CANDIDATE",
+      "source_url": "https://github.com/Kirch-Nairu/Operation-FORGE.kirion/blob/eabbfbabdbb22d8684fb2c3d80767b8547852b83/arsenal/CHATGPT_BOOTSTRAP.md"
+    },
+    {
+      "id": "forge.exact.sha.ledger",
+      "note": "90 SOURCE AND SYNC/Exact SHA Ledger.md",
+      "source_path": "AGENTS.md",
+      "source_ref": "ac7285d7cd866b4728c28d64a7c145a6bc43f812",
+      "source_repo": "Kirch-Nairu/Operation-FORGE.kirion",
+      "source_status": "ACCEPTED",
+      "source_url": "https://github.com/Kirch-Nairu/Operation-FORGE.kirion/blob/ac7285d7cd866b4728c28d64a7c145a6bc43f812/AGENTS.md"
+    },
+    {
+      "id": "forge.source.index",
+      "note": "90 SOURCE AND SYNC/Source Index.md",
+      "source_path": "AGENTS.md",
+      "source_ref": "ac7285d7cd866b4728c28d64a7c145a6bc43f812",
+      "source_repo": "Kirch-Nairu/Operation-FORGE.kirion",
+      "source_status": "ACCEPTED",
+      "source_url": "https://github.com/Kirch-Nairu/Operation-FORGE.kirion/blob/ac7285d7cd866b4728c28d64a7c145a6bc43f812/AGENTS.md"
+    },
+    {
+      "id": "forge.updating.from.github",
+      "note": "90 SOURCE AND SYNC/Updating from GitHub.md",
+      "source_path": "AGENTS.md",
+      "source_ref": "ac7285d7cd866b4728c28d64a7c145a6bc43f812",
+      "source_repo": "Kirch-Nairu/Operation-FORGE.kirion",
+      "source_status": "ACCEPTED",
+      "source_url": "https://github.com/Kirch-Nairu/Operation-FORGE.kirion/blob/ac7285d7cd866b4728c28d64a7c145a6bc43f812/AGENTS.md"
+    }
+  ],
+  "schema_version": 1,
+  "source_mode": "git-verified"
+}

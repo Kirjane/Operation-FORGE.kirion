@@ -20,3 +20,11 @@ jobs:
           python-version: '3.12'
       - run: python -m unittest discover -s obsidian/tests -v
       - run: python obsidian/scripts/build_vault.py --repo-root . --check
+      - name: Package full-source Git-verified Obsidian vault
+        run: python obsidian/scripts/build_vault.py --repo-root . --check --zip obsidian/dist/KIRION-FORGE-VAULT-GIT-VERIFIED.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: forge-obsidian-vault-git-verified
+          path: obsidian/dist/KIRION-FORGE-VAULT-GIT-VERIFIED.zip
+          if-no-files-found: error
+          retention-days: 7

@@ -39,8 +39,8 @@ php -d extension=pdo_sqlite -d extension=sqlite3 tests/run_tests.php
 ```
 
 ## 5. Misuse & Negative Cases
-- **Negative Case 1 (Queue Dispatch Before Commit):** Dispatching a worker job inside an uncommitted transaction so the worker reads missing/uncommitted state or executes even when the transaction rolls back (`QUEUE-BEFORE-COMMIT`).
+- **Negative Case 1 (Queue Dispatch Before Commit):** Dispatching a worker job inside an uncommitted transaction so the worker reads missing/uncommitted state or executes even when the transaction rolls back (`LARAVEL-QUEUE-BEFORE-COMMIT`).
 - **Negative Case 2 (Non-Idempotent Job Retry):** Retrying a failed job that increments stock or balance twice on the second attempt.
 
 ## 6. Tests & Qualification Evidence
-- Verified in Benchmark A (after-commit queue worker retry idempotency + PDF byte inspection) and Benchmark C (`QUEUE-BEFORE-COMMIT`, `DUPLICATE-POSTING`).
+- Verified in Benchmark A (after-commit queue worker retry idempotency + PDF byte inspection) and Benchmark C (`LARAVEL-QUEUE-BEFORE-COMMIT`, `BOTH-DUPLICATE-POSTING`).

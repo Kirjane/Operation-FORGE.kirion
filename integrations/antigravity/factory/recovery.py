@@ -7,6 +7,7 @@ import uuid
 from pathlib import Path
 from typing import Any, Callable
 
+from . import REPO_ROOT
 from .authority import validate_contract
 from .delivery import compute_delivery_key
 from .scheduler import FactoryJournal
@@ -58,6 +59,7 @@ class RecoveryManager:
         """
         Reconstruct exact mission state after an orchestrator crash or interruption
         without duplicating local commits or remote broker writes.
+        Detects remote branch drift during PENDING_REMOTE reconciliation and halts BLOCKED.
         """
         m = self.journal.get_mission(mission_id)
         packet = m["packet"]
@@ -66,9 +68,9 @@ class RecoveryManager:
         candidate_sha = observed_local_sha or m["candidate_sha"]
         delivery_key = compute_delivery_key(mission_id, branch, candidate_sha)
 
-        # Inspect delivery_receipts table read-only if present
         delivery_reconciled = False
         remote_already_delivered = False
+        remote_drift_detected = False
         conn = sqlite3.connect(self.journal.db_path)
         conn.row_factory = sqlite3.Row
         try:
@@ -93,11 +95,24 @@ class RecoveryManager:
                             )
                             conn.commit()
                             remote_already_delivered = True
-                        delivery_reconciled = True
+                            delivery_reconciled = True
+                        elif remote_sha in (None, base_sha):
+                            conn.execute(
+                                "UPDATE delivery_receipts SET status = 'RECONCILED_RETRY_ALLOWED' WHERE delivery_key = ?",
+                                (delivery_key,),
+                            )
+                            conn.commit()
+                            delivery_reconciled = True
+                        else:
+                            # Remote branch moved to an unexpected divergent SHA: fail closed!
+                            remote_drift_detected = True
+                            delivery_reconciled = False
         finally:
             conn.close()
 
-        if remote_already_delivered:
+        if remote_drift_detected:
+            next_action = "HALT_BLOCKED_REQUIRE_MAINTAINER_RECONCILIATION"
+        elif remote_already_delivered:
             next_action = "NO_OP_ALREADY_DELIVERED_AWAIT_INDEPENDENT_REVIEW"
         elif interruption_point == "PRE_LOCAL_COMMIT":
             next_action = "RESUME_CLEAN_WORKTREE_COMMIT_AND_RUN_GATES"
@@ -130,3 +145,41 @@ class RecoveryManager:
         }
         validate_contract(capsule, "recovery-capsule.schema.json")
         return capsule
+
+    def export_canonical_forge_sandbox_capsule(
+        self,
+        recovery_capsule: dict[str, Any],
+        *,
+        worktree_status: str = "clean",
+        commands_executed: list[str] | None = None,
+        known_failures: list[str] | None = None,
+        known_unverified_claims: list[str] | None = None,
+        created_by_role: str = "Maintainer",
+    ) -> dict[str, Any]:
+        """Serialize a factory RecoveryCapsule into the canonical root schemas/sandbox-capsule.schema.json format."""
+        validate_contract(recovery_capsule, "recovery-capsule.schema.json")
+        m = self.journal.get_mission(recovery_capsule["mission_id"])
+        packet = m["packet"]
+        canonical = {
+            "capsule_version": 1,
+            "repository": packet["repo_name"],
+            "remote": "origin",
+            "source_branch": packet["permitted_branch"],
+            "source_sha": recovery_capsule["base_sha"],
+            "target_branch": packet["permitted_branch"],
+            "candidate_head": recovery_capsule["candidate_sha"],
+            "worktree_status": worktree_status,
+            "commands_executed": list(commands_executed or []),
+            "known_failures": list(known_failures or []),
+            "known_unverified_claims": list(known_unverified_claims or []),
+            "blocker": (
+                f"Interruption at {recovery_capsule['interruption_point']}"
+                if recovery_capsule["next_allowed_action"].startswith("HALT_BLOCKED")
+                else None
+            ),
+            "next_permitted_action": recovery_capsule["next_allowed_action"],
+            "created_at": recovery_capsule["created_at_utc"],
+            "created_by_role": created_by_role,
+        }
+        validate_contract(canonical, "sandbox-capsule.schema.json", base_dir=REPO_ROOT / "schemas")
+        return canonical

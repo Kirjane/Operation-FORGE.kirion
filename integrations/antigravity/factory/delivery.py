@@ -13,10 +13,11 @@ from . import EXPECTED_BROKER_LOGIN, EXPECTED_BROKER_USER_ID
 from .authority import SHA40_RE, AuthorityError, verify_mission_packet
 from .evidence import redact_secrets
 from .policy import (
-    PROTECTED_GOVERNANCE_PATHS,
     PolicyViolationError,
     assert_operation_allowed,
     assert_paths_within_ownership,
+    is_prohibited_branch,
+    is_protected_governance_path,
 )
 from .quality import NoxReviewEngine
 
@@ -166,8 +167,8 @@ class NairuDeliveryBroker:
             raise DeliveryBrokerError(f"Invalid 40-char candidate_sha: {candidate_sha!r}")
 
         branch = packet["permitted_branch"]
-        if branch in PROHIBITED_BRANCH_NAMES or branch.startswith("refs/heads/main"):
-            raise DeliveryBrokerError(f"Delivery to protected branch {branch!r} is prohibited.")
+        if is_prohibited_branch(branch):
+            raise DeliveryBrokerError(f"Delivery to protected/invalid branch {branch!r} is prohibited.")
 
         if has_symlinks:
             raise DeliveryBrokerError("Candidate contains symlinks; rejected by Nairu delivery broker.")
@@ -175,11 +176,10 @@ class NairuDeliveryBroker:
         if not changed_files:
             raise DeliveryBrokerError("Candidate has zero changed files to deliver.")
 
-        # Verify every changed file is within packet owned_paths and not protected governance
+        # Verify every changed file is within packet owned_paths and not protected governance (case-insensitive)
         for f in changed_files:
-            norm = f.replace("\\", "/").strip()
-            if norm in PROTECTED_GOVERNANCE_PATHS:
-                raise DeliveryBrokerError(f"Delivery rejected: protected governance file modified ({norm}).")
+            if is_protected_governance_path(f):
+                raise DeliveryBrokerError(f"Delivery rejected: protected governance file modified ({f}).")
         assert_paths_within_ownership(
             {**packet, "allowed_operations": list(set(packet["allowed_operations"]) | {"WRITE_OWNED"})},
             changed_files,
@@ -189,10 +189,16 @@ class NairuDeliveryBroker:
         conn = self._connect()
         try:
             existing = conn.execute("SELECT * FROM delivery_receipts WHERE delivery_key = ?", (delivery_key,)).fetchone()
-            if existing is not None and existing["status"] == "DELIVERED":
-                result = dict(existing)
-                result["idempotent_replay"] = True
-                return result
+            if existing is not None:
+                if existing["status"] == "DELIVERED":
+                    result = dict(existing)
+                    result["idempotent_replay"] = True
+                    return result
+                if existing["status"] == "PENDING_REMOTE":
+                    raise DeliveryBrokerError(
+                        f"Uncertain PENDING_REMOTE delivery exists for delivery_key={delivery_key}; "
+                        "run RecoveryManager.reconcile_interrupted_mission() read-only before retrying."
+                    )
         finally:
             conn.close()
 

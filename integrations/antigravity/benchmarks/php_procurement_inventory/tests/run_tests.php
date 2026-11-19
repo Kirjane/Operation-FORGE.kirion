@@ -128,8 +128,8 @@ assertThrowsStatus(
     'Injected receipt fault rolls back'
 );
 
-// Complete remaining receipt (4 VALVE-10MM + 2 GAUGE-PRO)
-$closedA = $engine->receiveGoods($clerkA, (int)$poA['id'], 'REC-A-002', [
+// Complete remaining receipt using a key containing SQL LIKE wildcard characters ('%' and '_') to verify no false collision
+$closedA = $engine->receiveGoods($clerkA, (int)$poA['id'], 'REC_%_002', [
     ['sku' => 'VALVE-10MM', 'qty' => 4],
     ['sku' => 'GAUGE-PRO', 'qty' => 2],
 ]);

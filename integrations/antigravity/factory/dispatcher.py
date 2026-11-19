@@ -144,11 +144,39 @@ def verify_plugin_package(plugin_dir: Path = PLUGIN_ROOT, repo_root: Path = REPO
     plugins_json_path = repo_root / ".agents" / "plugins.json"
     if not plugins_json_path.is_file():
         raise AuthorityError("Missing .agents/plugins.json workspace registration.")
+    try:
+        plugins_cfg = json.loads(plugins_json_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        raise AuthorityError(f"Invalid JSON in .agents/plugins.json: {exc}") from exc
+    entries = plugins_cfg.get("entries") if isinstance(plugins_cfg, dict) else None
+    if not isinstance(entries, list) or not entries:
+        raise AuthorityError(".agents/plugins.json must define a non-empty 'entries' list.")
+    expected_parent = plugin_dir.parent.resolve()
+    entry_resolved = False
+    for entry in entries:
+        if not isinstance(entry, dict) or not isinstance(entry.get("path"), str) or not entry["path"].strip():
+            raise AuthorityError(f"Invalid entry in .agents/plugins.json: {entry!r}")
+        raw_entry_path = Path(entry["path"])
+        candidate_dir = raw_entry_path.resolve() if raw_entry_path.is_absolute() else (repo_root / raw_entry_path).resolve()
+        if candidate_dir == expected_parent:
+            entry_resolved = True
+            break
+    if not entry_resolved:
+        raise AuthorityError(
+            f".agents/plugins.json entries do not register plugin parent directory {expected_parent}"
+        )
 
-    # Compute deterministic package digest
+    # Compute deterministic package digest sorted by normalized POSIX relative path, excluding __pycache__ / *.pyc
     hasher = hashlib.sha256()
-    for file_path in sorted(p for p in plugin_dir.rglob("*") if p.is_file()):
-        rel = file_path.relative_to(plugin_dir).as_posix()
+    files_to_hash = []
+    for file_path in plugin_dir.rglob("*"):
+        if not file_path.is_file():
+            continue
+        rel_parts = file_path.relative_to(plugin_dir).parts
+        if "__pycache__" in rel_parts or file_path.suffix.lower() in (".pyc", ".pyo"):
+            continue
+        files_to_hash.append((file_path.relative_to(plugin_dir).as_posix(), file_path))
+    for rel, file_path in sorted(files_to_hash, key=lambda pair: pair[0]):
         hasher.update(rel.encode("utf-8") + b"\x00" + file_path.read_bytes() + b"\x00")
 
     return {

@@ -34,8 +34,8 @@ python -m unittest discover -s integrations/antigravity/tests -v
 ```
 
 ## 5. Misuse & Negative Cases
-- **Negative Case 1 (Check-Then-Act Race Outside Transaction):** Checking `if (!exists(key))` before opening a transaction, allowing two concurrent requests to pass the check simultaneously (`RACE-CONDITION`).
+- **Negative Case 1 (Check-Then-Act Race Outside Transaction):** Checking `if (!exists(key))` before opening a transaction, allowing two concurrent requests to pass the check simultaneously (`BOTH-CONCURRENCY-RACE`).
 - **Negative Case 2 (Unordered Multi-Row Lock):** Locking Account B then Account A in one request while another locks Account A then Account B, causing deadlocks.
 
 ## 6. Tests & Qualification Evidence
-- Verified in Benchmark A (concurrent PO approvals), Benchmark B (10 repeated same-key requests + concurrent distinct operations), Benchmark C (`RACE-CONDITION`, `DUPLICATE-POSTING`), and Benchmark D (lease CAS races).
+- Verified in Benchmark A (concurrent PO approvals), Benchmark B (10 repeated same-key requests + concurrent distinct operations), Benchmark C (`BOTH-CONCURRENCY-RACE`, `BOTH-DUPLICATE-POSTING`), and Benchmark D (lease CAS races).

@@ -185,7 +185,7 @@ class TrustedEvidenceRunner:
             "artifact_size_bytes": size_bytes,
             "artifact_sha256": digest,
             "evidence_level": ev_level,
-            "evidence_type": evidence_type if not is_runtime_gate else "RUNTIME",
+            "evidence_type": evidence_type,
             "provenance": prov,
             "certainty_ceiling": FORGE_LEVEL_TO_CERTAINTY_CEILING[ev_level],
             "redacted": True,

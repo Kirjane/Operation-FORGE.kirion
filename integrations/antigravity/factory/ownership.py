@@ -13,6 +13,7 @@ from .authority import AuthorityError
 from .policy import (
     PolicyViolationError,
     assert_paths_within_ownership,
+    is_prohibited_branch,
     normalize_rel_path,
     path_matches_prefix,
 )
@@ -57,10 +58,10 @@ def assert_canonical_path_inside_worktree(worktree_root: Path, target_path: Path
     """Reject symlink escapes, hardlink escapes, and relative path traversals outside worktree_root."""
     root_resolved = worktree_root.resolve()
 
-    # Check every ancestor from target down to worktree_root for symlinks
+    # Check every ancestor from target down to worktree_root for symlinks (including broken/dangling symlinks)
     current = target_path
     while True:
-        if current.exists() and current.is_symlink():
+        if current.is_symlink():
             raise PolicyViolationError(f"Symlink prohibited inside worker sandbox: {current}")
         if current == worktree_root or current.parent == current:
             break
@@ -260,7 +261,24 @@ class WorktreeSandbox:
         self.sandbox_root.mkdir(parents=True, exist_ok=True)
 
     def create_worktree(self, branch_name: str, base_sha: str, worktree_name: str) -> Path:
+        if is_prohibited_branch(branch_name):
+            raise PolicyViolationError(f"Worktree cannot be created on prohibited branch {branch_name!r}.")
+        if (
+            not isinstance(worktree_name, str)
+            or not worktree_name.strip()
+            or worktree_name in (".", "..")
+            or any(sep in worktree_name for sep in ("/", "\\", ":", "\x00"))
+        ):
+            raise PolicyViolationError(f"worktree_name must be a single safe directory segment, got {worktree_name!r}")
+
         wt_path = (self.sandbox_root / worktree_name).resolve()
+        try:
+            wt_path.relative_to(self.sandbox_root)
+        except ValueError as exc:
+            raise PolicyViolationError(f"worktree_name {worktree_name!r} escapes sandbox_root {self.sandbox_root}") from exc
+        if wt_path == self.sandbox_root:
+            raise PolicyViolationError("worktree_name cannot resolve to sandbox_root itself.")
+
         if wt_path.exists():
             subprocess.run(["git", "worktree", "remove", "--force", str(wt_path)], cwd=self.source_repo, capture_output=True)
             if wt_path.exists():

@@ -9,11 +9,11 @@ from typing import Any
 
 from . import REPO_ROOT, SCHEMAS_ROOT
 
-SHA40_RE = re.compile(r"^[0-9a-f]{40}$")
-SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
-MISSION_ID_RE = re.compile(r"^[A-Z0-9][A-Z0-9_-]{1,63}$")
-REPO_NAME_RE = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
-GATE_ID_RE = re.compile(r"^G(0[0-9]|1[0-5])$")
+SHA40_RE = re.compile(r"^[0-9a-f]{40}\Z")
+SHA256_RE = re.compile(r"^[0-9a-f]{64}\Z")
+MISSION_ID_RE = re.compile(r"^[A-Z0-9][A-Z0-9_-]{1,63}\Z")
+REPO_NAME_RE = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+\Z")
+GATE_ID_RE = re.compile(r"^G(0[0-9]|1[0-5])\Z")
 
 CANONICAL_STATES = (
     "PLANNED",
@@ -76,6 +76,12 @@ class AuthorityError(ValueError):
     """Raised when a mission packet, state transition, or git authority check fails."""
 
 
+def _compile_schema_pattern(pattern: str) -> re.Pattern[str]:
+    """Compile JSON Schema regex preventing Python '$' from matching before a trailing newline."""
+    anchored = re.sub(r"(?<!\\)\$$", r"\\Z", pattern)
+    return re.compile(anchored)
+
+
 def validate_against_schema(instance: Any, schema: dict[str, Any], path: str = "$") -> list[str]:
     """Deterministic JSON Schema Draft 2020-12 structural and constraint validator using stdlib."""
     errors: list[str] = []
@@ -112,8 +118,9 @@ def validate_against_schema(instance: Any, schema: dict[str, Any], path: str = "
         if min_len is not None and len(instance) < min_len:
             errors.append(f"{path}: string length {len(instance)} < minLength {min_len}")
         pattern = schema.get("pattern")
-        if pattern is not None and not re.search(pattern, instance):
-            errors.append(f"{path}: string {instance!r} does not match pattern {pattern}")
+        if pattern is not None:
+            if not _compile_schema_pattern(pattern).search(instance):
+                errors.append(f"{path}: string {instance!r} does not match pattern {pattern}")
 
     elif isinstance(instance, int) and not isinstance(instance, bool):
         minimum = schema.get("minimum")
@@ -153,15 +160,15 @@ def validate_against_schema(instance: Any, schema: dict[str, Any], path: str = "
     return errors
 
 
-def load_schema(schema_name: str) -> dict[str, Any]:
-    path = SCHEMAS_ROOT / schema_name
+def load_schema(schema_name: str, *, base_dir: Path = SCHEMAS_ROOT) -> dict[str, Any]:
+    path = base_dir / schema_name
     if not path.is_file():
         raise AuthorityError(f"Missing schema file: {path}")
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def validate_contract(instance: Any, schema_filename: str) -> None:
-    schema = load_schema(schema_filename)
+def validate_contract(instance: Any, schema_filename: str, *, base_dir: Path = SCHEMAS_ROOT) -> None:
+    schema = load_schema(schema_filename, base_dir=base_dir)
     errors = validate_against_schema(instance, schema)
     if errors:
         raise AuthorityError(f"Schema validation failed for {schema_filename}: {'; '.join(errors)}")
@@ -174,20 +181,27 @@ def verify_mission_packet(
     observed_base_sha: str | None = None,
     trusted_verifiers: set[str] | None = None,
 ) -> dict[str, Any]:
-    """Fail-closed verification of a MissionPacket against schema, authority, and budget invariants."""
+    """Fail-closed verification of a MissionPacket against schema, authority, ownership, and role invariants."""
+    from .policy import (
+        PERSONA_PERMISSIONS,
+        is_prohibited_branch,
+        is_protected_governance_path,
+        normalize_rel_path,
+    )
+
     validate_contract(packet, "mission-packet.schema.json")
 
     if packet.get("work_mode") == "PAUSED" and "WRITE_OWNED" in packet.get("allowed_operations", []):
         raise AuthorityError("PAUSED work_mode forbids WRITE_OWNED mutations.")
 
     branch = packet["permitted_branch"]
-    if branch in ("main", "master", "HEAD"):
-        raise AuthorityError(f"MissionPacket cannot authorize direct mutation on protected branch {branch!r}.")
+    if is_prohibited_branch(branch):
+        raise AuthorityError(f"MissionPacket cannot authorize direct mutation on protected/invalid branch {branch!r}.")
 
     for owned in packet["owned_paths"]:
-        norm = owned.replace("\\", "/").strip()
-        if norm in ("*", ".", "/", "") or ".." in norm.split("/"):
-            raise AuthorityError(f"Overbroad or traversal owned_path rejected: {owned!r}")
+        norm = normalize_rel_path(owned)
+        if is_protected_governance_path(norm):
+            raise AuthorityError(f"MissionPacket owned_paths cannot claim protected governance file {owned!r}.")
 
     if expected_repo is not None and packet["repo_name"] != expected_repo:
         raise AuthorityError(f"Repository mismatch: packet={packet['repo_name']!r} expected={expected_repo!r}")
@@ -204,10 +218,26 @@ def verify_mission_packet(
 
     persona = packet["assigned_persona"]
     role = packet["formal_role"]
-    if persona in ("Antigravity-Nox", "Antigravity-Aegis") and role != "Reviewer":
-        raise AuthorityError(f"{persona} must hold formal_role 'Reviewer', got {role!r}")
-    if role == "Reviewer" and any(op in packet["allowed_operations"] for op in ("WRITE_OWNED", "INTEGRATE_BRANCH", "DELIVER_DRAFT_PR")):
+    spec = PERSONA_PERMISSIONS.get(persona)
+    if spec is None:
+        raise AuthorityError(f"Unrecognized assigned_persona: {persona!r}")
+    if role not in spec["formal_roles"]:
+        raise AuthorityError(f"Persona {persona!r} cannot hold formal_role {role!r}; allowed: {sorted(spec['formal_roles'])}")
+
+    allowed_ops = set(packet["allowed_operations"])
+    if role == "Reviewer" and (allowed_ops & {"WRITE_OWNED", "INTEGRATE_BRANCH", "DELIVER_DRAFT_PR"}):
         raise AuthorityError("Reviewer formal_role cannot be granted write, integration, or delivery operations.")
+
+    # Each operation in allowed_operations must be allowed by the persona (except DELIVER_DRAFT_PR which
+    # is exercised by Antigravity-Maintainer after writer authority return on writer/integrator packets).
+    permitted_for_packet = set(spec["allowed_ops"])
+    if role in ("Code Writer", "Integration Writer"):
+        permitted_for_packet.add("DELIVER_DRAFT_PR")
+    disallowed_ops = allowed_ops - permitted_for_packet
+    if disallowed_ops:
+        raise AuthorityError(
+            f"MissionPacket grants operations {sorted(disallowed_ops)} not permitted for {persona} ({role})."
+        )
 
     return packet
 

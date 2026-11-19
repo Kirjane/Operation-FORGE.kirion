@@ -80,6 +80,14 @@ def run_benchmark_a_with_hidden_oracle(trials: int = 2) -> dict[str, Any]:
                         break
                     time.sleep(0.1)
 
+                # Negative HTTP auth checks: missing headers must fail closed with 401
+                st_unauth, _ = _http_request(
+                    f"{base_url}/api/v1/suppliers",
+                    method="POST",
+                    body={"code": "NO-AUTH", "name": "Should Fail"},
+                )
+                assert st_unauth == 401, f"Expected 401 on missing auth headers, got {st_unauth}"
+
                 # Tenant A supplier & PO
                 st, sup_raw = _http_request(
                     f"{base_url}/api/v1/suppliers",
@@ -135,9 +143,23 @@ def run_benchmark_a_with_hidden_oracle(trials: int = 2) -> dict[str, Any]:
                 )
                 assert st_rec == 200
 
-                # Work queue twice (verify idempotency over HTTP)
-                _http_request(f"{base_url}/api/v1/queue/work", method="POST", headers={"X-Tenant-Id": "1"})
-                st_q, q_raw = _http_request(f"{base_url}/api/v1/queue/work", method="POST", headers={"X-Tenant-Id": "1"})
+                # Queue worker denies unauthorized role (requester -> 403), allows worker/approver (200) and stays idempotent
+                st_q_denied, _ = _http_request(
+                    f"{base_url}/api/v1/queue/work",
+                    method="POST",
+                    headers={"X-Tenant-Id": "1", "X-User-Id": "101", "X-Actor-Role": "requester"},
+                )
+                assert st_q_denied == 403, f"Expected 403 for requester on queue/work, got {st_q_denied}"
+                _http_request(
+                    f"{base_url}/api/v1/queue/work",
+                    method="POST",
+                    headers={"X-Tenant-Id": "1", "X-User-Id": "102", "X-Actor-Role": "worker"},
+                )
+                st_q, q_raw = _http_request(
+                    f"{base_url}/api/v1/queue/work",
+                    method="POST",
+                    headers={"X-Tenant-Id": "1", "X-User-Id": "102", "X-Actor-Role": "worker"},
+                )
                 assert st_q == 200
                 assert json.loads(q_raw)["total_persisted_effects"] == 1
 
@@ -253,6 +275,14 @@ def run_benchmark_b_with_hidden_oracle(trials: int = 2) -> dict[str, Any]:
                     if st == 200:
                         break
                     time.sleep(0.1)
+
+                # Missing header fails closed with 401
+                st_unauth_b, _ = _http_request(
+                    f"{base_url}/api/v1/accounts",
+                    method="POST",
+                    body={"AccountId": "ORA-NOAUTH", "Currency": "PHP", "InitialBalance": 10.00},
+                )
+                assert st_unauth_b == 401, f"Expected 401 on missing X-Actor-Role, got {st_unauth_b}"
 
                 st_acc, _ = _http_request(
                     f"{base_url}/api/v1/accounts",

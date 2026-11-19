@@ -474,8 +474,11 @@ public sealed class ScopedTransactionStore : IDisposable
         }
     }
 
-    public async Task<Dictionary<string, object>> ReconcileAccountAsync(string accountId, CancellationToken ct)
+    public async Task<Dictionary<string, object>> ReconcileAccountAsync(string accountId, string actorRole, CancellationToken ct)
     {
+        ct.ThrowIfCancellationRequested();
+        if (actorRole is not ("operator" or "treasurer" or "auditor"))
+            throw new DomainException($"Role '{actorRole}' is denied from reconciling accounts.", 403);
         await using var conn = await OpenConnectionAsync(ct);
         long balanceMinor;
         long version;
@@ -559,29 +562,40 @@ public static class Program
             }
         });
 
+        static string RequireActorRole(HttpContext http)
+        {
+            var role = http.Request.Headers["X-Actor-Role"].FirstOrDefault()?.Trim();
+            if (string.IsNullOrEmpty(role))
+                throw new DomainException("Missing X-Actor-Role authentication header.", 401);
+            return role;
+        }
+
         app.MapGet("/health", async (ScopedTransactionStore store, CancellationToken ct) =>
             Results.Ok(new { status = "ok", schema_version = await store.GetSchemaVersionAsync(ct) }));
 
         app.MapPost("/api/v1/accounts", async (CreateAccountRequest req, HttpContext http, ScopedTransactionStore store, CancellationToken ct) =>
         {
-            var role = http.Request.Headers["X-Actor-Role"].FirstOrDefault() ?? "operator";
+            var role = RequireActorRole(http);
             return Results.Created($"/api/v1/reconcile/{req.AccountId}", await store.CreateAccountAsync(req, role, ct));
         });
 
         app.MapPost("/api/v1/payments", async (PostPaymentRequest req, HttpContext http, ScopedTransactionStore store, CancellationToken ct) =>
         {
-            var role = http.Request.Headers["X-Actor-Role"].FirstOrDefault() ?? "operator";
+            var role = RequireActorRole(http);
             return Results.Ok(await store.PostPaymentAsync(req, role, ct));
         });
 
         app.MapPost("/api/v1/payments/{paymentId}/reverse", async (string paymentId, ReversePaymentRequest req, HttpContext http, ScopedTransactionStore store, CancellationToken ct) =>
         {
-            var role = http.Request.Headers["X-Actor-Role"].FirstOrDefault() ?? "operator";
+            var role = RequireActorRole(http);
             return Results.Ok(await store.ReversePaymentAsync(paymentId, req, role, ct));
         });
 
-        app.MapGet("/api/v1/reconcile/{accountId}", async (string accountId, ScopedTransactionStore store, CancellationToken ct) =>
-            Results.Ok(await store.ReconcileAccountAsync(accountId, ct)));
+        app.MapGet("/api/v1/reconcile/{accountId}", async (string accountId, HttpContext http, ScopedTransactionStore store, CancellationToken ct) =>
+        {
+            var role = RequireActorRole(http);
+            return Results.Ok(await store.ReconcileAccountAsync(accountId, role, ct));
+        });
 
         return app;
     }
@@ -659,7 +673,21 @@ public static class Program
                 var address = app.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()!.Addresses.First();
                 using var client = new HttpClient { BaseAddress = new Uri(address) };
 
-                // 3. Role denial checks over real HTTP
+                // 3. Unauthenticated (missing header -> 401) and role denial (403) checks over real HTTP
+                using (var unauthMsg = new HttpRequestMessage(HttpMethod.Post, "/api/v1/payments"))
+                {
+                    unauthMsg.Content = JsonContent.Create(new PostPaymentRequest("ACC-100", "PAY-UNAUTH", "IK-UNAUTH", 10.00m, "PHP", "CREDIT"));
+                    var unauthResp = await client.SendAsync(unauthMsg);
+                    AssertTrue(unauthResp.StatusCode == HttpStatusCode.Unauthorized, "Missing X-Actor-Role fails closed with 401 Unauthorized");
+                }
+
+                using (var deniedRec = new HttpRequestMessage(HttpMethod.Get, "/api/v1/reconcile/ACC-100"))
+                {
+                    deniedRec.Headers.Add("X-Actor-Role", "guest");
+                    var deniedRecResp = await client.SendAsync(deniedRec);
+                    AssertTrue(deniedRecResp.StatusCode == HttpStatusCode.Forbidden, "Guest role denied from reconcile endpoint (403)");
+                }
+
                 using (var deniedMsg = new HttpRequestMessage(HttpMethod.Post, "/api/v1/payments"))
                 {
                     deniedMsg.Headers.Add("X-Actor-Role", "auditor");
@@ -745,7 +773,11 @@ public static class Program
                 await restartedApp.StartAsync();
                 var addr2 = restartedApp.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()!.Addresses.First();
                 using var client2 = new HttpClient { BaseAddress = new Uri(addr2) };
-                var rec = await client2.GetFromJsonAsync<JsonElement>("/api/v1/reconcile/ACC-100");
+                using var recReq = new HttpRequestMessage(HttpMethod.Get, "/api/v1/reconcile/ACC-100");
+                recReq.Headers.Add("X-Actor-Role", "auditor");
+                var recResp = await client2.SendAsync(recReq);
+                AssertTrue(recResp.StatusCode == HttpStatusCode.OK, "Auditor can reconcile persisted account after restart");
+                var rec = await recResp.Content.ReadFromJsonAsync<JsonElement>();
                 var balanceMinor = rec.GetProperty("balance_minor").GetInt64();
                 var ledgerSumMinor = rec.GetProperty("ledger_sum_minor").GetInt64();
                 var reconciled = rec.GetProperty("reconciled").GetBoolean();
@@ -764,7 +796,7 @@ public static class Program
             {
                 benchmark = "B_ASPNET_CSHARP_TRANSACTION_ENGINE",
                 status = "PASS",
-                assertions_verified = 22,
+                assertions_verified = 25,
                 final_balance_minor = 125025,
                 final_balance_decimal = 1250.25m,
                 ledger_entries_verified = 8,

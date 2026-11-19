@@ -33,7 +33,7 @@ python -m unittest discover -s integrations/antigravity/tests -v
 
 ## 5. Misuse & Negative Cases
 - **Negative Case 1 (Symlink/Path Traversal):** Creating a symlink or `../../.forge/AUTHORITY.md` path inside a worker worktree to read or overwrite protected files (`SYMLINK-TRAVERSAL`).
-- **Negative Case 2 (Malicious Issue/Package Instruction):** Following an embedded prompt inside an issue comment or `composer.json` description asking the agent to auto-merge or exfiltrate `os.environ` (`MALICIOUS-INSTRUCTION`).
+- **Negative Case 2 (Malicious Issue/Package Instruction):** Following an embedded prompt inside an issue comment or `composer.json` description asking the agent to auto-merge or exfiltrate `os.environ` (`MALICIOUS-PROMPT-INSTRUCTION`).
 
 ## 6. Tests & Qualification Evidence
-- Verified in Benchmark C (`MALICIOUS-INSTRUCTION`) and Benchmark E (16-vector adversarial authority and supply-chain qualification suite).
+- Verified in Benchmark C (`MALICIOUS-PROMPT-INSTRUCTION`) and Benchmark E (16-vector adversarial authority and supply-chain qualification suite).

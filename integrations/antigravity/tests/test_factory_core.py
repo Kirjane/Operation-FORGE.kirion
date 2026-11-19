@@ -334,6 +334,194 @@ class FactoryCoreTests(unittest.TestCase):
             self.assertEqual(metrics["first_pass_validation_rate"], 1.0)
             self.assertEqual(metrics["evidence_integrity_rate"], 1.0)
 
+    def test_nox_cycle2_security_and_governance_regressions(self) -> None:
+        """Discriminating regression tests for NOX-R2-001..011 findings."""
+        # NOX-R2-001: evaluate_gate_suite rejects E0/ASSUMED/dirty/nonzero-exit PASS and mandatory exemptions
+        bad_env = {
+            "schema_version": 1,
+            "run_id": "run-r2",
+            "mission_id": "R2-TEST",
+            "stage": "VERIFY",
+            "gate_id": "G03",
+            "candidate_sha": BASE_SHA,
+            "tree_sha": BASE_SHA,
+            "dirty": True,
+            "command_argv": ["dotnet", "build"],
+            "cwd": ".",
+            "started_at_utc": "2026-11-19T00:00:00Z",
+            "completed_at_utc": "2026-11-19T00:00:01Z",
+            "exit_code": 1,
+            "status": "PASS",
+            "environment_versions": {"python": "3.13.5"},
+            "fixture_sha256": "0" * 64,
+            "artifact_path": "a.log",
+            "artifact_size_bytes": 1,
+            "artifact_sha256": "a" * 64,
+            "evidence_level": "E0",
+            "evidence_type": "NONE",
+            "provenance": "ASSUMED",
+            "certainty_ceiling": "HYPOTHESIS",
+            "redacted": True,
+        }
+        with self.assertRaises(QualityGateError):
+            evaluate_gate_suite("RISK-1", [bad_env], candidate_sha=BASE_SHA)
+        with self.assertRaises(QualityGateError):
+            evaluate_gate_suite("RISK-1", [{**bad_env, "dirty": False, "exit_code": 0}], candidate_sha=BASE_SHA)
+        with self.assertRaises(QualityGateError):
+            evaluate_gate_suite("RISK-1", [], candidate_sha=BASE_SHA, non_applicable_gates={"G00": "skip"})
+        with self.assertRaises(QualityGateError):
+            evaluate_gate_suite("RISK-1", [], candidate_sha=BASE_SHA, non_applicable_gates={"G03": "   "})
+
+        # NOX-R2-002: TrustedEvidenceRunner never coerces BUILD to RUNTIME when is_runtime_gate=True
+        with tempfile.TemporaryDirectory() as tmp:
+            runner = TrustedEvidenceRunner(Path(tmp) / "artifacts")
+            env_b = runner.run_gate_command(
+                run_id="run-r2",
+                mission_id="R2-TEST",
+                stage="VERIFY",
+                gate_id="G10",
+                command_argv=[sys.executable, "-c", "print('ok')"],
+                cwd=REPO_ROOT,
+                evidence_type="BUILD",
+                is_runtime_gate=True,
+            )
+            self.assertEqual(env_b["evidence_type"], "BUILD")
+            self.assertEqual(env_b["evidence_level"], "E4")
+            with self.assertRaises(QualityGateError):
+                evaluate_gate_suite("RISK-2", [env_b], candidate_sha=env_b["candidate_sha"])
+
+        # NOX-R2-003: Forged NoxResult claiming verdict='PASS' with OPEN P0/P1/P2 fails closed
+        nox = NoxReviewEngine()
+        for sev in ("P0", "P1", "P2"):
+            forged = {
+                "schema_version": 1,
+                "mission_id": "R2-TEST",
+                "frozen_sha": BASE_SHA,
+                "reviewer_context_id": "ctx-nox-r2",
+                "reviewer_persona": "Antigravity-Nox",
+                "author_context_id": "ctx-jane-r2",
+                "inspected_scope": ["integrations/antigravity/"],
+                "evidence_inspected": ["env-1"],
+                "findings": [
+                    {
+                        "id": f"F-{sev}",
+                        "severity": sev,
+                        "path": "integrations/antigravity/factory/quality.py",
+                        "line": 1,
+                        "contract_violated": "Test violation",
+                        "reproduction": "Repro",
+                        "requested_correction": "Fix",
+                        "disposition": "OPEN",
+                    }
+                ],
+                "verdict": "PASS",
+            }
+            with self.assertRaises(QualityGateError):
+                nox.assert_review_valid_for_sha(forged, BASE_SHA)
+
+        # NOX-R2-005: Trailing newline SHA, protected refspec branches, overbroad owned_paths, mismatched persona/role
+        base_pkt = make_valid_packet()
+        with self.assertRaises(AuthorityError):
+            verify_mission_packet({**base_pkt, "base_sha": BASE_SHA + "\n"})
+        for bad_branch in ("MAIN", "refs/heads/main", "refs/heads/master", "origin/main", "production", "release"):
+            with self.assertRaises(AuthorityError):
+                verify_mission_packet({**base_pkt, "permitted_branch": bad_branch})
+        for bad_path in ("./", "/etc/passwd", "C:/Windows", "AGENTS.md", "src/**"):
+            with self.assertRaises(AuthorityError):
+                verify_mission_packet({**base_pkt, "owned_paths": [bad_path]})
+        with self.assertRaises(AuthorityError):
+            verify_mission_packet({**base_pkt, "assigned_persona": "Antigravity-Jane", "formal_role": "Maintainer"})
+        with self.assertRaises(AuthorityError):
+            verify_mission_packet({**base_pkt, "assigned_persona": "Antigravity-Maintainer", "formal_role": "Code Writer"})
+
+        # NOX-R2-006 & NOX-R2-011: PENDING_REMOTE fails closed on re-delivery; remote drift halts BLOCKED; canonical Sandbox Capsule export
+        with tempfile.TemporaryDirectory() as tmp:
+            db = Path(tmp) / "r2_recovery.db"
+            journal = FactoryJournal(db)
+            recovery = RecoveryManager(journal)
+            broker = NairuDeliveryBroker(
+                db,
+                actor_verifier=lambda: {"login": EXPECTED_BROKER_LOGIN, "id": EXPECTED_BROKER_USER_ID, "type": "User"},
+            )
+            journal.register_mission(base_pkt)
+            from integrations.antigravity.factory.delivery import compute_delivery_key
+            dkey = compute_delivery_key(base_pkt["mission_id"], base_pkt["permitted_branch"], NEXT_SHA)
+            conn = broker._connect()
+            try:
+                conn.execute(
+                    """
+                    INSERT INTO delivery_receipts (
+                        delivery_key, mission_id, branch, base_sha, candidate_sha,
+                        actor_login, actor_id, status, pr_mode, receipt_markdown, updated_at_utc
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, 'PENDING_REMOTE', 'VALIDATED_DRAFT_PR', 'md', '2026-11-19T00:00:00Z')
+                    """,
+                    (dkey, base_pkt["mission_id"], base_pkt["permitted_branch"], BASE_SHA, NEXT_SHA, EXPECTED_BROKER_LOGIN, EXPECTED_BROKER_USER_ID),
+                )
+            finally:
+                conn.close()
+
+            nox_ok = nox.execute_review(
+                mission_id=base_pkt["mission_id"],
+                frozen_sha=NEXT_SHA,
+                author_context_id="ctx-jane",
+                inspected_scope=["integrations/antigravity/factory/"],
+                evidence_inspected=["env-1"],
+                findings=[],
+            )
+            # Re-calling broker while PENDING_REMOTE must fail closed without calling remote_executor
+            with self.assertRaises(DeliveryBrokerError):
+                broker.prepare_and_record_delivery(
+                    packet=base_pkt,
+                    candidate_sha=NEXT_SHA,
+                    changed_files=["integrations/antigravity/factory/policy.py"],
+                    gate_summary={"overall_status": "PASS", "passed_gates": ["G00", "G13", "G15"]},
+                    nox_result=nox_ok,
+                )
+
+            # Divergent remote SHA during PENDING_REMOTE reconciliation must halt BLOCKED
+            divergent_sha = "f" * 40
+            drift_cap = recovery.reconcile_interrupted_mission(
+                base_pkt["mission_id"],
+                interruption_point="PRE_BROKER_RECEIPT",
+                observed_local_sha=NEXT_SHA,
+                remote_head_probe=lambda _b: divergent_sha,
+            )
+            self.assertFalse(drift_cap["delivery_reconciled"])
+            self.assertEqual(drift_cap["next_allowed_action"], "HALT_BLOCKED_REQUIRE_MAINTAINER_RECONCILIATION")
+
+            # Canonical schemas/sandbox-capsule.schema.json export validates strictly
+            canonical_cap = recovery.export_canonical_forge_sandbox_capsule(drift_cap)
+            self.assertEqual(canonical_cap["capsule_version"], 1)
+            self.assertEqual(canonical_cap["next_permitted_action"], "HALT_BLOCKED_REQUIRE_MAINTAINER_RECONCILIATION")
+
+        # NOX-R2-007: Worktree traversal name and prohibited branch rejected before rmtree
+        with tempfile.TemporaryDirectory() as tmp:
+            sb = WorktreeSandbox(REPO_ROOT, Path(tmp) / "sandboxes")
+            with self.assertRaises(PolicyViolationError):
+                sb.create_worktree("feat/ok", BASE_SHA, "../escape")
+            with self.assertRaises(PolicyViolationError):
+                sb.create_worktree("main", BASE_SHA, "valid_lane")
+
+        # NOX-R2-008: Workflow scripts synchronize with canonical JSON Schema contracts
+        nox_wf_src = (ANTIGRAVITY_ROOT / "workflows" / "nox_adversarial_audit.py").read_text(encoding="utf-8")
+        feat_wf_src = (ANTIGRAVITY_ROOT / "workflows" / "feature_delivery.py").read_text(encoding="utf-8")
+        self.assertIn("nox-result.schema.json", nox_wf_src)
+        self.assertIn("writer-result.schema.json", feat_wf_src)
+        self.assertIn("nox-result.schema.json", feat_wf_src)
+        self.assertIn('writer_res["final_sha"]', feat_wf_src)
+        self.assertNotIn('type_name="research",\n    workspace=', feat_wf_src)
+
+        # NOX-R2-009: verify_plugin_package rejects malformed or missing-entry .agents/plugins.json and ignores __pycache__
+        with tempfile.TemporaryDirectory() as tmp:
+            fake_repo = Path(tmp) / "repo"
+            (fake_repo / ".agents").mkdir(parents=True)
+            (fake_repo / ".agents" / "plugins.json").write_text('{"entries": [{"path": "wrong/dir"}]}', encoding="utf-8")
+            with self.assertRaises(AuthorityError):
+                verify_plugin_package(PLUGIN_ROOT, fake_repo)
+            (fake_repo / ".agents" / "plugins.json").write_text("{broken-json", encoding="utf-8")
+            with self.assertRaises(AuthorityError):
+                verify_plugin_package(PLUGIN_ROOT, fake_repo)
+
 
 if __name__ == "__main__":
     unittest.main()

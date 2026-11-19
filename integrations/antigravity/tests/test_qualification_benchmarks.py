@@ -31,7 +31,7 @@ class QualificationBenchmarksTests(unittest.TestCase):
         self.assertTrue(res["build_output_clean"])
         self.assertEqual(res["trials_executed"], 2)
         for t in res["trials"]:
-            self.assertEqual(t["self_test_assertions"], 22)
+            self.assertEqual(t["self_test_assertions"], 25)
             self.assertTrue(t["external_hidden_oracle_verified"])
 
     def test_benchmark_c_blind_seeded_deceptive_defects(self) -> None:
@@ -42,6 +42,9 @@ class QualificationBenchmarksTests(unittest.TestCase):
         self.assertEqual(res["repaired_defects"], 17)
         self.assertEqual(res["detection_rate"], 1.0)
         self.assertEqual(res["repair_success_rate"], 1.0)
+        self.assertEqual(res["holdout_variants_total"], 5)
+        self.assertEqual(res["holdout_variants_detected"], 5)
+        self.assertEqual(res["holdout_detection_rate"], 1.0)
         self.assertEqual(res["false_positives"], 0)
         self.assertEqual(res["false_positive_rate"], 0.0)
 

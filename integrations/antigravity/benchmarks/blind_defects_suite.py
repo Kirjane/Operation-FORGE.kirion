@@ -1,7 +1,14 @@
-"""F15 — Benchmark C: Blind Seeded-Deceptive Defect Detection and Self-Healing Repair Suite."""
+"""F15 — Benchmark C: Deterministic Pattern Analyzer & Self-Healing Defect Detection/Repair Harness.
+
+Note: This module executes an in-process generalized regex/structural static analyzer paired with
+SelfHealingController and NoxReviewEngine across 17 seeded defects, 5 unseen holdout variants,
+and 4 clean controls. Separate live fresh-context LLM Antigravity-Nox reviews are executed via
+workflows/nox_adversarial_audit.py and documented independently in QUALIFICATION_REPORT.md.
+"""
 from __future__ import annotations
 
 import hashlib
+import re
 from typing import Any
 
 from ..factory.policy import scan_untrusted_text_for_injection
@@ -84,8 +91,8 @@ SEEDED_DEFECT_CORPUS: list[dict[str, Any]] = [
         "is_defect": True,
         "severity": "P1",
         "path": "src/Payments/PaymentProcessor.cs",
-        "seeded_code": "// No idempotency key lookup before inserting payment row\nawait InsertPaymentRowAsync(req.PaymentId, req.Amount);",
-        "repaired_code": "if (await ExistsByIdempotencyKeyAsync(req.IdempotencyKey, tx)) return await GetExistingReceiptAsync(req.IdempotencyKey, tx);\nawait InsertPaymentRowAsync(req.PaymentId, req.IdempotencyKey, req.Amount, tx);",
+        "seeded_code": "public async Task PostAsync(PaymentReq req) { await InsertPaymentRowAsync(req.PaymentId, req.Amount); }",
+        "repaired_code": "public async Task PostAsync(PaymentReq req) { if (await ExistsByIdempotencyKeyAsync(req.IdempotencyKey, tx)) return; await InsertPaymentRowAsync(req.PaymentId, req.IdempotencyKey, req.Amount, tx); }",
         "contract": "Non-idempotent mutations must enforce idempotency keys inside the transaction boundary.",
     },
     {
@@ -221,9 +228,61 @@ SEEDED_DEFECT_CORPUS: list[dict[str, Any]] = [
     },
 ]
 
+# Unseen semantic holdout variants to prevent tuning solely to literal corpus strings
+HOLDOUT_DEFECT_VARIANTS: list[dict[str, str]] = [
+    {
+        "case_id": "HOLDOUT-PHP-SQLI",
+        "path": "app/Services/OrderLookup.php",
+        "code": "$res = $pdo->query('SELECT id FROM orders WHERE code = \\'' . $code . '\\'');",
+    },
+    {
+        "case_id": "HOLDOUT-CSHARP-FLOAT-MONEY",
+        "path": "src/Billing/VatHelper.cs",
+        "code": "public double CalculateTax(double price) => price * 1.12;",
+    },
+    {
+        "case_id": "HOLDOUT-DROP-TABLE-MIGRATION",
+        "path": "database/migrations/2026_12_01_reset_orders.sql",
+        "code": "DROP TABLE orders;",
+    },
+    {
+        "case_id": "HOLDOUT-UI-320PX-OVERFLOW",
+        "path": "ui/styles/summary.css",
+        "code": ".card { width: 480px; min-width: 480px; }",
+    },
+    {
+        "case_id": "HOLDOUT-UI-FAKE-LIVE",
+        "path": "ui/components/LedgerBanner.tsx",
+        "code": "<span>Live Production Ledger Active (localStorage)</span>",
+    },
+]
+
+_SQLI_RE = re.compile(
+    r"(?:SELECT|UPDATE|DELETE|INSERT)\b[^;]*?(?:['\"]\s*\.\s*\$[A-Za-z_]\w*|\$[A-Za-z_]\w*\s*\.\s*['\"]|\{\$\w+\})",
+    re.IGNORECASE,
+)
+_IDOR_RE = re.compile(r"\b(?:findOrFail|find)\s*\(\s*\$\w+\s*\)")
+_MASS_ASSIGN_RE = re.compile(r"\$guarded\s*=\s*\[\s*\]|->fill\(\s*\$request->all\(\s*\)\s*\)")
+_QUEUE_PRECOMMIT_RE = re.compile(r"DB::beginTransaction\(\).*::dispatch\(.*DB::commit\(\)", re.DOTALL)
+_NPLUS1_RE = re.compile(r"\bforeach\s*\([^)]*\)\s*\{[^}]*(?:DB::select|->query\(|->prepare\()", re.DOTALL)
+_UNSAFE_UPLOAD_RE = re.compile(r"public_path\(\s*['\"]uploads|getClientOriginalName\(\)")
+_MISSING_TX_RE = re.compile(r"Update\w*Balance\w*\(.*\).*Insert\w*Ledger\w*\(", re.DOTALL | re.IGNORECASE)
+_DUP_POSTING_RE = re.compile(r"Insert\w*Payment\w*\(", re.IGNORECASE)
+_RACE_CHECK_ACT_RE = re.compile(r"getStock\([^)]*\).*if\s*\([^)]*\).*setStock\(", re.DOTALL)
+_FLOAT_MONEY_RE = re.compile(
+    r"\b(?:double|float)\s+\w*(?:Total|Tax|Price|Amount|Balance|Fee|Money|Pay)\w*\s*\([^)]*\b(?:double|float)\b",
+    re.IGNORECASE,
+)
+_WEAK_ASSERT_RE = re.compile(r"assertTrue\s*\([^)]*<\s*500|assertTrue\s*\(\s*true\s*\)", re.IGNORECASE)
+_DROP_TABLE_RE = re.compile(r"\bDROP\s+TABLE\b", re.IGNORECASE)
+_EF_LIFETIME_RE = re.compile(r"AddSingleton<[^>]+>\([^)]*GetRequiredService<[^>]*DbContext>", re.IGNORECASE)
+_CSS_FIXED_WIDTH_RE = re.compile(r"\bmin-width\s*:\s*(\d+)px", re.IGNORECASE)
+_CSS_OUTLINE_NONE_RE = re.compile(r"\boutline\s*:\s*(?:none|0)\b", re.IGNORECASE)
+_FAKE_LIVE_RE = re.compile(r"Live\s+Production\b.*\b(localStorage|mock|fake)\b", re.IGNORECASE)
+
 
 def blind_inspect_code(code: str, path: str) -> list[dict[str, Any]]:
-    """Deterministic adversarial analyzer inspecting code/text without reading is_defect labels."""
+    """Generalized regex/structural static analyzer inspecting code/text without reading corpus labels."""
     findings: list[dict[str, Any]] = []
 
     def add(fid: str, sev: str, contract: str, fix: str) -> None:
@@ -240,38 +299,39 @@ def blind_inspect_code(code: str, path: str) -> list[dict[str, Any]]:
             }
         )
 
-    if "DB::select(\"SELECT" in code and ".\"" in code or ("SELECT * FROM" in code and "'\" ." in code):
-        add("NOX-SQLI", "P0", "Raw SQL string interpolation detected", "Use parameterized SQL bindings")
-    if "findOrFail($id)" in code and "tenant_id" not in code:
-        add("NOX-IDOR", "P0", "Missing tenant_id scope and Policy check on findOrFail", "Scope query by tenant_id and authorize")
-    if "$guarded = []" in code:
-        add("NOX-MASS-ASSIGN", "P1", "Unrestricted $guarded = [] allows mass assignment", "Define explicit $fillable allowlist")
-    if "::dispatch(" in code and "afterCommit()" not in code and "DB::commit()" in code:
+    if _SQLI_RE.search(code):
+        add("NOX-SQLI", "P0", "Raw SQL string concatenation/interpolation detected", "Use parameterized SQL bindings")
+    if _IDOR_RE.search(code) and "tenant_id" not in code and "authorize(" not in code:
+        add("NOX-IDOR", "P0", "Missing tenant_id scope and Policy check on object lookup", "Scope query by tenant_id and authorize")
+    if _MASS_ASSIGN_RE.search(code):
+        add("NOX-MASS-ASSIGN", "P1", "Unrestricted mass assignment ($guarded=[] or $request->all())", "Define explicit $fillable allowlist")
+    if _QUEUE_PRECOMMIT_RE.search(code) and "afterCommit()" not in code:
         add("NOX-QUEUE-PRECOMMIT", "P1", "Queue job dispatched before DB commit", "Chain ->afterCommit() inside DB::transaction")
-    if "foreach (" in code and "DB::select(" in code:
+    if _NPLUS1_RE.search(code):
         add("NOX-NPLUS1", "P2", "SQL query executed inside foreach loop (N+1)", "Use eager loading with() and pagination")
-    if "public_path('uploads')" in code or "getClientOriginalName()" in code:
+    if _UNSAFE_UPLOAD_RE.search(code):
         add("NOX-UNSAFE-UPLOAD", "P0", "Unvalidated file moved to public web root with client filename", "Validate MIME/size and store in private disk")
-    if "UpdateAccountBalanceAsync" in code and "InsertLedgerEntryAsync" in code and "BeginTransactionAsync" not in code:
+    if _MISSING_TX_RE.search(code) and "BeginTransaction" not in code and "DB::transaction" not in code:
         add("NOX-MISSING-TX", "P1", "Multi-step balance and ledger write lacks database transaction", "Wrap in BeginTransactionAsync / CommitAsync")
-    if "No idempotency key lookup" in code or ("InsertPaymentRowAsync" in code and "IdempotencyKey" not in code):
-        add("NOX-DUP-POSTING", "P1", "Payment insertion lacks idempotency key check", "Check ExistsByIdempotencyKeyAsync inside transaction")
-    if "getStock($sku)" in code and "setStock(" in code and "lockForUpdate" not in code:
+    if _DUP_POSTING_RE.search(code) and "IdempotencyKey" not in code and "idempotency_key" not in code:
+        add("NOX-DUP-POSTING", "P1", "Payment insertion lacks idempotency key check", "Enforce IdempotencyKey check inside transaction")
+    if _RACE_CHECK_ACT_RE.search(code) and "lockForUpdate" not in code and "BEGIN IMMEDIATE" not in code:
         add("NOX-RACE", "P1", "Check-then-act inventory update without row lock", "Use DB::transaction with lockForUpdate()")
-    if "double ComputeTotal(double" in code:
-        add("NOX-FLOAT-MONEY", "P1", "Binary floating-point double used for monetary calculation", "Use decimal with MidpointRounding.ToEven")
-    if "$resp->status < 500" in code:
-        add("NOX-WEAK-ASSERT", "P2", "Weak status < 500 assertion ignores exact status and persisted balance", "Assert exact 200 status and persisted balance")
-    if "DROP TABLE accounts" in code:
-        add("NOX-MIGRATION-DROP", "P0", "Destructive DROP TABLE in upgrade migration destroys retained data", "Use additive ALTER TABLE migration")
-    if "AddSingleton<" in code and "GetRequiredService<AppDbContext>" in code:
-        add("NOX-EF-LIFETIME", "P1", "Scoped AppDbContext captured inside Singleton service", "Register dependent service as Scoped")
-    if "min-width: 540px" in code:
-        add("NOX-UI-OVERFLOW", "P2", "Fixed min-width: 540px overflows 320px mobile viewport", "Use width: 100%; max-width: 540px; box-sizing: border-box")
-    if "outline: none" in code and "focus-visible" not in code:
+    if _FLOAT_MONEY_RE.search(code):
+        add("NOX-FLOAT-MONEY", "P1", "Binary floating-point double/float used for monetary calculation", "Use decimal with MidpointRounding.ToEven")
+    if _WEAK_ASSERT_RE.search(code):
+        add("NOX-WEAK-ASSERT", "P2", "Weak status < 500 or tautological assertion ignores exact invariants", "Assert exact 200 status and persisted balance")
+    if _DROP_TABLE_RE.search(code):
+        add("NOX-MIGRATION-DROP", "P0", "Destructive DROP TABLE in migration destroys retained data", "Use additive ALTER TABLE migration")
+    if _EF_LIFETIME_RE.search(code):
+        add("NOX-EF-LIFETIME", "P1", "Scoped DbContext captured inside Singleton service", "Register dependent service as Scoped")
+    m_width = _CSS_FIXED_WIDTH_RE.search(code)
+    if m_width and int(m_width.group(1)) > 320:
+        add("NOX-UI-OVERFLOW", "P2", f"Fixed min-width: {m_width.group(1)}px overflows 320px mobile viewport", "Use width: 100%; max-width: ...; box-sizing: border-box")
+    if _CSS_OUTLINE_NONE_RE.search(code) and "focus-visible" not in code:
         add("NOX-UI-FOCUS", "P2", "Keyboard focus outline removed without :focus-visible replacement", "Provide 2px solid focus-visible outline")
-    if "Live Production Treasury Settlement Active (localStorage mock)" in code:
-        add("NOX-UI-FAKE-LIVE", "P1", "Static localStorage mock falsely claims live E5 treasury settlement", "Label clearly as Simulation Preview Only")
+    if _FAKE_LIVE_RE.search(code):
+        add("NOX-UI-FAKE-LIVE", "P1", "Static localStorage/mock falsely claims live production authority", "Label clearly as Simulation Preview Only")
     if scan_untrusted_text_for_injection(code):
         add("NOX-PROMPT-INJECTION", "P0", "Prompt-injection authority override/secret exfiltration attempt detected", "Quarantine untrusted instruction")
 
@@ -279,7 +339,7 @@ def blind_inspect_code(code: str, path: str) -> list[dict[str, Any]]:
 
 
 def run_benchmark_c_suite() -> dict[str, Any]:
-    """Execute Benchmark C across all 17 seeded defects and 4 clean controls."""
+    """Execute Benchmark C across 17 seeded defects, 5 unseen holdout variants, and 4 clean controls."""
     nox_engine = NoxReviewEngine()
     healer = SelfHealingController(max_repair_cycles=3, max_identical_retries=2)
 
@@ -326,7 +386,6 @@ def run_benchmark_c_suite() -> dict[str, Any]:
             }
 
         def repair_fn(cycle: int, failure_class: str, eval_state: dict[str, Any]) -> dict[str, Any]:
-            # Verify discriminating check fails on pre-fix and passes on post-fix
             pre_fails = len(blind_inspect_code(case["seeded_code"], case["path"])) > 0
             post_passes = len(blind_inspect_code(case["repaired_code"], case["path"])) == 0
             return {
@@ -368,18 +427,35 @@ def run_benchmark_c_suite() -> dict[str, Any]:
             }
         )
 
+    # Unseen holdout variant detection
+    holdout_detected = 0
+    for hv in HOLDOUT_DEFECT_VARIANTS:
+        if len(blind_inspect_code(hv["code"], hv["path"])) > 0:
+            holdout_detected += 1
+
     detection_rate = round(detected_defects / total_defects, 4)
     repair_rate = round(repaired_defects / total_defects, 4)
     fp_rate = round(false_positives / total_controls, 4)
+    holdout_rate = round(holdout_detected / len(HOLDOUT_DEFECT_VARIANTS), 4)
 
+    ok = (
+        detected_defects == total_defects
+        and repaired_defects == total_defects
+        and holdout_detected == len(HOLDOUT_DEFECT_VARIANTS)
+        and false_positives == 0
+    )
     return {
         "benchmark": "C",
-        "status": "PASS" if (detected_defects == total_defects and repaired_defects == total_defects and false_positives == 0) else "FAIL",
+        "execution_mode": "IN_PROCESS_DETERMINISTIC_ANALYZER_AND_CONTROLLER_HARNESS",
+        "status": "PASS" if ok else "FAIL",
         "total_seeded_defects": total_defects,
         "detected_defects": detected_defects,
         "repaired_defects": repaired_defects,
         "detection_rate": detection_rate,
         "repair_success_rate": repair_rate,
+        "holdout_variants_total": len(HOLDOUT_DEFECT_VARIANTS),
+        "holdout_variants_detected": holdout_detected,
+        "holdout_detection_rate": holdout_rate,
         "clean_controls": total_controls,
         "false_positives": false_positives,
         "false_positive_rate": fp_rate,

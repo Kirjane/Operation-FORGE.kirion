@@ -26,6 +26,20 @@ GATE_CATALOG: dict[str, dict[str, str]] = {
     "G15": {"name": "Draft Delivery & Evidence Receipt", "min_evidence": "E4"},
 }
 
+EVIDENCE_LEVEL_ORDER: dict[str, int] = {
+    "E0": 0,
+    "E1": 1,
+    "E2": 2,
+    "E3": 3,
+    "E4": 4,
+    "E5": 5,
+    "E6": 6,
+    "E7": 7,
+}
+
+MANDATORY_NON_EXEMPTIBLE_GATES = {"G00", "G13", "G15"}
+E5_RUNTIME_GATES = {"G07", "G08", "G09", "G10", "G11"}
+
 RISK_REQUIRED_GATES: dict[str, list[str]] = {
     "RISK-0": ["G00", "G01", "G04", "G13", "G15"],
     "RISK-1": ["G00", "G01", "G03", "G04", "G05", "G12", "G13", "G15"],
@@ -59,22 +73,53 @@ def evaluate_gate_suite(
     candidate_sha: str,
     non_applicable_gates: dict[str, str] | None = None,
 ) -> dict[str, Any]:
-    """Verify all required gates for a risk class have non-stale trusted evidence envelopes."""
+    """Verify all required gates for a risk class have clean, exact-SHA, minimum-strength trusted evidence."""
     if risk_class not in RISK_REQUIRED_GATES:
         raise QualityGateError(f"Unknown risk_class: {risk_class!r}")
 
     required = list(RISK_REQUIRED_GATES[risk_class])
     na_map = non_applicable_gates or {}
+
+    for gid, reason in na_map.items():
+        if gid in MANDATORY_NON_EXEMPTIBLE_GATES:
+            raise QualityGateError(f"Mandatory anchor gate {gid} cannot be exempted via non_applicable_gates.")
+        if not isinstance(reason, str) or not reason.strip():
+            raise QualityGateError(f"Non-applicable gate {gid} requires a non-empty documented justification.")
+
     by_gate: dict[str, dict[str, Any]] = {}
     for env in envelopes:
         validate_contract(env, "evidence-envelope.schema.json")
+        gid = env["gate_id"]
         if env["candidate_sha"] != candidate_sha:
             raise QualityGateError(
-                f"Stale evidence envelope for gate {env['gate_id']}: envelope SHA {env['candidate_sha']} != candidate SHA {candidate_sha}"
+                f"Stale evidence envelope for gate {gid}: envelope SHA {env['candidate_sha']} != candidate SHA {candidate_sha}"
             )
-        if env["gate_id"] == "G10" and env["evidence_type"] == "BUILD":
-            raise QualityGateError("E4 BUILD evidence cannot satisfy G10 (Actual Observable Runtime Verification).")
-        by_gate[env["gate_id"]] = env
+        if gid in E5_RUNTIME_GATES and env["evidence_type"] in ("BUILD", "NONE", "SOURCE"):
+            raise QualityGateError(
+                f"Evidence type {env['evidence_type']!r} cannot satisfy runtime gate {gid} ({GATE_CATALOG[gid]['name']})."
+            )
+        if env["status"] == "PASS":
+            if env["dirty"] is True:
+                raise QualityGateError(f"Dirty working tree cannot produce a trusted PASS envelope for gate {gid}.")
+            if env["exit_code"] != 0:
+                raise QualityGateError(f"Non-zero exit_code ({env['exit_code']}) cannot be recorded as PASS for gate {gid}.")
+            min_level = GATE_CATALOG[gid]["min_evidence"]
+            actual_level = env["evidence_level"]
+            if EVIDENCE_LEVEL_ORDER[actual_level] < EVIDENCE_LEVEL_ORDER[min_level]:
+                raise QualityGateError(
+                    f"Insufficient evidence level for gate {gid}: got {actual_level}, requires >= {min_level}."
+                )
+            if gid == "G10" and env["evidence_type"] != "RUNTIME":
+                raise QualityGateError(f"Gate G10 requires evidence_type='RUNTIME', got {env['evidence_type']!r}.")
+            if gid in E5_RUNTIME_GATES and env["provenance"] not in ("DIRECTLY_OBSERVED", "REPRODUCED"):
+                raise QualityGateError(
+                    f"Gate {gid} (E5) requires provenance in ('DIRECTLY_OBSERVED', 'REPRODUCED'), got {env['provenance']!r}."
+                )
+            if EVIDENCE_LEVEL_ORDER[actual_level] >= EVIDENCE_LEVEL_ORDER["E4"] and env["provenance"] in ("ASSUMED", "REPORTED"):
+                raise QualityGateError(
+                    f"Gate {gid} with {actual_level} cannot carry {env['provenance']!r} provenance."
+                )
+        by_gate[gid] = env
 
     missing: list[str] = []
     failed: list[str] = []
@@ -108,6 +153,16 @@ def evaluate_gate_suite(
     }
 
 
+def _has_blocking_findings(findings: list[dict[str, Any]]) -> tuple[bool, bool]:
+    """Return (has_p0_quarantine, has_blocking_p1_or_p2) from raw finding entries."""
+    has_p0 = any(f["severity"] == "P0" and f["disposition"] != "FIXED" for f in findings)
+    has_p1 = any(f["severity"] == "P1" and f["disposition"] != "FIXED" for f in findings)
+    has_undisposed_p2 = any(
+        f["severity"] == "P2" and f["disposition"] not in ("FIXED", "AUTHORIZED_DISPOSITION") for f in findings
+    )
+    return has_p0, (has_p1 or has_undisposed_p2)
+
+
 class NoxReviewEngine:
     """F11 — Fresh-context read-only adversarial review engine at a frozen candidate SHA."""
 
@@ -129,15 +184,10 @@ class NoxReviewEngine:
         if reviewer_persona not in ("Antigravity-Nox", "Antigravity-Aegis"):
             raise QualityGateError(f"Invalid adversarial reviewer persona: {reviewer_persona!r}")
 
-        has_p0 = any(f["severity"] == "P0" and f["disposition"] == "OPEN" for f in findings)
-        has_p1 = any(f["severity"] == "P1" and f["disposition"] == "OPEN" for f in findings)
-        has_undisposed_p2 = any(
-            f["severity"] == "P2" and f["disposition"] not in ("FIXED", "AUTHORIZED_DISPOSITION") for f in findings
-        )
-
+        has_p0, has_p1_or_p2 = _has_blocking_findings(findings)
         if has_p0:
             verdict = "QUARANTINED"
-        elif has_p1 or has_undisposed_p2:
+        elif has_p1_or_p2:
             verdict = "REWORK"
         else:
             verdict = "PASS"
@@ -166,6 +216,14 @@ class NoxReviewEngine:
             )
         if nox_result["reviewer_context_id"] == nox_result["author_context_id"]:
             raise QualityGateError("Nox review invalid: reviewer and author share context_id.")
+
+        # Independently recompute blocking finding invariants regardless of claimed verdict string
+        has_p0, has_p1_or_p2 = _has_blocking_findings(nox_result["findings"])
+        if has_p0:
+            raise QualityGateError("Nox review invalid: unresolved P0 finding requires QUARANTINED regardless of verdict.")
+        if has_p1_or_p2:
+            raise QualityGateError("Nox review invalid: unresolved P1 or undisposed P2 finding blocks PASS.")
+
         if nox_result["verdict"] != "PASS":
             raise QualityGateError(f"Nox review verdict is {nox_result['verdict']!r}, not PASS.")
 
@@ -209,12 +267,6 @@ class SelfHealingController:
         repair_fn: Callable[[int, str, dict[str, Any]], dict[str, Any]],
         nox_review_fn: Callable[[str, str], dict[str, Any]],
     ) -> dict[str, Any]:
-        """
-        Execute bounded self-healing cycles:
-        - evaluate_fn(sha) -> {'passed': bool, 'failure_output': str, 'author_context_id': str}
-        - repair_fn(cycle, failure_class, eval_state) -> {'new_sha': str, 'regression_failed_prefix': bool, 'assertion_weakened': bool}
-        - nox_review_fn(sha, author_context_id) -> NoxResult dict
-        """
         current_sha = initial_sha
         cycles_used = 0
         failure_counts: dict[str, int] = {}
@@ -253,7 +305,6 @@ class SelfHealingController:
             sig = hashlib.sha256(f"{failure_class}:{failure_output}".encode("utf-8")).hexdigest()[:16]
             failure_counts[sig] = failure_counts.get(sig, 0) + 1
 
-            # Halt immediately on non-auto-repairable authority/requirements/drift stops
             if failure_class in ("requirements", "drift", "resource"):
                 return {
                     "status": "BLOCKED",

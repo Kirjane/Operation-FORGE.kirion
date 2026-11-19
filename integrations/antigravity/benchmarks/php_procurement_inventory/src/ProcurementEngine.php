@@ -337,9 +337,15 @@ final class ProcurementEngine
             $tenantId = (int)$po['tenant_id'];
             $this->assertTenantMatch($actor, $tenantId);
 
-            // Check idempotency key inside transaction
-            $dupStmt = $this->pdo->prepare('SELECT COUNT(*) AS cnt FROM stock_movements WHERE tenant_id = :t AND idempotency_key LIKE :ik');
-            $dupStmt->execute([':t' => $tenantId, ':ik' => $idempotencyKey . ':%']);
+            // Check exact idempotency key prefix inside transaction (immune to SQL LIKE '%'/'_' wildcards)
+            $prefix = $idempotencyKey . ':';
+            $dupStmt = $this->pdo->prepare(
+                'SELECT COUNT(*) AS cnt FROM stock_movements WHERE tenant_id = :t AND SUBSTR(idempotency_key, 1, :plen) = :pref'
+            );
+            $dupStmt->bindValue(':t', $tenantId, PDO::PARAM_INT);
+            $dupStmt->bindValue(':plen', strlen($prefix), PDO::PARAM_INT);
+            $dupStmt->bindValue(':pref', $prefix, PDO::PARAM_STR);
+            $dupStmt->execute();
             if ((int)$dupStmt->fetch()['cnt'] > 0) {
                 $this->pdo->exec('COMMIT;');
                 return $this->getPurchaseOrder($actor, $poId);

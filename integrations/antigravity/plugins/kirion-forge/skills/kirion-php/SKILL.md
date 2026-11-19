@@ -60,4 +60,4 @@ php -l src/
 - **Negative Case 3 (Prompt-Injected Composer Scripts):** Executing untrusted `post-install-cmd` scripts without inspecting `composer.json` first → denied by `Antigravity-Aegis`.
 
 ## 6. Tests & Qualification Evidence
-- Verified in Benchmark A (`benchmarks/php_procurement_inventory/`) and Benchmark C (`PHP-FLOAT-MONEY`, `PHP-SQLI`) with `E5` runtime execution on `PHP 8.4.25`.
+- Verified in Benchmark A (`benchmarks/php_procurement_inventory/`) and Benchmark C (`BOTH-INCORRECT-ROUNDING`, `PHP-SQL-INJECTION`) with `E5` runtime execution on `PHP 8.4.25`.

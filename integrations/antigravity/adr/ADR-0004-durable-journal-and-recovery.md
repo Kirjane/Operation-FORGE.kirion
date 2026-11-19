@@ -20,7 +20,7 @@ Autonomous multi-stage software factory runs must survive process termination be
 3. **Content-Addressed Artifact Store & Secret Redaction:**
    - Gate logs, diffs, and receipts are redacted for token patterns (`ghp_`, `gho_`, `github_pat_`, `Bearer `, `ANTIGRAVITY_CSRF_TOKEN`) before persistence and stored by SHA-256 digest (`artifacts/<sha256[:2]>/<sha256>.blob`).
 4. **Crash Recovery & Sandbox Capsules (`factory/recovery.py`):**
-   - On startup or recovery, the recovery engine inspects the SQLite WAL journal, verifies current Git HEAD and dirty status, checks `delivery_receipts` against remote state read-only before retrying any delivery, reclaims expired leases only after explicit reconciliation, and emits a canonical Forge Sandbox Capsule (`schemas/sandbox-capsule.schema.json` compatible) for successor handoff.
+   - On startup or recovery, the recovery engine inspects the SQLite WAL journal, verifies current Git HEAD and dirty status, checks `delivery_receipts` against remote state read-only before retrying any delivery (halting `BLOCKED` on remote branch drift), reclaims expired leases only after explicit reconciliation, emits a schema-valid `integrations/antigravity/schemas/recovery-capsule.schema.json` record, and provides `export_canonical_forge_sandbox_capsule()` exporting root `schemas/sandbox-capsule.schema.json` payloads for successor handoff.
 
 ## Consequences
 - Orchestrator kills at any boundary (pre-commit, post-commit, pre-broker, post-broker) are deterministically recoverable across 3+ repeated trials (Benchmark D) with zero duplicate remote writes.

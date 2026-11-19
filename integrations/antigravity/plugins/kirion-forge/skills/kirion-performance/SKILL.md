@@ -31,8 +31,8 @@ python -m unittest discover -s integrations/antigravity/tests -v
 ```
 
 ## 5. Misuse & Negative Cases
-- **Negative Case 1 (Per-Row Query inside Loop):** Executing `SELECT * FROM line_items WHERE po_id = ?` inside a `foreach ($orders as $order)` loop (`LARAVEL-NPLUS1`).
+- **Negative Case 1 (Per-Row Query inside Loop):** Executing `SELECT * FROM line_items WHERE po_id = ?` inside a `foreach ($orders as $order)` loop (`LARAVEL-N-PLUS-1`).
 - **Negative Case 2 (Unmeasured Performance Claim):** Claiming "4x faster" or "sub-10ms" without a recorded baseline, target command, and environment envelope.
 
 ## 6. Tests & Qualification Evidence
-- Verified in Benchmark A (query count assertions) and Benchmark C (`LARAVEL-NPLUS1` detection and repair).
+- Verified in Benchmark A (query count assertions) and Benchmark C (`LARAVEL-N-PLUS-1` detection and repair).

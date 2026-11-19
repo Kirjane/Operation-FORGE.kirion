@@ -5,23 +5,54 @@ from __future__ import annotations
 import json
 import re
 import sys
-from pathlib import Path
+
+# Matches optional git global options such as -C <dir>, -c k=v, --git-dir=..., --work-tree=...
+_GIT_OPTS = r"(?:\s+(?:-[Cc]\s+\S+|--git-dir(?:=\S+|\s+\S+)|--work-tree(?:=\S+|\s+\S+)|--no-pager|-p|--paginate))*"
 
 FORBIDDEN_COMMAND_PATTERNS = [
-    (r"\bgit\s+push\b[^\n]*(\s--force\b|\s-f\b|\s--force-with-lease\b|\s--delete\b)", "Force push or remote ref deletion is prohibited by KIRION Forge policy."),
-    (r"\bgit\s+push\b[^\n]*\b(origin\s+main|origin\s+master)\b", "Direct push to main/master is prohibited by KIRION Forge policy."),
-    (r"\bgh\s+pr\s+merge\b", "Autonomous PR merge is prohibited; promotion requires independent Engineer acceptance."),
-    (r"\bgh\s+pr\s+review\b[^\n]*--approve\b", "Self-approval via gh pr review --approve is prohibited."),
-    (r"\bgh\s+release\s+(create|delete|edit)\b", "Release mutation is prohibited without separate Engineer authorization."),
-    (r"\bgh\s+api\b[^\n]*(-X|--method)\s*(PUT|DELETE|PATCH)\s+/?repos/[^\n]*/(branches|rulesets|collaborators|hooks)", "Repository admin/branch-protection mutation is prohibited."),
-    (r"\b(JetboxWriteState|DeletePlugin|InstallCustomization)\b", "Language Server state-mutation RPCs are restricted."),
-    (r"\bphp\s+artisan\s+(migrate:fresh|migrate:reset|db:wipe)\b[^\n]*--force\b", "Destructive production database reset is prohibited."),
+    (
+        rf"\bgit{_GIT_OPTS}\s+push\b[^\n]*(\s--force\b|\s-f\b|\s--force-with-lease\b|\s--force-if-includes\b|\s--delete\b|\s-d\b|\s\+\S+|\s:\S+)",
+        "Force push, '+' refspec, or remote ref deletion is prohibited by KIRION Forge policy.",
+    ),
+    (
+        rf"\bgit{_GIT_OPTS}\s+push\b[^\n]*(\s(?:origin\s+)?(?:refs/heads/|refs/remotes/origin/)?(?:main|master|production|release)(?:\s|$)|:(?:refs/heads/)?(?:main|master|production|release)(?:\s|$))",
+        "Direct push to protected branch (main/master/production/release) is prohibited by KIRION Forge policy.",
+    ),
+    (
+        rf"\bgit{_GIT_OPTS}\s+branch\b[^\n]*(\s-D\b|\s--delete\b[^\n]*\s--force\b|\s--force\b[^\n]*\s--delete\b)",
+        "Forced local branch deletion (git branch -D) is prohibited by KIRION Forge policy.",
+    ),
+    (
+        r"\b(rm\s+(?:[^\n]*\s)?-[^\s]*[rf][^\s]*\s+(?:[^\n]*\s)?(?:\S*/)?\.git(?:\b|/|\s|$)|remove-item\b[^\n]*\.git(?:\b|/|\\|\s|$)|rmdir\b[^\n]*\.git(?:\b|/|\\|\s|$))",
+        "Destructive removal of .git metadata is prohibited by KIRION Forge policy.",
+    ),
+    (
+        r"\bgh\s+pr\s+merge\b",
+        "Autonomous PR merge is prohibited; promotion requires independent Engineer acceptance.",
+    ),
+    (
+        r"\bgh\s+pr\s+review\b[^\n]*--approve\b",
+        "Self-approval via gh pr review --approve is prohibited.",
+    ),
+    (
+        r"\bgh\s+release\s+(create|delete|edit)\b",
+        "Release mutation is prohibited without separate Engineer authorization.",
+    ),
+    (
+        r"\bgh\s+api\b[^\n]*(-X|--method)\s*(PUT|DELETE|PATCH)\s+/?repos/[^\n]*/(branches|rulesets|collaborators|hooks)",
+        "Repository admin/branch-protection mutation is prohibited.",
+    ),
+    (
+        r"\b(JetboxWriteState|DeletePlugin|InstallCustomization)\b",
+        "Language Server state-mutation RPCs are restricted.",
+    ),
+    (
+        r"\bphp\s+artisan\s+(migrate:fresh|migrate:reset|db:wipe)\b[^\n]*--force\b",
+        "Destructive production database reset is prohibited.",
+    ),
 ]
 
-PROTECTED_GLOBAL_PATHS = [
-    "/.gemini/config/config.json",
-    "/.gemini/config/plugins/",
-]
+GLOBAL_CONFIG_TREE_RE = re.compile(r"(^|/)\.gemini/config(/|$)", re.IGNORECASE)
 
 
 def evaluate_pre_tool_use(payload: dict) -> dict:
@@ -41,13 +72,12 @@ def evaluate_pre_tool_use(payload: dict) -> dict:
                 return {"decision": "deny", "reason": reason}
 
     if tool_name in ("write_file", "edit_file"):
-        raw_path = str(args.get("Path") or "").replace("\\", "/")
-        for protected in PROTECTED_GLOBAL_PATHS:
-            if protected.lower() in raw_path.lower():
-                return {
-                    "decision": "deny",
-                    "reason": f"Global Antigravity configuration write ({protected}) is prohibited without explicit user permission.",
-                }
+        raw_path = str(args.get("Path") or "").replace("\\", "/").strip()
+        if GLOBAL_CONFIG_TREE_RE.search(raw_path):
+            return {
+                "decision": "deny",
+                "reason": "Global Antigravity configuration tree (~/.gemini/config) is prohibited without explicit user permission.",
+            }
 
     return {"decision": "allow"}
 

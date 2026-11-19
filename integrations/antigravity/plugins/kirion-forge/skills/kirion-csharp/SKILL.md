@@ -44,4 +44,4 @@ dotnet test -c Release --no-build
 - **Negative Case 3 (Incorrect Rounding Scale):** Allowing >2 decimal places or unrounded division into ledger postings without explicit scale validation.
 
 ## 6. Tests & Qualification Evidence
-- Verified on `.NET SDK 10.0.401` in Benchmark B (`benchmarks/dotnet_transaction_engine/`) and Benchmark C (`CSHARP-ROUNDING`, `CSHARP-MISSING-TX`).
+- Verified on `.NET SDK 10.0.401` in Benchmark B (`benchmarks/dotnet_transaction_engine/`) and Benchmark C (`BOTH-INCORRECT-ROUNDING`, `BOTH-MISSING-TRANSACTION`).

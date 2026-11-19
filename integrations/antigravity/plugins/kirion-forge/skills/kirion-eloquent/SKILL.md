@@ -48,4 +48,4 @@ php artisan test --filter=MigrationPreservationTest
 - **Negative Case 3 (Partial Receipt Without Transaction):** Incrementing `inventory_items` before validating excess quantity against `ordered_qty`, leaving partial state on exception.
 
 ## 6. Tests & Qualification Evidence
-- Verified in Benchmark A (partial receipt reconciliation, migration upgrade, rollback on injected failure) and Benchmark C (`PHP-SQLI`, `LARAVEL-NPLUS1`, `MISSING-TX`).
+- Verified in Benchmark A (partial receipt reconciliation, migration upgrade, rollback on injected failure) and Benchmark C (`PHP-SQL-INJECTION`, `LARAVEL-N-PLUS-1`, `BOTH-MISSING-TRANSACTION`).

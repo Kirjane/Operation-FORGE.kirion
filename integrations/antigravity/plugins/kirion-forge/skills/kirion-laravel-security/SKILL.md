@@ -50,4 +50,4 @@ php artisan test --filter=SecurityAndTenantIsolationTest
 - **Negative Case 3 (Unsafe File Upload):** Saving uploaded filename directly to `public/uploads/$filename` allowing `.php` or path traversal `../`.
 
 ## 6. Tests & Qualification Evidence
-- Verified in Benchmark A (cross-tenant A/B denial and role matrix) and Benchmark C (`LARAVEL-IDOR`, `LARAVEL-MASS-ASSIGN`, `UNSAFE-UPLOAD`).
+- Verified in Benchmark A (cross-tenant A/B denial and role matrix) and Benchmark C (`LARAVEL-IDOR`, `LARAVEL-MASS-ASSIGNMENT`, `UNSAFE-FILE-UPLOAD`).

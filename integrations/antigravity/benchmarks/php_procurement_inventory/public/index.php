@@ -10,12 +10,6 @@ $dbPath = getenv('KIRION_BENCHMARK_A_DB') ?: (sys_get_temp_dir() . DIRECTORY_SEP
 $engine = new ProcurementEngine($dbPath);
 $engine->migrateV1ToV2();
 
-$actor = [
-    'tenant_id' => (int)($_SERVER['HTTP_X_TENANT_ID'] ?? 1),
-    'user_id' => (int)($_SERVER['HTTP_X_USER_ID'] ?? 101),
-    'role' => (string)($_SERVER['HTTP_X_ACTOR_ROLE'] ?? 'requester'),
-];
-
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 $uri = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
 $rawBody = file_get_contents('php://input') ?: '{}';
@@ -27,6 +21,20 @@ try {
         echo json_encode(['status' => 'ok', 'schema_version' => $engine->getSchemaVersion()]);
         exit;
     }
+
+    // Fail-closed authentication: require explicit non-empty tenant, user, and role headers on all /api/v1/* routes
+    $rawTenant = trim((string)($_SERVER['HTTP_X_TENANT_ID'] ?? ''));
+    $rawUser = trim((string)($_SERVER['HTTP_X_USER_ID'] ?? ''));
+    $rawRole = trim((string)($_SERVER['HTTP_X_ACTOR_ROLE'] ?? ''));
+    if ($rawTenant === '' || $rawUser === '' || $rawRole === '' || !ctype_digit($rawTenant) || !ctype_digit($rawUser)) {
+        throw new DomainHttpException('Missing or invalid authentication headers (X-Tenant-Id, X-User-Id, X-Actor-Role required).', 401);
+    }
+
+    $actor = [
+        'tenant_id' => (int)$rawTenant,
+        'user_id' => (int)$rawUser,
+        'role' => $rawRole,
+    ];
 
     if ($method === 'POST' && $uri === '/api/v1/suppliers') {
         header('Content-Type: application/json');
@@ -61,6 +69,9 @@ try {
     }
 
     if ($method === 'POST' && $uri === '/api/v1/queue/work') {
+        if (!in_array($actor['role'], ['approver', 'stock_clerk', 'worker'], true)) {
+            throw new DomainHttpException("Role '{$actor['role']}' is denied from executing outbox queue worker.", 403);
+        }
         header('Content-Type: application/json');
         echo json_encode($engine->processOutboxQueue((int)$actor['tenant_id']));
         exit;

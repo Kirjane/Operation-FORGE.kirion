@@ -35,6 +35,10 @@ PROTECTED_GOVERNANCE_PATHS = {
     ".forge/SSOT_CURRENT.md",
 }
 
+PROTECTED_GOVERNANCE_PATHS_LOWER = {p.lower() for p in PROTECTED_GOVERNANCE_PATHS}
+
+PROHIBITED_BRANCH_NAMES_LOWER = {"main", "master", "head", "production", "release"}
+
 PERSONA_PERMISSIONS: dict[str, dict[str, Any]] = {
     "Antigravity-Maintainer": {
         "formal_roles": {"Maintainer"},
@@ -91,24 +95,63 @@ class PolicyViolationError(AuthorityError):
     """Raised when an operation, path mutation, or untrusted input violates deny-default policy."""
 
 
+def is_prohibited_branch(branch: str) -> bool:
+    """Case-insensitive, refspec-aware check denying protected branches, whitespace, and option-like names."""
+    if not isinstance(branch, str):
+        return True
+    raw = branch.strip()
+    if not raw or raw != branch or any(ch.isspace() for ch in raw):
+        return True
+    if raw.startswith("-") or ".." in raw or raw.startswith("+") or raw.startswith(":"):
+        return True
+
+    candidates = [raw]
+    if ":" in raw:
+        candidates.extend(part for part in raw.split(":") if part)
+
+    for cand in candidates:
+        low = cand.lower()
+        for prefix in ("refs/heads/", "refs/remotes/origin/", "remotes/origin/", "origin/"):
+            if low.startswith(prefix):
+                low = low[len(prefix):]
+        if low in PROHIBITED_BRANCH_NAMES_LOWER:
+            return True
+    return False
+
+
+def is_protected_governance_path(rel_path: str) -> bool:
+    """Case-insensitive governance path check (critical on Windows NTFS/macOS APFS)."""
+    norm = normalize_rel_path(rel_path)
+    return norm.lower() in PROTECTED_GOVERNANCE_PATHS_LOWER
+
+
 def normalize_rel_path(raw_path: str) -> str:
     cleaned = raw_path.replace("\\", "/").strip()
+    if not cleaned:
+        raise PolicyViolationError("Empty relative path forbidden.")
     while cleaned.startswith("./"):
         cleaned = cleaned[2:]
+    if not cleaned or cleaned == ".":
+        raise PolicyViolationError(f"Repository root path {raw_path!r} is overbroad and forbidden.")
     if cleaned.startswith("/") or re.match(r"^[A-Za-z]:", cleaned):
         raise PolicyViolationError(f"Absolute path forbidden in relative path check: {raw_path!r}")
+    if any(ch in cleaned for ch in ("*", "?", "\x00", "\n", "\r")):
+        raise PolicyViolationError(f"Wildcard or control character forbidden in path: {raw_path!r}")
     parts = cleaned.split("/")
     if ".." in parts:
         raise PolicyViolationError(f"Parent directory traversal ('..') forbidden: {raw_path!r}")
-    return str(PurePosixPath(cleaned))
+    norm = str(PurePosixPath(cleaned))
+    if norm in (".", ""):
+        raise PolicyViolationError(f"Overbroad root path forbidden: {raw_path!r}")
+    return norm
 
 
 def path_matches_prefix(candidate_rel: str, owned_prefix: str) -> bool:
     norm_cand = normalize_rel_path(candidate_rel)
     norm_pref = normalize_rel_path(owned_prefix.rstrip("/"))
-    if norm_cand == norm_pref:
+    if norm_cand.lower() == norm_pref.lower():
         return True
-    return norm_cand.startswith(norm_pref + "/")
+    return norm_cand.lower().startswith(norm_pref.lower() + "/")
 
 
 def assert_operation_allowed(
@@ -152,7 +195,7 @@ def assert_paths_within_ownership(
 
     for raw in changed_paths:
         norm = normalize_rel_path(raw)
-        if not allow_protected_governance and norm in PROTECTED_GOVERNANCE_PATHS:
+        if not allow_protected_governance and is_protected_governance_path(norm):
             raise PolicyViolationError(f"Protected governance file {norm!r} cannot be modified by worker.")
 
         if not any(path_matches_prefix(norm, pref) for pref in owned_prefixes):
@@ -161,12 +204,12 @@ def assert_paths_within_ownership(
             )
 
         if persona == "Antigravity-Scribe" and not (
-            norm.endswith((".md", ".json", ".txt")) or "/adr/" in f"/{norm}" or "/evidence/" in f"/{norm}"
+            norm.endswith((".md", ".json", ".txt")) or "/adr/" in f"/{norm.lower()}" or "/evidence/" in f"/{norm.lower()}"
         ):
             raise PolicyViolationError(f"Antigravity-Scribe is restricted to documentation/capsule paths, denied: {norm!r}")
 
         if persona == "Antigravity-Lucien" and not (
-            norm.endswith((".md", ".schema.json", ".json")) or "/adr/" in f"/{norm}" or "/schemas/" in f"/{norm}"
+            norm.endswith((".md", ".schema.json", ".json")) or "/adr/" in f"/{norm.lower()}" or "/schemas/" in f"/{norm.lower()}"
         ):
             raise PolicyViolationError(f"Antigravity-Lucien is restricted to architecture/ADR/schema paths, denied: {norm!r}")
 

@@ -28,8 +28,8 @@ python -m unittest discover -s integrations/antigravity/tests -v
 ```
 
 ## 5. Misuse & Negative Cases
-- **Negative Case 1 (Weak Assertion):** Asserting `response.status_code < 500` or `result is not None` while ignoring that a duplicate payment doubled the ledger balance (`WEAK-ASSERTION`).
+- **Negative Case 1 (Weak Assertion):** Asserting `response.status_code < 500` or `result is not None` while ignoring that a duplicate payment doubled the ledger balance (`BOTH-WEAK-ASSERTION`).
 - **Negative Case 2 (Assertion Weakening During Repair):** Changing an expected balance in a failing test to match the buggy output instead of fixing the calculation.
 
 ## 6. Tests & Qualification Evidence
-- Verified across Benchmarks A, B, C (`WEAK-ASSERTION`), D, and E.
+- Verified across Benchmarks A, B, C (`BOTH-WEAK-ASSERTION`), D, and E.

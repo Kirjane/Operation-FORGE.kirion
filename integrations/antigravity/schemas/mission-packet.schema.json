@@ -118,6 +118,10 @@
         "pattern": "^G(0[0-9]|1[0-5])$"
       }
     },
+    "non_applicable_gates": {
+      "type": "object",
+      "additionalProperties": { "type": "string", "minLength": 1 }
+    },
     "gate_commands": {
       "type": "object",
       "additionalProperties": {

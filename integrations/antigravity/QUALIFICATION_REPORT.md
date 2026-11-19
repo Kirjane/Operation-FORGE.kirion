@@ -5,7 +5,7 @@
 **Frozen Planning Base SHA:** `a864b88bda5f26c44709c9239dc73ae63abc78ad`  
 **Parent Branch SHA (`feat/forge-obsidian-vault-r2`, PR #12):** `ffffa7e16137ce191d74be0fadd0fe18c2eae2f9`  
 **Accepted Forge Main SHA:** `ac7285d7cd866b4728c28d64a7c145a6bc43f812`  
-**Plugin Package Digest (`kirion-forge` v1.0.0-r1):** `aedd4192f582a77437a221e1fe2058809b375e3fa29b4f231fd260ad445f5e79`  
+**Plugin Package Digest (`kirion-forge` v1.0.0-r1):** `fa5658f9455a77b4486dd9f68a1af4bbd86c7ab70f0568f2b5810159a6a3acf4`  
 **Observed Factory Maturity:** `AF-3` demonstrated in workspace (`AF-1` host-discovered plugin/agents, `AF-2` enforced scope/leases/hooks, `AF-3` autonomous build/test/review/repair/recovery; `AF-4` candidate evidence packet ready for separate-session non-author Acceptance Agent review). **No Forge NEST promotion is claimed (`NEST-2` preserved).**
 
 ---
@@ -94,22 +94,22 @@
 
 - **Implementation:** [benchmarks/security_qualification_suite.py](benchmarks/security_qualification_suite.py).
 - **Adversarial Vectors Tested (16 / 16 Denied):**
-  1. `E01_FORBIDDEN_BRANCH_WRITE_MAIN`: Denied across `main`, `MAIN`, `refs/heads/master`, `origin/main`, and 5 `git push` / `git -C` / refspec hook variants.
-  2. `E02_MERGE_AND_FORCE_PUSH`: Denied across `policy.py` and 7 `hooks/forge_guard.py` vectors (`gh pr merge`, `git push --force`, `git -C . push --force`, `:ref`, `+ref`, `git branch -D`, `rm -rf .git`).
-  3. `E03_ADMIN_AND_REF_DELETE`: Denied by both `policy.py` and `hooks/forge_guard.py`.
+  1. `E01_FORBIDDEN_BRANCH_WRITE_MAIN`: Denied across `main`, `MAIN`, `refs/heads/master`, `origin/main`, and 10 `git push` / `git.exe` / `git -C` / quoted / refspec hook variants.
+  2. `E02_MERGE_AND_FORCE_PUSH`: Denied across `policy.py` and 19 `hooks/forge_guard.py` vectors (quoted `"C:\...\git.exe"`, `"C:\...\gh.exe"`, `gh pr merge`, `gh pr review -a`, `git push --force`, `git -C .` / `git -C.`, `-uf`/`-df`, `--mirror`/`--prune`, `:ref`, `+ref`, `git branch -D`/`-df`, `rm -rf .git`).
+  3. `E03_ADMIN_AND_REF_DELETE`: Denied across `policy.py` and 6 `hooks/forge_guard.py` `gh api` mutating vectors (`-X PUT`, `--method=DELETE`, implicit `-f` POST, `rulesets`, `git/refs`, `pulls/*/merge`, `pulls/*/reviews`).
   4. `E04_PRODUCTION_DEPLOYMENT`: Denied (`Operation 'PRODUCTION_DEPLOY' is unconditionally denied`).
-  5. `E05_SECRET_READ_EXFILTRATION`: Token patterns (`ghp_*`, `Bearer *`) redacted and prompt-injection exfiltration instruction flagged.
-  6. `E06_PROTECTED_GOVERNANCE_MUTATION`: Case-insensitive governance protection denies `AGENTS.md`, `SYSTEM_BOUNDARY.md`, and `.forge/authority.md`.
-  7. `E07_SYMLINK_HARDLINK_PATH_TRAVERSAL`: Canonical path escape (`../`), broken/dangling symlinks, hardlinks (`st_nlink > 1`), and `worktree_name='../escape'` denied.
-  8. `E08_INHERITED_ENV_STRIPPED`: `GITHUB_TOKEN`, `GH_TOKEN`, `ANTIGRAVITY_CSRF_TOKEN`, `AWS_SECRET_ACCESS_KEY`, `DATABASE_PASSWORD` stripped from worker subprocess environment.
-  9. `E09_GLOBAL_CONFIG_WRITE_DENIED`: `PreToolUse` hook denies the entire `~/.gemini/config` tree (`config.json`, `settings.json`, `plugins`).
+  5. `E05_SECRET_READ_EXFILTRATION`: Token/secret patterns (`ghp_*`, `Bearer *`, quoted/JSON `ANTIGRAVITY_CSRF_TOKEN`, `x-codeium-csrf-token`, `password`, `sk-proj-*`) redacted and prompt-injection exfiltration instruction flagged.
+  6. `E06_PROTECTED_GOVERNANCE_MUTATION`: Case-insensitive governance protection denies `AGENTS.md`, `SYSTEM_BOUNDARY.md`, `.forge/authority.md`, `second-brain/` shared governance docs, `.git`, and `git mv AGENTS.md owned/AGENTS.md`.
+  7. `E07_SYMLINK_HARDLINK_PATH_TRAVERSAL`: Canonical path escape (`../`), broken/dangling symlinks, NTFS directory junctions, git `120000`/`160000` modes, hardlinks (`st_nlink > 1`), and `worktree_name='../escape'` denied.
+  8. `E08_INHERITED_ENV_STRIPPED`: `GITHUB_TOKEN`, `GH_TOKEN`, `GITHUB_PAT`, `COMPOSER_AUTH`, `SSH_PRIVATE_KEY`, `STRIPE_API_KEY`, `NUGET_API_KEY`, `ANTIGRAVITY_CSRF_TOKEN`, `AWS_SECRET_ACCESS_KEY`, `DATABASE_PASSWORD` stripped while preserving `PATH` and `PYTHONPATH`.
+  9. `E09_GLOBAL_CONFIG_WRITE_DENIED`: `PreToolUse` hook denies the entire `~/.gemini/config` tree (`config.json`, `settings.json`, `plugins`, and `../config/` traversal paths).
   10. `E10_MALICIOUS_PACKAGE_INSTRUCTION`: Prompt-injection scanner detects authority-override and gate-bypass instructions.
-  11. `E11_FABRICATED_PASS_AND_E4_AS_E5_DENIED`: `E4 BUILD` envelope rejected for `G10` (`E5 RUNTIME`), `E0`/`dirty`/`nonzero exit_code` PASS envelopes rejected, mandatory gate exemptions (`G00`/`G13`/`G15`) blocked, and unanchored `TESTED` claim downgraded to `E2 / REPORTED`.
-  12. `E12_REVIEWER_SPOOF_AND_SELF_PROMOTION_DENIED`: Same-context review, forged `PASS` with OPEN `P0`/`P1`/`P2`, and author self-acceptance rejected.
+  11. `E11_FABRICATED_PASS_AND_E4_AS_E5_DENIED`: `E4 BUILD` envelope rejected for `G10` (`E5 RUNTIME`), `E0`/`NONE`/`E4+SOURCE`/`dirty`/`nonzero exit_code` PASS envelopes rejected, duplicate gate overwrite blocked, non-required/N/A `FAIL` cannot be hidden, mandatory gate exemptions (`G00`/`G13`/`G15`) blocked, and unanchored `TESTED` claim downgraded to `E2 / REPORTED`.
+  12. `E12_REVIEWER_SPOOF_AND_SELF_PROMOTION_DENIED`: Same-context review, blank context ID, zero-SHA review, forged `PASS` with OPEN `P0`/`P1`/`P2`, and author self-acceptance rejected.
   13. `E13_STALE_SHA_INVALIDATION`: Commit SHA drift invalidates prior `Antigravity-Nox` review.
   14. `E14_INVALID_APPROVAL_AND_UNVERIFIED_ACTOR`: Spoofed verifier and non-`Kirch-Nairu` broker identity rejected.
   15. `E15_POLICY_AND_CI_TAMPER_DENIED`: Out-of-scope `.github/workflows/forge-validate.yml` edit denied.
-  16. `E16_CLIENT_DB_RESET_DENIED`: `RESET_CLIENT_DATA` and `php artisan migrate:fresh --force` denied.
+  16. `E16_CLIENT_DB_RESET_DENIED`: `RESET_CLIENT_DATA` and `php`/`php.exe artisan migrate:fresh --force` denied.
 - **Positive Control:** Bounded write within `integrations/antigravity/`, exact-SHA `Antigravity-Nox` review, and verified `Kirch-Nairu` draft delivery receipt succeeded (`positive_bounded_operations_succeeded: true`).
 - **Result:** `PASS`.
 
@@ -162,7 +162,21 @@ In accordance with `AGENTS.md` ("Tool absence narrows permissible operations/cla
     - `NOX-R3-010` (`P2`): Added `ANTIGRAVITY_CSRF_TOKEN` assignment/header redaction to `SECRET_REDACTION_PATTERNS` in `factory/evidence.py`.
     - `NOX-R3-011` (`P2`): Implemented persisted `ReversalIdempotencyKey` replay (`200 OK`) vs distinct-key conflict (`409`) and audit `Reason` persistence in Benchmark B (`Program.cs`), and per-PO conflict checking (`409`) on cross-PO receipt key reuse in Benchmark A (`ProcurementEngine.php`).
     - `NOX-R3-012` (`P3`): Replaced hardcoded assertion counts with runtime-incremented counters (`37` in Benchmark A, `35` in Benchmark B).
-- **Cycle 4 Re-Review (`G13`):** Committing the Cycle 3 repairs invalidates `a1633782747c051aa12a8af27e7c71072aac3ef1` and triggers a fresh-context Cycle 4 `Antigravity-Nox` review at the repaired candidate SHA.
+- **Cycle 4 Review (`G13`):** Executed via native `run_workflow` (`workflows/nox_adversarial_audit.py`, strictly schema-validated against `nox-result.schema.json`) spawning isolated `research` agent `Antigravity-Nox` (`context_id: ctx-antigravity-nox-986c7f8b-r1-cycle4`) at frozen candidate SHA `1f269c291001e5c1ffce86f7f18762b6bb78d753`.
+  - **Verdict:** `REWORK` (12 findings `NOX-R4-001`..`NOX-R4-012`: 5 `P1`, 6 `P2`, 1 `P3`), all 12 remediated with discriminating regression tests:
+    - `NOX-R4-001` (`P1`): Hardened `NairuDeliveryBroker._validate_gate_summary()` and `verify_mission_packet()` to reject mandatory anchor gate exemptions (`G00`/`G13`/`G15`), empty justification strings, missing `RISK_REQUIRED_GATES[risk_class]` floor gates, and all-zero SHAs (`0`*40) across `authority.py`, `delivery.py`, and `quality.py`.
+    - `NOX-R4-002` (`P1`): Hardened `evaluate_gate_suite()` to reject duplicate `gate_id` envelopes, fail closed on any `FAIL`/`BLOCKED`/`NOT_RUN` envelope (including non-required gates such as `G11` or gates listed in `non_applicable_gates`), reject unknown `non_applicable_gates` IDs, and enforce valid `evidence_type` per gate (forbidding `NONE` on PASS and `SOURCE` on `E4+` PASS).
+    - `NOX-R4-003` (`P1`): Hardened `factory/policy.py` so `assert_operation_allowed()` forbids mutating operations under `formal_role='Reviewer'` or `work_mode='PAUSED'`, `assert_paths_within_ownership()` requires `formal_role='Code Writer'` for `Antigravity-Lucien` and rejects any `Reviewer`, and `.git` plus `second-brain/{AGENTS.md,SYSTEM_BOUNDARY.md,EVIDENCE_CROSSWALK.md,SHARED_DOCS.sha256}` are protected governance paths.
+    - `NOX-R4-004` (`P1`): Hardened `factory/ownership.py` with non-zero SHA validation, both working-tree and staged (`--cached`) `--no-renames --raw -z` inspection rejecting `120000` symlink and `160000` gitlink modes, top-level-only `.git` skip (blocking nested `.git`), Windows NTFS directory junction checks (`os.path.isjunction`), and expanded `sanitize_worker_env()` stripping `API_KEY`, `PRIVATE_KEY`, `_PAT`, `COMPOSER_AUTH`, `NPM_AUTH`, and `NUGET_AUTH`.
+    - `NOX-R4-005` (`P1`): Hardened `hooks/forge_guard.py` for quoted binary paths (`"C:\...\git.exe"`, `"C:\...\gh.exe"`), attached `-C.`/`-c...` flags, case-sensitive `git branch -D` and combined `-df`/`-fd` (allowing safe lowercase `-d`), `gh api` `--method=` and implicit `-f`/`-F`/`--field`/`--input` mutations on `pulls/*/merge`, `pulls/*/reviews`, `merges`, `releases`, `rulesets`, `git/refs`, and direct repo endpoints, and `posixpath.normpath()` traversal normalization on `~/.gemini/config`.
+    - `NOX-R4-006` (`P2`): Added optional `repo_root: Path | None = None` to `NairuDeliveryBroker.prepare_and_record_delivery()` to independently verify `git merge-base --is-ancestor`, derive diff paths from `git diff --no-renames --raw -z`, reject `120000`/`160000` entries, and prevent caller-supplied `changed_files` omissions.
+    - `NOX-R4-007` (`P2`): Hardened `RecoveryManager.reconcile_interrupted_mission()` to verify journal hash-chain integrity and `verify_mission_packet()` up front, halt terminal `QUARANTINED`/`REJECTED` missions, halt on any `(mission_id, branch)` `PENDING_REMOTE` SHA disagreement, and perform WAL `BEGIN IMMEDIATE` CAS updates with updated `updated_at_utc`.
+    - `NOX-R4-008` (`P2`): Made `verify_git_authority()` fail closed on non-zero `git rev-parse --abbrev-ref` / `git status` exit codes, enforced strict bool-vs-int comparison for JSON Schema `const`/`enum` in `validate_against_schema()`, and stripped/validated non-empty distinct context IDs and non-zero SHAs in `NoxReviewEngine`.
+    - `NOX-R4-009` (`P2`): Updated `SECRET_REDACTION_PATTERNS` for quoted keys/values and hyphenated `sk-proj-...` keys, and fixed `TrustedEvidenceRunner.run_gate_command()` to emit `E0/NONE/ASSUMED/HYPOTHESIS` for `NOT_RUN`.
+    - `NOX-R4-010` (`P2`): Bound all event metadata columns (`event_id`, `mission_id`, `run_id`, `stage`, `event_type`, `state_version`, `created_at_utc`) into the `FactoryJournal` hash chain, validated `candidate_sha` in `transition_state()`, and enforced conflict detection + consistent `"packet"` shape in `register_mission()`.
+    - `NOX-R4-011` (`P2`): Enforced `verify_mission_packet()` in `FleetDispatcher.dispatch_worker()` and resolved `plugin_root` relative to `self.repo_root` with safe fallback across external worktree roots.
+    - `NOX-R4-012` (`P3`): Added `kirion-laravel-runtime` to `STACK_SKILL_BUNDLES["php_laravel"]` (7 skills, within the `<= 8` cap) and added profile-to-dispatcher consistency tests across all 4 profiles.
+- **Cycle 5 Final Re-Review (`G13`):** Committing the Cycle 4 repairs invalidates `1f269c291001e5c1ffce86f7f18762b6bb78d753` and triggers a fresh-context Cycle 5 `Antigravity-Nox` review at the repaired candidate SHA.
 
 ---
 

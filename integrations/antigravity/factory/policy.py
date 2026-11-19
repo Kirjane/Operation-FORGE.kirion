@@ -33,9 +33,15 @@ PROTECTED_GOVERNANCE_PATHS = {
     ".forge/AUTHORITY.md",
     ".forge/NEST.md",
     ".forge/SSOT_CURRENT.md",
+    "second-brain/AGENTS.md",
+    "second-brain/SYSTEM_BOUNDARY.md",
+    "second-brain/EVIDENCE_CROSSWALK.md",
+    "second-brain/SHARED_DOCS.sha256",
 }
 
 PROTECTED_GOVERNANCE_PATHS_LOWER = {p.lower() for p in PROTECTED_GOVERNANCE_PATHS}
+
+MUTATING_OPERATIONS = {"WRITE_OWNED", "INTEGRATE_BRANCH", "DELIVER_DRAFT_PR"}
 
 PROHIBITED_BRANCH_NAMES_LOWER = {"main", "master", "head", "production", "release"}
 
@@ -123,7 +129,10 @@ def is_prohibited_branch(branch: str) -> bool:
 
 
 def is_protected_governance_path(rel_path: str) -> bool:
-    """Case-insensitive governance path check (critical on Windows NTFS/macOS APFS)."""
+    """Case-insensitive governance path check (critical on Windows NTFS/macOS APFS), including .git metadata."""
+    cleaned = rel_path.replace("\\", "/").strip()
+    if any(part.lower() == ".git" for part in cleaned.split("/")):
+        return True
     norm = normalize_rel_path(rel_path)
     return norm.lower() in PROTECTED_GOVERNANCE_PATHS_LOWER
 
@@ -143,9 +152,11 @@ def normalize_rel_path(raw_path: str) -> str:
     parts = cleaned.split("/")
     if ".." in parts:
         raise PolicyViolationError(f"Parent directory traversal ('..') forbidden: {raw_path!r}")
+    if any(part.lower() == ".git" for part in parts):
+        raise PolicyViolationError(f"Git metadata path ('.git') forbidden: {raw_path!r}")
     norm = str(PurePosixPath(cleaned))
-    if norm in (".", ""):
-        raise PolicyViolationError(f"Overbroad root path forbidden: {raw_path!r}")
+    if norm in (".", "") or any(part.lower() == ".git" for part in PurePosixPath(norm).parts):
+        raise PolicyViolationError(f"Overbroad or .git path forbidden: {raw_path!r}")
     return norm
 
 
@@ -166,6 +177,14 @@ def assert_operation_allowed(
     """Deny-by-default check for any requested factory operation."""
     if operation in UNCONDITIONALLY_DENIED_OPERATIONS:
         raise PolicyViolationError(f"Operation {operation!r} is unconditionally denied by Forge factory policy.")
+
+    if packet.get("work_mode") == "PAUSED" and operation in MUTATING_OPERATIONS:
+        raise PolicyViolationError(f"Operation {operation!r} is forbidden while work_mode is 'PAUSED'.")
+
+    if packet.get("formal_role") == "Reviewer" and operation in MUTATING_OPERATIONS:
+        raise PolicyViolationError(
+            f"formal_role='Reviewer' is read-only and cannot perform mutating operation {operation!r}."
+        )
 
     persona = actor_persona or packet.get("assigned_persona", "")
     spec = PERSONA_PERMISSIONS.get(persona)
@@ -192,6 +211,10 @@ def assert_paths_within_ownership(
     require_write_operation: bool = True,
 ) -> list[str]:
     """Verify every touched file is inside MissionPacket.owned_paths and respects persona path restrictions."""
+    if packet.get("formal_role") == "Reviewer":
+        raise PolicyViolationError(
+            f"formal_role='Reviewer' ({packet.get('assigned_persona')!r}) is read-only and cannot mutate repository paths."
+        )
     if require_write_operation:
         assert_operation_allowed(packet, "WRITE_OWNED")
     owned_prefixes = packet.get("owned_paths", [])
@@ -212,8 +235,13 @@ def assert_paths_within_ownership(
         if persona == "Antigravity-Scribe" and not norm_low.endswith((".md", ".json", ".txt")):
             raise PolicyViolationError(f"Antigravity-Scribe is restricted to documentation/capsule files (.md/.json/.txt), denied: {norm!r}")
 
-        if persona == "Antigravity-Lucien" and not norm_low.endswith((".md", ".schema.json", ".json")):
-            raise PolicyViolationError(f"Antigravity-Lucien is restricted to architecture/ADR/schema files (.md/.json), denied: {norm!r}")
+        if persona == "Antigravity-Lucien":
+            if packet.get("formal_role") != "Code Writer":
+                raise PolicyViolationError(
+                    "Antigravity-Lucien is read-only by default and requires explicit Code Writer role transition to write files."
+                )
+            if not norm_low.endswith((".md", ".schema.json", ".json")):
+                raise PolicyViolationError(f"Antigravity-Lucien is restricted to architecture/ADR/schema files (.md/.json), denied: {norm!r}")
 
         if persona == "Antigravity-QA":
             if packet.get("formal_role") != "Code Writer":

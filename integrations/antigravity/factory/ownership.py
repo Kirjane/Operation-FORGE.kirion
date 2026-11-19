@@ -3,13 +3,14 @@ from __future__ import annotations
 
 import datetime as dt
 import os
+import re
 import shutil
 import sqlite3
 import subprocess
 from pathlib import Path
 from typing import Any
 
-from .authority import AuthorityError
+from .authority import AuthorityError, is_valid_git_sha
 from .policy import (
     PolicyViolationError,
     assert_paths_within_ownership,
@@ -32,22 +33,81 @@ SENSITIVE_ENV_PREFIXES = (
     "ANTHROPIC_API_KEY",
     "SECRET_",
     "PRIVATE_KEY",
+    "COMPOSER_AUTH",
+    "NPM_AUTH",
+    "NUGET_AUTH",
 )
+
+SENSITIVE_ENV_SUBSTRINGS = (
+    "TOKEN",
+    "SECRET",
+    "PASSWORD",
+    "CREDENTIAL",
+    "API_KEY",
+    "PRIVATE_KEY",
+    "COMPOSER_AUTH",
+    "NPM_AUTH",
+    "NUGET_AUTH",
+)
+
+_PAT_ENV_RE = re.compile(r"(?:^|_)PAT(?:_|$)")
 
 
 class LeaseConflictError(PolicyViolationError):
     """Raised when a path/module/behavior lease collides, expires, or fails compare-and-set."""
 
 
+def parse_git_raw_z_diff(raw_stdout: str) -> tuple[list[str], list[tuple[str, str, str]]]:
+    """
+    Parse `git diff --no-renames --raw -z` output.
+    Returns (paths, forbidden_mode_entries) where forbidden_mode_entries holds
+    (path, old_mode, new_mode) for any symlink (120000) or gitlink/submodule (160000) mode.
+    """
+    if not raw_stdout:
+        return [], []
+    tokens = raw_stdout.split("\0")
+    if tokens and tokens[-1] == "":
+        tokens.pop()
+    paths: list[str] = []
+    forbidden_modes: list[tuple[str, str, str]] = []
+    idx = 0
+    while idx < len(tokens):
+        meta = tokens[idx]
+        if not meta.startswith(":"):
+            raise AuthorityError(f"Unexpected git --raw -z metadata header: {meta!r}")
+        fields = meta[1:].split(" ")
+        if len(fields) < 5:
+            raise AuthorityError(f"Malformed git --raw -z metadata header: {meta!r}")
+        old_mode, new_mode, status = fields[0], fields[1], fields[4]
+        status_code = status[0] if status else ""
+        if status_code in ("R", "C"):
+            if idx + 2 >= len(tokens):
+                raise AuthorityError("Truncated rename/copy record in git --raw -z output.")
+            entry_paths = [tokens[idx + 1], tokens[idx + 2]]
+            idx += 3
+        else:
+            if idx + 1 >= len(tokens):
+                raise AuthorityError("Truncated path record in git --raw -z output.")
+            entry_paths = [tokens[idx + 1]]
+            idx += 2
+        for p in entry_paths:
+            paths.append(p)
+            if old_mode in ("120000", "160000") or new_mode in ("120000", "160000"):
+                forbidden_modes.append((p, old_mode, new_mode))
+    return paths, forbidden_modes
+
+
 def sanitize_worker_env(base_env: dict[str, str] | None = None) -> dict[str, str]:
-    """Build a minimal subprocess environment stripping broker tokens and secrets."""
+    """Build a minimal subprocess environment stripping broker tokens, PATs, API/private keys, and auth secrets."""
     source = base_env if base_env is not None else dict(os.environ)
     clean: dict[str, str] = {}
     for k, v in source.items():
         upper = k.upper()
         if any(upper == pref or upper.startswith(pref) for pref in SENSITIVE_ENV_PREFIXES):
             continue
-        if "TOKEN" in upper or "SECRET" in upper or "PASSWORD" in upper or "CREDENTIAL" in upper:
+        if any(sub in upper for sub in SENSITIVE_ENV_SUBSTRINGS):
+            continue
+        if _PAT_ENV_RE.search(upper):
             continue
         clean[k] = v
     clean["GIT_TERMINAL_PROMPT"] = "0"
@@ -55,14 +115,17 @@ def sanitize_worker_env(base_env: dict[str, str] | None = None) -> dict[str, str
 
 
 def assert_canonical_path_inside_worktree(worktree_root: Path, target_path: Path) -> Path:
-    """Reject symlink escapes, hardlink escapes, and relative path traversals outside worktree_root."""
+    """Reject symlink escapes, NTFS directory junctions, hardlinks, and path traversals outside worktree_root."""
     root_resolved = worktree_root.resolve()
+    is_junction = getattr(os.path, "isjunction", None)
 
-    # Check every ancestor from target down to worktree_root for symlinks (including broken/dangling symlinks)
+    # Check every ancestor from target down to worktree_root for symlinks (including broken/dangling) and junctions
     current = target_path
     while True:
         if current.is_symlink():
             raise PolicyViolationError(f"Symlink prohibited inside worker sandbox: {current}")
+        if is_junction is not None and is_junction(current):
+            raise PolicyViolationError(f"Directory junction prohibited inside worker sandbox: {current}")
         if current == worktree_root or current.parent == current:
             break
         current = current.parent
@@ -261,6 +324,8 @@ class WorktreeSandbox:
         self.sandbox_root.mkdir(parents=True, exist_ok=True)
 
     def create_worktree(self, branch_name: str, base_sha: str, worktree_name: str) -> Path:
+        if not is_valid_git_sha(base_sha):
+            raise AuthorityError(f"Invalid or all-zero base_sha forbidden in create_worktree: {base_sha!r}")
         if is_prohibited_branch(branch_name):
             raise PolicyViolationError(f"Worktree cannot be created on prohibited branch {branch_name!r}.")
         if (
@@ -304,22 +369,40 @@ class WorktreeSandbox:
         *,
         base_sha: str,
     ) -> list[str]:
-        """Inspect all tracked and untracked files in worktree; reject symlinks, hardlinks, or out-of-scope edits."""
+        """Inspect all tracked, staged, and untracked files in worktree; reject symlinks, gitlinks, junctions, hardlinks, nested .git, or out-of-scope edits."""
+        if not is_valid_git_sha(base_sha):
+            raise AuthorityError(f"Invalid or all-zero base_sha forbidden in inspect_and_validate_worktree: {base_sha!r}")
+
         for item in wt_path.rglob("*"):
-            if ".git" in item.parts:
+            rel_parts = item.relative_to(wt_path).parts
+            if rel_parts and rel_parts[0] == ".git":
                 continue
+            if any(part.lower() == ".git" for part in rel_parts):
+                raise PolicyViolationError(f"Nested .git metadata prohibited inside worker sandbox: {item}")
             assert_canonical_path_inside_worktree(wt_path, item)
 
-        diff_p = subprocess.run(
-            ["git", "-c", "core.quotepath=false", "diff", "--no-renames", "--name-only", "-z", base_sha],
+        diff_wt = subprocess.run(
+            ["git", "-c", "core.quotepath=false", "diff", "--no-renames", "--raw", "-z", base_sha],
             cwd=wt_path,
             capture_output=True,
             text=True,
             check=False,
         )
-        if diff_p.returncode != 0:
+        if diff_wt.returncode != 0:
             raise AuthorityError(
-                f"Failed to inspect git diff against base_sha={base_sha!r} in {wt_path}: {diff_p.stderr.strip()}"
+                f"Failed to inspect working-tree git diff against base_sha={base_sha!r} in {wt_path}: {diff_wt.stderr.strip()}"
+            )
+
+        diff_cached = subprocess.run(
+            ["git", "-c", "core.quotepath=false", "diff", "--cached", "--no-renames", "--raw", "-z", base_sha],
+            cwd=wt_path,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if diff_cached.returncode != 0:
+            raise AuthorityError(
+                f"Failed to inspect staged git diff against base_sha={base_sha!r} in {wt_path}: {diff_cached.stderr.strip()}"
             )
 
         untracked_p = subprocess.run(
@@ -334,9 +417,16 @@ class WorktreeSandbox:
                 f"Failed to inspect untracked files in {wt_path}: {untracked_p.stderr.strip()}"
             )
 
-        diff_entries = [entry for entry in diff_p.stdout.split("\0") if entry]
+        wt_paths, wt_forbidden = parse_git_raw_z_diff(diff_wt.stdout)
+        cached_paths, cached_forbidden = parse_git_raw_z_diff(diff_cached.stdout)
+        forbidden_modes = wt_forbidden + cached_forbidden
+        if forbidden_modes:
+            raise PolicyViolationError(
+                f"Forbidden symlink (120000) or gitlink (160000) entry detected in worktree diff: {forbidden_modes}"
+            )
+
         untracked_entries = [entry for entry in untracked_p.stdout.split("\0") if entry]
-        changed = sorted(set(diff_entries + untracked_entries))
+        changed = sorted(set(wt_paths + cached_paths + untracked_entries))
         if changed:
             assert_paths_within_ownership(packet, changed)
         return changed

@@ -54,6 +54,7 @@ from integrations.antigravity.factory.policy import (
     assert_paths_within_ownership,
 )
 from integrations.antigravity.factory.quality import (
+    RISK_REQUIRED_GATES,
     NoxReviewEngine,
     QualityGateError,
     SelfHealingController,
@@ -102,7 +103,7 @@ def make_valid_packet(
         "owned_paths": owned_paths or ["integrations/antigravity/factory/"],
         "depends_on": depends_on or [],
         "risk_class": "RISK-2",
-        "required_gates": ["G00", "G01", "G03", "G05", "G13", "G15"],
+        "required_gates": list(RISK_REQUIRED_GATES["RISK-2"]),
         "budget": {
             "max_parallel_writers": 3,
             "max_parallel_reviewers": 3,
@@ -484,12 +485,20 @@ class FactoryCoreTests(unittest.TestCase):
                 findings=[],
             )
             # Re-calling broker while PENDING_REMOTE must fail closed without calling remote_executor
-            with self.assertRaises(DeliveryBrokerError):
+            with self.assertRaisesRegex(DeliveryBrokerError, "PENDING_REMOTE"):
                 broker.prepare_and_record_delivery(
                     packet=base_pkt,
                     candidate_sha=NEXT_SHA,
                     changed_files=["integrations/antigravity/factory/policy.py"],
-                    gate_summary={"overall_status": "PASS", "passed_gates": ["G00", "G13", "G15"]},
+                    gate_summary={
+                        "risk_class": base_pkt["risk_class"],
+                        "candidate_sha": NEXT_SHA,
+                        "overall_status": "PASS",
+                        "passed_gates": list(RISK_REQUIRED_GATES[base_pkt["risk_class"]]),
+                        "failed_gates": [],
+                        "missing_gates": [],
+                        "not_run_gates": [],
+                    },
                     nox_result=nox_ok,
                 )
 
@@ -799,6 +808,448 @@ class FactoryCoreTests(unittest.TestCase):
 
         # NOX-R3-010: ANTIGRAVITY_CSRF_TOKEN= redacted
         self.assertNotIn("secret_csrf_token_12345", redact_secrets("ANTIGRAVITY_CSRF_TOKEN=secret_csrf_token_12345"))
+
+    def test_nox_cycle4_security_and_governance_regressions(self) -> None:
+        """Discriminating regression tests for NOX-R4-001..012 findings."""
+        import importlib.util
+        import sqlite3
+        from integrations.antigravity.factory.authority import (
+            ZERO_SHA40,
+            load_schema,
+            validate_against_schema,
+        )
+        from integrations.antigravity.factory.delivery import compute_delivery_key
+        from integrations.antigravity.factory.policy import is_protected_governance_path
+
+        base_pkt = make_valid_packet("R4-TEST")
+
+        # NOX-R4-001: _validate_gate_summary rejects mandatory exemptions, empty N/A reasons, missing risk-floor gates, and zero SHA
+        with self.assertRaises(AuthorityError):
+            verify_mission_packet({**base_pkt, "base_sha": ZERO_SHA40})
+        with self.assertRaises(AuthorityError):
+            verify_mission_packet({**base_pkt, "risk_class": "RISK-3", "required_gates": ["G00", "G13", "G15"]})
+        with self.assertRaises(AuthorityError):
+            verify_mission_packet({**base_pkt, "non_applicable_gates": {"G00": "skip"}})
+
+        with tempfile.TemporaryDirectory() as tmp:
+            broker = NairuDeliveryBroker(
+                Path(tmp) / "r4_broker.db",
+                actor_verifier=lambda: {"login": EXPECTED_BROKER_LOGIN, "id": EXPECTED_BROKER_USER_ID, "type": "User"},
+            )
+            with self.assertRaises(DeliveryBrokerError):
+                broker._validate_gate_summary(
+                    {**base_pkt, "risk_class": "RISK-3", "required_gates": list(RISK_REQUIRED_GATES["RISK-3"])},
+                    BASE_SHA,
+                    {
+                        "overall_status": "PASS",
+                        "candidate_sha": BASE_SHA,
+                        "risk_class": "RISK-3",
+                        "passed_gates": [],
+                        "documented_non_applicable": {"G00": "", "G13": "", "G15": ""},
+                    },
+                )
+            with self.assertRaises(DeliveryBrokerError):
+                broker._validate_gate_summary(
+                    base_pkt,
+                    ZERO_SHA40,
+                    {
+                        "overall_status": "PASS",
+                        "candidate_sha": ZERO_SHA40,
+                        "risk_class": base_pkt["risk_class"],
+                        "passed_gates": list(RISK_REQUIRED_GATES[base_pkt["risk_class"]]),
+                    },
+                )
+
+        # NOX-R4-002: evaluate_gate_suite blocks E4+NONE/SOURCE, non-required FAIL (G11), FAIL masked by N/A, duplicate gate_id, invalid N/A gate
+        def _env(gid: str, *, status: str = "PASS", level: str = "E4", ev_type: str = "INTEGRATION", prov: str = "AUTOMATED") -> dict:
+            return {
+                "schema_version": 1,
+                "run_id": "run-r4",
+                "mission_id": "R4-TEST",
+                "stage": "VERIFY",
+                "gate_id": gid,
+                "candidate_sha": BASE_SHA,
+                "tree_sha": BASE_SHA,
+                "dirty": False,
+                "command_argv": ["python", "-B", "-c", "print('ok')"],
+                "cwd": ".",
+                "started_at_utc": "2026-11-20T00:00:00Z",
+                "completed_at_utc": "2026-11-20T00:00:01Z",
+                "exit_code": 0 if status == "PASS" else 1,
+                "status": status,
+                "environment_versions": {"python": "3.13.5"},
+                "fixture_sha256": "0" * 64,
+                "artifact_path": "a.log",
+                "artifact_size_bytes": 1,
+                "artifact_sha256": "a" * 64,
+                "evidence_level": level,
+                "evidence_type": ev_type,
+                "provenance": prov,
+                "certainty_ceiling": "VERIFIED" if level in ("E3", "E4", "E5") else ("SUPPORTED" if level in ("E1", "E2") else "HYPOTHESIS"),
+                "redacted": True,
+            }
+
+        risk0_passing = [_env(g) for g in RISK_REQUIRED_GATES["RISK-0"]]
+        self.assertEqual(evaluate_gate_suite("RISK-0", risk0_passing, candidate_sha=BASE_SHA)["overall_status"], "PASS")
+        with self.assertRaises(QualityGateError):
+            evaluate_gate_suite("RISK-0", [_env(g, ev_type="NONE") for g in RISK_REQUIRED_GATES["RISK-0"]], candidate_sha=BASE_SHA)
+        with self.assertRaises(QualityGateError):
+            evaluate_gate_suite("RISK-0", [_env(g, ev_type="SOURCE") for g in RISK_REQUIRED_GATES["RISK-0"]], candidate_sha=BASE_SHA)
+        g11_fail_res = evaluate_gate_suite("RISK-0", risk0_passing + [_env("G11", status="FAIL", level="E1", ev_type="RUNTIME", prov="DIRECTLY_OBSERVED")], candidate_sha=BASE_SHA)
+        self.assertEqual(g11_fail_res["overall_status"], "BLOCKED")
+        self.assertIn("G11", g11_fail_res["failed_gates"])
+        g04_masked = evaluate_gate_suite(
+            "RISK-0",
+            [_env(g) for g in RISK_REQUIRED_GATES["RISK-0"] if g != "G04"] + [_env("G04", status="FAIL", level="E1", prov="DIRECTLY_OBSERVED")],
+            candidate_sha=BASE_SHA,
+            non_applicable_gates={"G04": "attempt to mask fail"},
+        )
+        self.assertEqual(g04_masked["overall_status"], "BLOCKED")
+        self.assertIn("G04", g04_masked["failed_gates"])
+        with self.assertRaises(QualityGateError):
+            evaluate_gate_suite(
+                "RISK-0",
+                [_env(g) for g in RISK_REQUIRED_GATES["RISK-0"] if g != "G04"]
+                + [_env("G04", status="FAIL", level="E1", prov="DIRECTLY_OBSERVED"), _env("G04")],
+                candidate_sha=BASE_SHA,
+            )
+        with self.assertRaises(QualityGateError):
+            evaluate_gate_suite("RISK-0", risk0_passing, candidate_sha=BASE_SHA, non_applicable_gates={"G99": "invalid gate"})
+
+        # NOX-R4-003: Reviewer/PAUSED mutating checks, Lucien Code Writer requirement, .git & second-brain governance paths
+        lucien_rev = {**base_pkt, "assigned_persona": "Antigravity-Lucien", "formal_role": "Reviewer", "allowed_operations": ["READ", "WRITE_OWNED"]}
+        qa_rev = {**base_pkt, "assigned_persona": "Antigravity-QA", "formal_role": "Reviewer", "allowed_operations": ["READ", "WRITE_OWNED"]}
+        paused_pkt = {**base_pkt, "work_mode": "PAUSED"}
+        with self.assertRaises(PolicyViolationError):
+            assert_operation_allowed(lucien_rev, "WRITE_OWNED")
+        with self.assertRaises(PolicyViolationError):
+            assert_operation_allowed(qa_rev, "WRITE_OWNED")
+        with self.assertRaises(PolicyViolationError):
+            assert_operation_allowed(paused_pkt, "WRITE_OWNED")
+        with self.assertRaises(PolicyViolationError):
+            assert_paths_within_ownership(lucien_rev, ["integrations/antigravity/adr/x.md"], require_write_operation=False)
+        for bad_gov in (".git/hooks", "owned/.git/config", "second-brain/AGENTS.md", "second-brain/SYSTEM_BOUNDARY.md", "second-brain/EVIDENCE_CROSSWALK.md", "second-brain/SHARED_DOCS.sha256"):
+            self.assertTrue(is_protected_governance_path(bad_gov))
+            with self.assertRaises(AuthorityError):
+                verify_mission_packet({**base_pkt, "owned_paths": [bad_gov]})
+
+        # NOX-R4-004 & NOX-R4-006: Staged index-only edit, 120000 gitlink/symlink mode, nested .git, zero base_sha, and broker repo_root ancestry/diff verification
+        with tempfile.TemporaryDirectory() as tmp:
+            troot = Path(tmp)
+            repo = _make_clean_git_repo(troot)
+            (repo / "AGENTS.md").write_text("# Root\n", encoding="utf-8")
+            (repo / "owned").mkdir()
+            (repo / "owned" / "a.py").write_text("x = 1\n", encoding="utf-8")
+            subprocess.run(["git", "add", "."], cwd=repo, capture_output=True, check=True)
+            subprocess.run(["git", "commit", "-m", "seed"], cwd=repo, capture_output=True, check=True)
+            base_s = subprocess.run(["git", "rev-parse", "HEAD"], cwd=repo, capture_output=True, text=True, check=True).stdout.strip()
+            owned_pkt = make_valid_packet("R4-WT", owned_paths=["owned/"])
+            owned_pkt["base_sha"] = base_s
+            owned_pkt["selected_skills"]["skill_source_sha"] = base_s
+
+            sb = WorktreeSandbox(repo, troot / "wts")
+            with self.assertRaises(AuthorityError):
+                sb.create_worktree("feat/r4-zero", ZERO_SHA40, "wt_zero")
+
+            wt = sb.create_worktree("feat/r4-staged", base_s, "wt_staged")
+            try:
+                # 1. Index-only staged change on AGENTS.md (working tree restored to HEAD) must still be caught!
+                (wt / "AGENTS.md").write_text("# Tampered\n", encoding="utf-8")
+                subprocess.run(["git", "add", "AGENTS.md"], cwd=wt, capture_output=True, check=True)
+                subprocess.run(["git", "checkout", "--", "AGENTS.md"], cwd=wt, capture_output=True, check=True)
+                with self.assertRaises(PolicyViolationError):
+                    sb.inspect_and_validate_worktree(wt, owned_pkt, base_sha=base_s)
+                subprocess.run(["git", "reset", "HEAD", "AGENTS.md"], cwd=wt, capture_output=True, check=True)
+
+                # 2. Git mode 120000 symlink in index (works even on Windows with core.symlinks=false) must fail closed!
+                blob_sha = subprocess.run(
+                    ["git", "hash-object", "-w", "--stdin"],
+                    cwd=wt,
+                    input="../AGENTS.md",
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                ).stdout.strip()
+                subprocess.run(
+                    ["git", "update-index", "--add", "--cacheinfo", f"120000,{blob_sha},owned/sym_link"],
+                    cwd=wt,
+                    capture_output=True,
+                    check=True,
+                )
+                with self.assertRaises(PolicyViolationError):
+                    sb.inspect_and_validate_worktree(wt, owned_pkt, base_sha=base_s)
+
+                # Commit the symlink to test NOX-R4-006 broker repo_root detection
+                subprocess.run(["git", "commit", "-m", "add symlink"], cwd=wt, capture_output=True, check=True)
+                sym_sha = subprocess.run(["git", "rev-parse", "HEAD"], cwd=wt, capture_output=True, text=True, check=True).stdout.strip()
+
+                broker_r4 = NairuDeliveryBroker(
+                    troot / "broker_repo.db",
+                    actor_verifier=lambda: {"login": EXPECTED_BROKER_LOGIN, "id": EXPECTED_BROKER_USER_ID, "type": "User"},
+                )
+                nox_sym = NoxReviewEngine().execute_review(
+                    mission_id=owned_pkt["mission_id"],
+                    frozen_sha=sym_sha,
+                    author_context_id="ctx-jane",
+                    inspected_scope=["owned/"],
+                    evidence_inspected=["env-1"],
+                    findings=[],
+                )
+                with self.assertRaises(DeliveryBrokerError):
+                    broker_r4.prepare_and_record_delivery(
+                        packet=owned_pkt,
+                        candidate_sha=sym_sha,
+                        changed_files=["owned/a.py"],
+                        gate_summary={
+                            "risk_class": owned_pkt["risk_class"],
+                            "candidate_sha": sym_sha,
+                            "overall_status": "PASS",
+                            "passed_gates": list(RISK_REQUIRED_GATES[owned_pkt["risk_class"]]),
+                        },
+                        nox_result=nox_sym,
+                        repo_root=wt,
+                    )
+
+                # Reset back to base_s and test clean commit + omitted changed_files + non-ancestor commit
+                subprocess.run(["git", "reset", "--hard", base_s], cwd=wt, capture_output=True, check=True)
+                (wt / "owned" / "a.py").write_text("x = 2\n", encoding="utf-8")
+                (wt / "owned" / "b.py").write_text("y = 3\n", encoding="utf-8")
+                subprocess.run(["git", "add", "owned/a.py", "owned/b.py"], cwd=wt, capture_output=True, check=True)
+                subprocess.run(["git", "commit", "-m", "clean owned edit"], cwd=wt, capture_output=True, check=True)
+                clean_sha = subprocess.run(["git", "rev-parse", "HEAD"], cwd=wt, capture_output=True, text=True, check=True).stdout.strip()
+
+                nox_clean = NoxReviewEngine().execute_review(
+                    mission_id=owned_pkt["mission_id"],
+                    frozen_sha=clean_sha,
+                    author_context_id="ctx-jane",
+                    inspected_scope=["owned/"],
+                    evidence_inspected=["env-1"],
+                    findings=[],
+                )
+                # Omitting owned/b.py from caller changed_files must fail closed!
+                with self.assertRaises(DeliveryBrokerError):
+                    broker_r4.prepare_and_record_delivery(
+                        packet=owned_pkt,
+                        candidate_sha=clean_sha,
+                        changed_files=["owned/a.py"],
+                        gate_summary={
+                            "risk_class": owned_pkt["risk_class"],
+                            "candidate_sha": clean_sha,
+                            "overall_status": "PASS",
+                            "passed_gates": list(RISK_REQUIRED_GATES[owned_pkt["risk_class"]]),
+                        },
+                        nox_result=nox_clean,
+                        repo_root=wt,
+                    )
+                # Supplying accurate changed_files succeeds with repo_root verification!
+                delivered = broker_r4.prepare_and_record_delivery(
+                    packet=owned_pkt,
+                    candidate_sha=clean_sha,
+                    changed_files=["owned/a.py", "owned/b.py"],
+                    gate_summary={
+                        "risk_class": owned_pkt["risk_class"],
+                        "candidate_sha": clean_sha,
+                        "overall_status": "PASS",
+                        "passed_gates": list(RISK_REQUIRED_GATES[owned_pkt["risk_class"]]),
+                    },
+                    nox_result=nox_clean,
+                    repo_root=wt,
+                )
+                self.assertEqual(delivered["status"], "DELIVERED")
+
+                # Nested owned/.git inside worktree must be caught!
+                (wt / "owned" / ".git").mkdir()
+                with self.assertRaises(PolicyViolationError):
+                    sb.inspect_and_validate_worktree(wt, owned_pkt, base_sha=base_s)
+            finally:
+                sb.remove_worktree(wt)
+
+        # NOX-R4-005: Direct forge_guard evaluation for all 9 bypass cases + safe non-forced git branch -d allowed
+        guard_spec = importlib.util.spec_from_file_location("forge_guard_r4", PLUGIN_ROOT / "hooks" / "forge_guard.py")
+        guard_mod = importlib.util.module_from_spec(guard_spec)
+        assert guard_spec and guard_spec.loader
+        guard_spec.loader.exec_module(guard_mod)
+        for denied_cmd in (
+            '"C:\\Program Files\\Git\\bin\\git.exe" push --force origin feat/x',
+            '"C:\\Program Files\\GitHub CLI\\gh.exe" pr merge 14 --admin',
+            "git -C. push --force origin feat/x",
+            "git branch -df feat/x",
+            "gh api --method=DELETE repos/Kirch-Nairu/Operation-FORGE.kirion/git/refs/heads/main",
+            "gh api repos/Kirch-Nairu/Operation-FORGE.kirion/rulesets -f name=evil",
+            "gh api -X PUT repos/Kirch-Nairu/Operation-FORGE.kirion/pulls/14/merge",
+            "gh api -X POST repos/Kirch-Nairu/Operation-FORGE.kirion/pulls/14/reviews -f event=APPROVE",
+            "gh api -X PATCH repos/Kirch-Nairu/Operation-FORGE.kirion -f default_branch=evil",
+        ):
+            self.assertEqual(
+                guard_mod.evaluate_pre_tool_use({"toolCall": {"name": "run_command", "args": {"CommandLine": denied_cmd}}})["decision"],
+                "deny",
+                f"Expected deny for {denied_cmd}",
+            )
+        self.assertEqual(
+            guard_mod.evaluate_pre_tool_use(
+                {"toolCall": {"name": "write_file", "args": {"Path": "C:/Users/arane/.gemini/antigravity/../config/settings.json"}}}
+            )["decision"],
+            "deny",
+        )
+        # Positive controls: safe lowercase git branch -d and safe PR comment API are allowed
+        self.assertEqual(
+            guard_mod.evaluate_pre_tool_use({"toolCall": {"name": "run_command", "args": {"CommandLine": "git branch -d feat/merged"}}})["decision"],
+            "allow",
+        )
+        self.assertEqual(
+            guard_mod.evaluate_pre_tool_use(
+                {"toolCall": {"name": "run_command", "args": {"CommandLine": "gh api repos/Kirch-Nairu/Operation-FORGE.kirion/issues/13/comments -f body=ok"}}}
+            )["decision"],
+            "allow",
+        )
+
+        # NOX-R4-007 & NOX-R4-010: Journal metadata hash chain, candidate_sha validation, conflicting re-registration, recovery terminal/drift/tamper halts
+        with tempfile.TemporaryDirectory() as tmp:
+            db = Path(tmp) / "r4_journal.db"
+            j = FactoryJournal(db)
+            rm = RecoveryManager(j)
+            br = NairuDeliveryBroker(db, actor_verifier=lambda: {"login": EXPECTED_BROKER_LOGIN, "id": EXPECTED_BROKER_USER_ID})
+
+            m1 = j.register_mission(base_pkt)
+            m1_repeat = j.register_mission(base_pkt)
+            self.assertIn("packet", m1_repeat)
+            self.assertEqual(m1_repeat["packet"]["mission_id"], m1["packet"]["mission_id"])
+            with self.assertRaises(SchedulerError):
+                j.register_mission({**base_pkt, "run_id": "run-conflicting"})
+            with self.assertRaises(SchedulerError):
+                j.transition_state(base_pkt["mission_id"], "AUTHORIZED", expected_version=1, actor_role="Maintainer", candidate_sha="not-a-sha")
+            with self.assertRaises(SchedulerError):
+                j.transition_state(base_pkt["mission_id"], "AUTHORIZED", expected_version=1, actor_role="Maintainer", candidate_sha=ZERO_SHA40)
+
+            j.transition_state(base_pkt["mission_id"], "AUTHORIZED", expected_version=1, actor_role="Maintainer")
+            # Insert unresolved PENDING_REMOTE under an older SHA -> recovery for a drifted local SHA must halt BLOCKED!
+            prior_sha = "e" * 40
+            dkey_prior = compute_delivery_key(base_pkt["mission_id"], base_pkt["permitted_branch"], prior_sha)
+            c = br._connect()
+            try:
+                c.execute(
+                    """
+                    INSERT INTO delivery_receipts (
+                        delivery_key, mission_id, branch, base_sha, candidate_sha,
+                        actor_login, actor_id, status, pr_mode, receipt_markdown, updated_at_utc
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, 'PENDING_REMOTE', 'VALIDATED_DRAFT_PR', 'md', '2026-11-19T00:00:00Z')
+                    """,
+                    (dkey_prior, base_pkt["mission_id"], base_pkt["permitted_branch"], BASE_SHA, prior_sha, EXPECTED_BROKER_LOGIN, EXPECTED_BROKER_USER_ID),
+                )
+            finally:
+                c.close()
+            drift_local_cap = rm.reconcile_interrupted_mission(
+                base_pkt["mission_id"],
+                interruption_point="PRE_BROKER_RECEIPT",
+                observed_local_sha=NEXT_SHA,
+                remote_head_probe=lambda _b: BASE_SHA,
+            )
+            self.assertEqual(drift_local_cap["next_allowed_action"], "HALT_BLOCKED_REQUIRE_MAINTAINER_RECONCILIATION")
+
+            # Terminal QUARANTINED mission must halt BLOCKED on reconciliation
+            j.transition_state(base_pkt["mission_id"], "QUARANTINED", expected_version=2, actor_role="Maintainer")
+            term_cap = rm.reconcile_interrupted_mission(
+                base_pkt["mission_id"],
+                interruption_point="PRE_LOCAL_COMMIT",
+                observed_local_sha=BASE_SHA,
+            )
+            self.assertTrue(term_cap["next_allowed_action"].startswith("HALT_BLOCKED"))
+
+            # Tampering with event_type column in SQLite must break verify_hash_chain() and halt recovery!
+            self.assertTrue(j.verify_hash_chain())
+            raw_conn = sqlite3.connect(db)
+            try:
+                raw_conn.execute("UPDATE journal_events SET event_type = 'TAMPERED_EVENT' WHERE seq = 1")
+                raw_conn.commit()
+            finally:
+                raw_conn.close()
+            self.assertFalse(j.verify_hash_chain())
+            with self.assertRaises(AuthorityError):
+                rm.reconcile_interrupted_mission(base_pkt["mission_id"], interruption_point="PRE_LOCAL_COMMIT", observed_local_sha=BASE_SHA)
+
+        # NOX-R4-008: Strict bool-vs-int schema const validation, blank/zero-SHA Nox rejection, and verify_git_authority fail-closed
+        sb_schema = load_schema("sandbox-capsule.schema.json", base_dir=REPO_ROOT / "schemas")
+        bool_capsule = {
+            "capsule_version": True,
+            "repository": "Kirch-Nairu/Operation-FORGE.kirion",
+            "remote": "origin",
+            "source_branch": "feat/x",
+            "source_sha": BASE_SHA,
+            "target_branch": "feat/x",
+            "candidate_head": BASE_SHA,
+            "worktree_status": "clean",
+            "commands_executed": [],
+            "known_failures": [],
+            "known_unverified_claims": [],
+            "blocker": None,
+            "next_permitted_action": "WAIT",
+            "created_at": "2026-11-20T00:00:00Z",
+            "created_by_role": "Maintainer",
+        }
+        self.assertTrue(len(validate_against_schema(bool_capsule, sb_schema)) > 0)
+        nox_eng = NoxReviewEngine()
+        with self.assertRaises(QualityGateError):
+            nox_eng.execute_review(
+                mission_id="R4-NOX",
+                frozen_sha=BASE_SHA,
+                author_context_id="ctx-jane",
+                reviewer_context_id="   ",
+                inspected_scope=["integrations/antigravity/"],
+                evidence_inspected=[],
+                findings=[],
+            )
+        with self.assertRaises(QualityGateError):
+            nox_eng.execute_review(
+                mission_id="R4-NOX",
+                frozen_sha=ZERO_SHA40,
+                author_context_id="ctx-jane",
+                inspected_scope=["integrations/antigravity/"],
+                evidence_inspected=[],
+                findings=[],
+            )
+
+        # NOX-R4-009: Quoted secrets & sk-proj keys redacted; NOT_RUN emits E0/NONE/ASSUMED/HYPOTHESIS
+        for raw_secret, leaked_frag in (
+            ('ANTIGRAVITY_CSRF_TOKEN="csrf_secret_98765"', "csrf_secret_98765"),
+            ('{"ANTIGRAVITY_CSRF_TOKEN": "csrf_secret_98765"}', "csrf_secret_98765"),
+            ('password="super_secret_pw"', "super_secret_pw"),
+            ('x-codeium-csrf-token: "tok_999999"', "tok_999999"),
+            ("sk-proj-1234567890abcdefghijklmnop", "sk-proj-"),
+        ):
+            self.assertNotIn(leaked_frag, redact_secrets(raw_secret))
+        with tempfile.TemporaryDirectory() as tmp:
+            clean_repo = _make_clean_git_repo(Path(tmp))
+            runner = TrustedEvidenceRunner(Path(tmp) / "arts")
+            nr_env = runner.run_gate_command(
+                run_id="run-nr",
+                mission_id="R4-NR",
+                stage="VERIFY",
+                gate_id="G10",
+                command_argv=["definitely_nonexistent_binary_kirion_404"],
+                cwd=clean_repo,
+                evidence_type="RUNTIME",
+                is_runtime_gate=True,
+            )
+            self.assertEqual(nr_env["status"], "NOT_RUN")
+            self.assertEqual(nr_env["evidence_level"], "E0")
+            self.assertEqual(nr_env["evidence_type"], "NONE")
+            self.assertEqual(nr_env["provenance"], "ASSUMED")
+            self.assertEqual(nr_env["certainty_ceiling"], "HYPOTHESIS")
+
+        # NOX-R4-011 & NOX-R4-012: FleetDispatcher verifies packet & works across external worktree roots; php_laravel profile matches dispatcher
+        with tempfile.TemporaryDirectory() as tmp:
+            ext_dispatcher = FleetDispatcher(repo_root=Path(tmp))
+            ext_ctx = ext_dispatcher.create_isolated_context("Antigravity-Jane", "Code Writer")
+            self.assertEqual(ext_ctx["agent_contract_path"], "integrations/antigravity/plugins/kirion-forge/agents/antigravity-jane.md")
+            malicious_pkt = {**base_pkt, "permitted_branch": "main", "verifier": "Mallory", "work_mode": "PAUSED", "owned_paths": ["AGENTS.md"]}
+            with self.assertRaises(AuthorityError):
+                ext_dispatcher.dispatch_worker(malicious_pkt, lambda p, c, w: {"ran": True})
+        for profile_name in ("csharp_aspnet.json", "php_laravel.json", "salryn_high_integrity.json", "frontend_web.json"):
+            prof = json.loads((PROFILES_ROOT / profile_name).read_text(encoding="utf-8"))
+            selected = select_skills_for_mission(prof["profile_id"], skill_source_sha=BASE_SHA)
+            selected_names = [Path(f).parent.name for f in selected["files"]]
+            self.assertEqual(selected_names, prof["required_skills"], f"Profile/dispatcher mismatch for {profile_name}")
+            self.assertLessEqual(len(selected["files"]), 8)
 
 
 if __name__ == "__main__":

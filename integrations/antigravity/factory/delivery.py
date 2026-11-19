@@ -10,16 +10,23 @@ from pathlib import Path
 from typing import Any, Callable
 
 from . import EXPECTED_BROKER_LOGIN, EXPECTED_BROKER_USER_ID
-from .authority import SHA40_RE, verify_mission_packet
+from .authority import is_valid_git_sha, verify_mission_packet
 from .evidence import redact_secrets
+from .ownership import parse_git_raw_z_diff
 from .policy import (
     PolicyViolationError,
     assert_operation_allowed,
     assert_paths_within_ownership,
     is_prohibited_branch,
     is_protected_governance_path,
+    normalize_rel_path,
 )
-from .quality import NoxReviewEngine
+from .quality import (
+    GATE_CATALOG,
+    MANDATORY_NON_EXEMPTIBLE_GATES,
+    RISK_REQUIRED_GATES,
+    NoxReviewEngine,
+)
 
 
 class DeliveryBrokerError(PolicyViolationError):
@@ -142,6 +149,8 @@ class NairuDeliveryBroker:
         return redact_secrets("\n".join(lines))
 
     def _validate_gate_summary(self, packet: dict[str, Any], candidate_sha: str, gate_summary: dict[str, Any]) -> None:
+        if not is_valid_git_sha(candidate_sha):
+            raise DeliveryBrokerError(f"Invalid or all-zero candidate_sha forbidden: {candidate_sha!r}")
         if gate_summary.get("overall_status") != "PASS":
             raise DeliveryBrokerError(
                 f"Required quality gates not satisfied ({gate_summary.get('overall_status')}); "
@@ -160,13 +169,44 @@ class NairuDeliveryBroker:
                 raise DeliveryBrokerError(
                     f"Gate summary reports non-empty {bad_key}={gate_summary.get(bad_key)!r}; delivery denied."
                 )
-        passed_or_na = set(gate_summary.get("passed_gates", [])) | set(
-            (gate_summary.get("documented_non_applicable") or {}).keys()
-        )
-        missing_required = [g for g in packet["required_gates"] if g not in passed_or_na]
+
+        passed_gates = gate_summary.get("passed_gates")
+        if not isinstance(passed_gates, list) or not all(isinstance(g, str) and g in GATE_CATALOG for g in passed_gates):
+            raise DeliveryBrokerError(f"Gate summary passed_gates must be a list of valid gate IDs, got {passed_gates!r}")
+
+        raw_na = gate_summary.get("documented_non_applicable")
+        if raw_na is None:
+            na_map: dict[str, str] = {}
+        elif isinstance(raw_na, dict):
+            na_map = raw_na
+        else:
+            raise DeliveryBrokerError("Gate summary documented_non_applicable must be a mapping of gate_id -> justification.")
+
+        for gid, reason in na_map.items():
+            if gid not in GATE_CATALOG:
+                raise DeliveryBrokerError(f"Unknown gate ID in documented_non_applicable: {gid!r}")
+            if gid in MANDATORY_NON_EXEMPTIBLE_GATES:
+                raise DeliveryBrokerError(
+                    f"Mandatory anchor gate {gid} cannot be exempted via documented_non_applicable; delivery denied."
+                )
+            if not isinstance(reason, str) or not reason.strip():
+                raise DeliveryBrokerError(
+                    f"Non-applicable gate {gid} requires a non-empty justification string; delivery denied."
+                )
+
+        passed_set = set(passed_gates)
+        missing_mandatory = sorted(MANDATORY_NON_EXEMPTIBLE_GATES - passed_set)
+        if missing_mandatory:
+            raise DeliveryBrokerError(
+                f"Mandatory anchor gates {missing_mandatory} must appear in passed_gates; delivery denied."
+            )
+
+        required_all = set(RISK_REQUIRED_GATES[packet["risk_class"]]) | set(packet["required_gates"])
+        passed_or_na = passed_set | set(na_map.keys())
+        missing_required = sorted(required_all - passed_or_na)
         if missing_required:
             raise DeliveryBrokerError(
-                f"Gate summary missing required mission gates {missing_required}; delivery denied."
+                f"Gate summary missing required gates {missing_required} for {packet['risk_class']}; delivery denied."
             )
 
     def prepare_and_record_delivery(
@@ -180,17 +220,19 @@ class NairuDeliveryBroker:
         has_symlinks: bool = False,
         allow_blocked_diagnostic_draft: bool = False,
         remote_executor: Callable[[str, str, str], dict[str, Any]] | None = None,
+        repo_root: Path | None = None,
     ) -> dict[str, Any]:
         """
-        Verify actor, mission authority, branch policy, path ownership, symlink absence, gate results,
-        and exact-SHA Nox review before atomically reserving and recording an idempotent delivery receipt.
+        Verify actor, mission authority, branch policy, Git ancestry/diff (when repo_root is supplied),
+        path ownership, symlink/gitlink absence, gate results, and exact-SHA Nox review before atomically
+        reserving and recording an idempotent delivery receipt.
         """
         verify_mission_packet(packet)
         assert_operation_allowed(packet, "DELIVER_DRAFT_PR", actor_persona="Antigravity-Maintainer")
         actor = self.verify_actor_identity()
 
-        if not SHA40_RE.fullmatch(candidate_sha):
-            raise DeliveryBrokerError(f"Invalid 40-char candidate_sha: {candidate_sha!r}")
+        if not is_valid_git_sha(candidate_sha):
+            raise DeliveryBrokerError(f"Invalid or all-zero 40-char candidate_sha: {candidate_sha!r}")
 
         branch = packet["permitted_branch"]
         if is_prohibited_branch(branch):
@@ -199,13 +241,52 @@ class NairuDeliveryBroker:
         if has_symlinks:
             raise DeliveryBrokerError("Candidate contains symlinks; rejected by Nairu delivery broker.")
 
-        if not changed_files:
+        effective_changed_files = list(changed_files)
+        if repo_root is not None:
+            anc = subprocess.run(
+                ["git", "merge-base", "--is-ancestor", packet["base_sha"], candidate_sha],
+                cwd=repo_root,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            if anc.returncode != 0:
+                raise DeliveryBrokerError(
+                    f"History integrity check failed: candidate_sha={candidate_sha} does not descend from base_sha={packet['base_sha']}."
+                )
+            diff_p = subprocess.run(
+                ["git", "-c", "core.quotepath=false", "diff", "--no-renames", "--raw", "-z", packet["base_sha"], candidate_sha],
+                cwd=repo_root,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            if diff_p.returncode != 0:
+                raise DeliveryBrokerError(
+                    f"Failed to inspect git diff {packet['base_sha']}..{candidate_sha}: {redact_secrets(diff_p.stderr.strip())}"
+                )
+            git_paths, forbidden_modes = parse_git_raw_z_diff(diff_p.stdout)
+            if forbidden_modes:
+                raise DeliveryBrokerError(
+                    f"Candidate commit contains forbidden symlink (120000) or gitlink (160000) entries: {forbidden_modes}"
+                )
+            effective_changed_files = sorted(set(git_paths))
+            if changed_files:
+                caller_norm = {normalize_rel_path(p) for p in changed_files}
+                actual_norm = {normalize_rel_path(p) for p in effective_changed_files}
+                omitted = sorted(actual_norm - caller_norm)
+                if omitted:
+                    raise DeliveryBrokerError(
+                        f"Caller-supplied changed_files omitted actual git diff paths: {omitted}"
+                    )
+
+        if not effective_changed_files:
             raise DeliveryBrokerError("Candidate has zero changed files to deliver.")
 
-        for f in changed_files:
+        for f in effective_changed_files:
             if is_protected_governance_path(f):
                 raise DeliveryBrokerError(f"Delivery rejected: protected governance file modified ({f}).")
-        assert_paths_within_ownership(packet, changed_files, require_write_operation=False)
+        assert_paths_within_ownership(packet, effective_changed_files, require_write_operation=False)
 
         is_blocked_diag = False
         if gate_summary.get("overall_status") != "PASS":
@@ -230,7 +311,7 @@ class NairuDeliveryBroker:
         receipt_md = self.format_start_close_receipt(
             packet=packet,
             candidate_sha=candidate_sha,
-            changed_files=changed_files,
+            changed_files=effective_changed_files,
             nox_result=nox_result,
             gate_summary=gate_summary,
             is_blocked_diagnostic=is_blocked_diag,

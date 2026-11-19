@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from . import PLUGIN_ROOT, REPO_ROOT
-from .authority import AuthorityError
+from .authority import AuthorityError, verify_mission_packet
 from .policy import PERSONA_PERMISSIONS, PolicyViolationError
 
 ALLOWED_PLUGIN_MANIFEST_KEYS = {
@@ -61,7 +61,7 @@ EXPECTED_PLUGIN_SPECIALIZATION_SKILLS = {
 
 STACK_SKILL_BUNDLES: dict[str, list[str]] = {
     "csharp_aspnet": ["kirion-csharp", "kirion-aspnet", "kirion-efcore", "kirion-concurrency"],
-    "php_laravel": ["kirion-php", "kirion-laravel", "kirion-eloquent", "kirion-laravel-security"],
+    "php_laravel": ["kirion-php", "kirion-laravel", "kirion-eloquent", "kirion-laravel-security", "kirion-laravel-runtime"],
     "salryn_high_integrity": ["kirion-business-logic", "kirion-concurrency", "kirion-database", "kirion-runtime"],
     "frontend_web": ["kirion-frontend", "kirion-design-engineering", "kirion-test-engineering"],
     "review_nox": ["kirion-review", "kirion-security", "kirion-test-engineering"],
@@ -69,6 +69,14 @@ STACK_SKILL_BUNDLES: dict[str, list[str]] = {
     "integration": ["kirion-integrator", "kirion-test-engineering"],
     "documentation": ["kirion-evidence", "kirion-cognition"],
 }
+
+
+def _resolve_plugin_root(repo_root: Path) -> Path:
+    """Resolve the kirion-forge plugin root under repo_root when present, falling back to canonical PLUGIN_ROOT."""
+    local_plugin = repo_root / "integrations" / "antigravity" / "plugins" / "kirion-forge"
+    if local_plugin.is_dir():
+        return local_plugin
+    return PLUGIN_ROOT
 
 
 def verify_plugin_package(plugin_dir: Path = PLUGIN_ROOT, repo_root: Path = REPO_ROOT) -> dict[str, Any]:
@@ -242,10 +250,15 @@ def select_skills_for_mission(
     if len(selected_names) > 8:
         selected_names = selected_names[:8]
 
+    plugin_root = _resolve_plugin_root(repo_root)
     resolved_paths: list[str] = []
     for name in selected_names:
         core_path = repo_root / ".agents" / "skills" / name / "SKILL.md"
-        plugin_path = PLUGIN_ROOT / "skills" / name / "SKILL.md"
+        if not core_path.is_file():
+            core_path = REPO_ROOT / ".agents" / "skills" / name / "SKILL.md"
+        plugin_path = plugin_root / "skills" / name / "SKILL.md"
+        if not plugin_path.is_file():
+            plugin_path = PLUGIN_ROOT / "skills" / name / "SKILL.md"
         if core_path.is_file():
             resolved_paths.append(f".agents/skills/{name}/SKILL.md")
         elif plugin_path.is_file():
@@ -273,9 +286,17 @@ class FleetDispatcher:
             raise PolicyViolationError(f"Persona {persona!r} is not permitted to assume formal role {formal_role!r}")
 
         agent_slug = next(k for k, v in EXPECTED_FLEET_AGENTS.items() if v == persona)
-        agent_file = PLUGIN_ROOT / "agents" / f"{agent_slug}.md"
+        plugin_root = _resolve_plugin_root(self.repo_root)
+        agent_file = plugin_root / "agents" / f"{agent_slug}.md"
+        if not agent_file.is_file():
+            agent_file = PLUGIN_ROOT / "agents" / f"{agent_slug}.md"
         if not agent_file.is_file():
             raise AuthorityError(f"Missing agent contract file: {agent_file}")
+
+        try:
+            contract_rel = agent_file.resolve().relative_to(self.repo_root.resolve()).as_posix()
+        except ValueError:
+            contract_rel = f"integrations/antigravity/plugins/kirion-forge/agents/{agent_slug}.md"
 
         context_id = f"ctx-{agent_slug}-{uuid.uuid4().hex[:12]}"
         return {
@@ -284,7 +305,7 @@ class FleetDispatcher:
             "formal_role": formal_role,
             "agent_slug": agent_slug,
             "native_type_name": "research" if formal_role == "Reviewer" else "self",
-            "agent_contract_path": agent_file.relative_to(self.repo_root).as_posix(),
+            "agent_contract_path": contract_rel,
         }
 
     def dispatch_worker(
@@ -294,6 +315,7 @@ class FleetDispatcher:
         *,
         worktree_path: Path | None = None,
     ) -> dict[str, Any]:
+        verify_mission_packet(packet)
         persona = packet["assigned_persona"]
         formal_role = packet["formal_role"]
         ctx = self.create_isolated_context(persona, formal_role)

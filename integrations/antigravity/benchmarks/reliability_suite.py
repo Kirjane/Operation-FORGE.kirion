@@ -11,7 +11,7 @@ from ..factory import EXPECTED_BROKER_LOGIN, EXPECTED_BROKER_USER_ID, PLUGIN_ROO
 from ..factory.authority import AuthorityError
 from ..factory.delivery import DeliveryBrokerError, NairuDeliveryBroker
 from ..factory.ownership import LeaseConflictError, LeaseManager
-from ..factory.quality import NoxReviewEngine
+from ..factory.quality import RISK_REQUIRED_GATES, NoxReviewEngine
 from ..factory.recovery import RecoveryManager
 from ..factory.scheduler import FactoryJournal, SchedulerError
 
@@ -43,7 +43,7 @@ def _make_sample_packet(mission_id: str) -> dict[str, Any]:
         "owned_paths": ["integrations/antigravity/"],
         "depends_on": [],
         "risk_class": "RISK-2",
-        "required_gates": ["G00", "G01", "G03", "G05", "G13", "G15"],
+        "required_gates": list(RISK_REQUIRED_GATES["RISK-2"]),
         "budget": {
             "max_parallel_writers": 3,
             "max_parallel_reviewers": 3,
@@ -117,7 +117,7 @@ def run_benchmark_d_suite(trials_per_point: int = 3) -> dict[str, Any]:
                     "risk_class": "RISK-2",
                     "candidate_sha": CANDIDATE_SHA,
                     "overall_status": "PASS",
-                    "passed_gates": ["G00", "G01", "G03", "G05", "G13", "G15"],
+                    "passed_gates": list(RISK_REQUIRED_GATES["RISK-2"]),
                     "failed_gates": [],
                     "missing_gates": [],
                     "not_run_gates": [],

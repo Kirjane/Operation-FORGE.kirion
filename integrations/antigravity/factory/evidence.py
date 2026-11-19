@@ -14,11 +14,11 @@ from .ownership import sanitize_worker_env
 SECRET_REDACTION_PATTERNS = [
     re.compile(r"\b(gh[pousr]_[A-Za-z0-9_]{8,})\b"),
     re.compile(r"\b(github_pat_[A-Za-z0-9_]{8,})\b"),
-    re.compile(r"(Bearer\s+)[A-Za-z0-9._\-]{8,}", re.IGNORECASE),
-    re.compile(r"(x-codeium-csrf-token:\s*)[^\s\"']+", re.IGNORECASE),
-    re.compile(r"(ANTIGRAVITY_CSRF_TOKEN\s*[:=]\s*)[^\s;&\"']+", re.IGNORECASE),
-    re.compile(r"\b(sk-[A-Za-z0-9]{16,})\b"),
-    re.compile(r"(password\s*=\s*)[^\s;&\"']+", re.IGNORECASE),
+    re.compile(r"(Bearer\s+)[\"']?[A-Za-z0-9._\-]{8,}[\"']?", re.IGNORECASE),
+    re.compile(r"[\"']?x-codeium-csrf-token[\"']?\s*[:=]\s*[\"']?[^\s;&\"',}\]]+[\"']?", re.IGNORECASE),
+    re.compile(r"[\"']?ANTIGRAVITY_CSRF_TOKEN[\"']?\s*[:=]\s*[\"']?[^\s;&\"',}\]]+[\"']?", re.IGNORECASE),
+    re.compile(r"\b(sk-[A-Za-z0-9_\-]{16,})\b"),
+    re.compile(r"[\"']?password[\"']?\s*[:=]\s*[\"']?[^\s;&\"',}\]]+[\"']?", re.IGNORECASE),
 ]
 
 FORGE_LEVEL_TO_CERTAINTY_CEILING: dict[str, str] = {
@@ -150,7 +150,9 @@ class TrustedEvidenceRunner:
         completed = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
         blob_path, size_bytes, digest = self._store_artifact(combined_output)
 
-        # Prevent E4 build from being claimed as E5 runtime; permit G08 SECURITY runtime gates; downgrade dirty/unanchored to E2
+        # Prevent E4 build from being claimed as E5 runtime; permit G08 SECURITY runtime gates;
+        # downgrade dirty/unanchored PASS to E2; keep NOT_RUN strictly at E0/NONE/ASSUMED/HYPOTHESIS.
+        recorded_evidence_type = evidence_type
         if status == "PASS":
             if is_runtime_gate and (evidence_type == "RUNTIME" or (gate_id == "G08" and evidence_type == "SECURITY")):
                 ev_level = "E5"
@@ -161,6 +163,10 @@ class TrustedEvidenceRunner:
             if candidate_sha == "0" * 40 or dirty:
                 ev_level = "E2"
                 prov = "REPORTED"
+        elif status == "NOT_RUN":
+            ev_level = "E0"
+            recorded_evidence_type = "NONE"
+            prov = "ASSUMED"
         else:
             ev_level = "E1"
             prov = "DIRECTLY_OBSERVED"
@@ -186,7 +192,7 @@ class TrustedEvidenceRunner:
             "artifact_size_bytes": size_bytes,
             "artifact_sha256": digest,
             "evidence_level": ev_level,
-            "evidence_type": evidence_type,
+            "evidence_type": recorded_evidence_type,
             "provenance": prov,
             "certainty_ceiling": FORGE_LEVEL_TO_CERTAINTY_CEILING[ev_level],
             "redacted": True,

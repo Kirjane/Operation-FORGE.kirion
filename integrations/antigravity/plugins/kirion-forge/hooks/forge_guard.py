@@ -3,15 +3,16 @@
 from __future__ import annotations
 
 import json
+import posixpath
 import re
 import sys
 
 # Matches quoted or unquoted argument tokens (supporting paths with spaces)
 _ARG = r'(?:"[^"]*"|\'[^\']*\'|\S+)'
-_GIT_BIN = r"\bgit(?:\.exe)?"
-_GH_BIN = r"\bgh(?:\.exe)?"
-_PHP_BIN = r"\bphp(?:\.exe)?"
-_GIT_OPTS = rf"(?:\s+(?:-[Cc]\s+{_ARG}|--git-dir(?:={_ARG}|\s+{_ARG})|--work-tree(?:={_ARG}|\s+{_ARG})|--no-pager|-p|--paginate))*"
+_GIT_BIN = r"""\bgit(?:\.exe)?['"]?"""
+_GH_BIN = r"""\bgh(?:\.exe)?['"]?"""
+_PHP_BIN = r"""\bphp(?:\.exe)?['"]?"""
+_GIT_OPTS = rf"(?:\s+(?:-[Cc]\s*{_ARG}|--git-dir(?:={_ARG}|\s+{_ARG})|--work-tree(?:={_ARG}|\s+{_ARG})|--no-pager|-p|--paginate))*"
 _SEP_END = r"""(?:['"]?(?:\s|[;&|`)<>$]|$))"""
 
 FORBIDDEN_COMMAND_PATTERNS = [
@@ -24,8 +25,13 @@ FORBIDDEN_COMMAND_PATTERNS = [
         "Direct push to protected branch (main/master/production/release) is prohibited by KIRION Forge policy.",
     ),
     (
-        rf"{_GIT_BIN}{_GIT_OPTS}\s+branch\b[^\n]*(\s-D\b|\s--delete\b[^\n]*\s--force\b|\s--force\b[^\n]*\s--delete\b)",
-        "Forced local branch deletion (git branch -D) is prohibited by KIRION Forge policy.",
+        rf"{_GIT_BIN}{_GIT_OPTS}\s+branch\b[^\n]*("
+        r"(?-i:\s-[A-Za-z]*D[A-Za-z]*\b)"
+        r"|(?-i:\s-(?:[A-Za-z]*d[A-Za-z]*f|[A-Za-z]*f[A-Za-z]*d)[A-Za-z]*\b)"
+        r"|(?:\s--delete\b|(?-i:\s-d\b))[^\n]*(?:\s--force\b|(?-i:\s-f\b))"
+        r"|(?:\s--force\b|(?-i:\s-f\b))[^\n]*(?:\s--delete\b|(?-i:\s-d\b))"
+        r")",
+        "Forced local branch deletion (git branch -D / -df / --delete --force) is prohibited by KIRION Forge policy.",
     ),
     (
         r"\b(rm(?:\.exe)?\s+(?:[^\n]*\s)?-[^\s]*[rf][^\s]*\s+(?:[^\n]*\s)?['\"]?(?:\S*/)?\.git['\"]?(?:\b|/|\s|[;&|]|$)|remove-item\b[^\n]*\.git(?:\b|/|\\|\s|[;&|]|$)|rmdir\b[^\n]*\.git(?:\b|/|\\|\s|[;&|]|$))",
@@ -54,9 +60,16 @@ FORBIDDEN_COMMAND_PATTERNS = [
 ]
 
 GH_API_BIN_RE = re.compile(rf"{_GH_BIN}\s+api\b", re.IGNORECASE)
-GH_API_MUTATING_METHOD_RE = re.compile(r"(-X|--method)\s*['\"]?(PUT|DELETE|PATCH|POST)\b", re.IGNORECASE)
+GH_API_MUTATING_METHOD_RE = re.compile(
+    r"(?:^|\s)(?:(?:-X|--method)(?:\s+|=)['\"]?(?:PUT|DELETE|PATCH|POST)\b|(?:-[fF](?:\s+|=|\S)|--(?:raw-)?field(?:\s+|=)|--input(?:\s+|=)))",
+    re.IGNORECASE,
+)
 GH_API_PROTECTED_ENDPOINT_RE = re.compile(
-    r"/?repos/[^\s\"']*/(branches|rulesets|collaborators|hooks|git/refs)\b",
+    r"/?repos/[^/\s\"']+/[^/\s\"']+/(?:branches|rulesets|collaborators|hooks|git/refs|merges|releases|pulls/[^/\s\"']+/merge|pulls/[^/\s\"']+/reviews)(?:[/\s\"';&|]|$)",
+    re.IGNORECASE,
+)
+GH_API_DIRECT_REPO_ENDPOINT_RE = re.compile(
+    r"(?:^|[\s'\"])/?repos/[^/\s\"']+/[^/\s\"']+(?:['\"]?(?:\s|[;&|]|$))",
     re.IGNORECASE,
 )
 
@@ -78,16 +91,21 @@ def evaluate_pre_tool_use(payload: dict) -> dict:
         for pattern, reason in FORBIDDEN_COMMAND_PATTERNS:
             if re.search(pattern, cmd, flags=re.IGNORECASE):
                 return {"decision": "deny", "reason": reason}
-        # Order-independent gh api mutating check for protected repo/ref endpoints
-        if GH_API_BIN_RE.search(cmd) and GH_API_MUTATING_METHOD_RE.search(cmd) and GH_API_PROTECTED_ENDPOINT_RE.search(cmd):
+        # Order-independent gh api mutating check for protected repo/PR/release/ref endpoints
+        if (
+            GH_API_BIN_RE.search(cmd)
+            and GH_API_MUTATING_METHOD_RE.search(cmd)
+            and (GH_API_PROTECTED_ENDPOINT_RE.search(cmd) or GH_API_DIRECT_REPO_ENDPOINT_RE.search(cmd))
+        ):
             return {
                 "decision": "deny",
-                "reason": "Repository admin, branch-protection, or git/refs API mutation is prohibited.",
+                "reason": "Repository admin, branch-protection, PR merge/review, release, or git/refs API mutation is prohibited.",
             }
 
     if tool_name in ("write_file", "edit_file"):
         raw_path = str(args.get("Path") or "").replace("\\", "/").strip()
-        if GLOBAL_CONFIG_TREE_RE.search(raw_path):
+        norm_path = posixpath.normpath(raw_path) if raw_path else ""
+        if GLOBAL_CONFIG_TREE_RE.search(raw_path) or GLOBAL_CONFIG_TREE_RE.search(norm_path):
             return {
                 "decision": "deny",
                 "reason": "Global Antigravity configuration tree (~/.gemini/config) is prohibited without explicit user permission.",

@@ -10,10 +10,16 @@ from typing import Any
 from . import REPO_ROOT, SCHEMAS_ROOT
 
 SHA40_RE = re.compile(r"^[0-9a-f]{40}\Z")
+ZERO_SHA40 = "0" * 40
 SHA256_RE = re.compile(r"^[0-9a-f]{64}\Z")
 MISSION_ID_RE = re.compile(r"^[A-Z0-9][A-Z0-9_-]{1,63}\Z")
 REPO_NAME_RE = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+\Z")
 GATE_ID_RE = re.compile(r"^G(0[0-9]|1[0-5])\Z")
+
+
+def is_valid_git_sha(sha: Any) -> bool:
+    """Return True iff sha is a lowercase 40-hex Git SHA and not the all-zero placeholder."""
+    return isinstance(sha, str) and bool(SHA40_RE.fullmatch(sha)) and sha != ZERO_SHA40
 
 CANONICAL_STATES = (
     "PLANNED",
@@ -82,6 +88,21 @@ def _compile_schema_pattern(pattern: str) -> re.Pattern[str]:
     return re.compile(anchored)
 
 
+def _json_equal(a: Any, b: Any) -> bool:
+    """Strict JSON Schema value equality distinguishing bool from int/float."""
+    if isinstance(a, bool) != isinstance(b, bool):
+        return False
+    if isinstance(a, dict) and isinstance(b, dict):
+        if set(a.keys()) != set(b.keys()):
+            return False
+        return all(_json_equal(a[k], b[k]) for k in a)
+    if isinstance(a, list) and isinstance(b, list):
+        if len(a) != len(b):
+            return False
+        return all(_json_equal(x, y) for x, y in zip(a, b))
+    return a == b
+
+
 def validate_against_schema(instance: Any, schema: dict[str, Any], path: str = "$") -> list[str]:
     """Deterministic JSON Schema Draft 2020-12 structural and constraint validator using stdlib."""
     errors: list[str] = []
@@ -98,6 +119,8 @@ def validate_against_schema(instance: Any, schema: dict[str, Any], path: str = "
                 type_ok = True
             elif t == "integer" and isinstance(instance, int) and not isinstance(instance, bool):
                 type_ok = True
+            elif t == "number" and isinstance(instance, (int, float)) and not isinstance(instance, bool):
+                type_ok = True
             elif t == "boolean" and isinstance(instance, bool):
                 type_ok = True
             elif t == "null" and instance is None:
@@ -105,10 +128,10 @@ def validate_against_schema(instance: Any, schema: dict[str, Any], path: str = "
         if not type_ok:
             return [f"{path}: expected type {expected_type}, got {type(instance).__name__}"]
 
-    if "const" in schema and instance != schema["const"]:
+    if "const" in schema and not _json_equal(instance, schema["const"]):
         errors.append(f"{path}: expected const {schema['const']!r}, got {instance!r}")
 
-    if "enum" in schema and instance not in schema["enum"]:
+    if "enum" in schema and not any(_json_equal(instance, item) for item in schema["enum"]):
         errors.append(f"{path}: value {instance!r} not in enum {schema['enum']}")
 
     if isinstance(instance, str):
@@ -181,15 +204,25 @@ def verify_mission_packet(
     observed_base_sha: str | None = None,
     trusted_verifiers: set[str] | None = None,
 ) -> dict[str, Any]:
-    """Fail-closed verification of a MissionPacket against schema, authority, ownership, and role invariants."""
+    """Fail-closed verification of a MissionPacket against schema, authority, ownership, risk-floor gates, and role invariants."""
     from .policy import (
         PERSONA_PERMISSIONS,
         is_prohibited_branch,
         is_protected_governance_path,
         normalize_rel_path,
     )
+    from .quality import (
+        GATE_CATALOG,
+        MANDATORY_NON_EXEMPTIBLE_GATES,
+        RISK_REQUIRED_GATES,
+    )
 
     validate_contract(packet, "mission-packet.schema.json")
+
+    if not is_valid_git_sha(packet["base_sha"]):
+        raise AuthorityError(f"Invalid or all-zero base_sha forbidden: {packet['base_sha']!r}")
+    if not is_valid_git_sha(packet["selected_skills"]["skill_source_sha"]):
+        raise AuthorityError("Invalid or all-zero selected_skills.skill_source_sha forbidden.")
 
     if packet.get("work_mode") == "PAUSED" and (
         set(packet.get("allowed_operations", [])) & {"WRITE_OWNED", "INTEGRATE_BRANCH", "DELIVER_DRAFT_PR"}
@@ -217,6 +250,28 @@ def verify_mission_packet(
 
     if not packet["authorization_ref"].startswith(("https://github.com/", "ISSUE-", "PR-", "FORGE-AUTH-")):
         raise AuthorityError(f"Invalid authorization_ref format: {packet['authorization_ref']!r}")
+
+    req_gates = set(packet["required_gates"])
+    missing_mandatory = sorted(MANDATORY_NON_EXEMPTIBLE_GATES - req_gates)
+    if missing_mandatory:
+        raise AuthorityError(
+            f"MissionPacket.required_gates must include mandatory anchor gates {missing_mandatory}."
+        )
+    na_gates = packet.get("non_applicable_gates") or {}
+    for gid, reason in na_gates.items():
+        if gid not in GATE_CATALOG:
+            raise AuthorityError(f"Unknown gate ID in MissionPacket.non_applicable_gates: {gid!r}")
+        if gid in MANDATORY_NON_EXEMPTIBLE_GATES:
+            raise AuthorityError(f"Mandatory anchor gate {gid} cannot be exempted via MissionPacket.non_applicable_gates.")
+        if not isinstance(reason, str) or not reason.strip():
+            raise AuthorityError(f"MissionPacket.non_applicable_gates[{gid!r}] requires a non-empty justification.")
+    risk_floor = set(RISK_REQUIRED_GATES[packet["risk_class"]])
+    missing_floor = sorted(risk_floor - (req_gates | set(na_gates.keys())))
+    if missing_floor:
+        raise AuthorityError(
+            f"MissionPacket for {packet['risk_class']} omits required risk-floor gates {missing_floor} "
+            "without explicit documented non_applicable_gates justification."
+        )
 
     persona = packet["assigned_persona"]
     role = packet["formal_role"]
@@ -277,7 +332,7 @@ def verify_git_authority(
     expected_head_sha: str | None = None,
     expected_branch: str | None = None,
 ) -> dict[str, Any]:
-    """Directly observe live Git HEAD SHA, branch, and working-tree cleanliness."""
+    """Directly observe live Git HEAD SHA, branch, and working-tree cleanliness (fail-closed on git errors)."""
     head_p = subprocess.run(
         ["git", "rev-parse", "HEAD"],
         cwd=repo_root,
@@ -288,7 +343,7 @@ def verify_git_authority(
     if head_p.returncode != 0:
         raise AuthorityError(f"Failed to read git HEAD in {repo_root}: {head_p.stderr.strip()}")
     head_sha = head_p.stdout.strip()
-    if not SHA40_RE.fullmatch(head_sha):
+    if not is_valid_git_sha(head_sha):
         raise AuthorityError(f"Invalid 40-char git HEAD SHA observed: {head_sha!r}")
 
     branch_p = subprocess.run(
@@ -298,6 +353,8 @@ def verify_git_authority(
         text=True,
         check=False,
     )
+    if branch_p.returncode != 0:
+        raise AuthorityError(f"Failed to read git branch in {repo_root}: {branch_p.stderr.strip()}")
     branch = branch_p.stdout.strip()
 
     status_p = subprocess.run(
@@ -307,6 +364,8 @@ def verify_git_authority(
         text=True,
         check=False,
     )
+    if status_p.returncode != 0:
+        raise AuthorityError(f"Failed to read git status in {repo_root}: {status_p.stderr.strip()}")
     dirty = bool(status_p.stdout.strip())
 
     if expected_head_sha is not None and head_sha != expected_head_sha:

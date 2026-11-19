@@ -5,7 +5,7 @@ import hashlib
 import uuid
 from typing import Any, Callable
 
-from .authority import SHA40_RE, AuthorityError, validate_contract
+from .authority import AuthorityError, is_valid_git_sha, validate_contract
 from .evidence import FORGE_LEVEL_TO_CERTAINTY_CEILING
 
 GATE_CATALOG: dict[str, dict[str, str]] = {
@@ -41,6 +41,25 @@ EVIDENCE_LEVEL_ORDER: dict[str, int] = {
 MANDATORY_NON_EXEMPTIBLE_GATES = {"G00", "G13", "G15"}
 E5_RUNTIME_GATES = {"G07", "G08", "G09", "G10", "G11"}
 STRICT_RUNTIME_ONLY_GATES = {"G07", "G09", "G10", "G11"}
+
+GATE_ALLOWED_PASS_EVIDENCE_TYPES: dict[str, set[str]] = {
+    "G00": {"SOURCE", "BUILD", "UNIT", "INTEGRATION", "RUNTIME", "SECURITY"},
+    "G01": {"SOURCE", "UNIT", "INTEGRATION", "RUNTIME"},
+    "G02": {"SOURCE", "UNIT", "INTEGRATION", "RUNTIME"},
+    "G03": {"BUILD", "INTEGRATION", "RUNTIME"},
+    "G04": {"BUILD", "UNIT", "INTEGRATION", "RUNTIME", "SECURITY"},
+    "G05": {"UNIT", "INTEGRATION", "RUNTIME"},
+    "G06": {"INTEGRATION", "RUNTIME"},
+    "G07": {"RUNTIME"},
+    "G08": {"RUNTIME", "SECURITY"},
+    "G09": {"RUNTIME"},
+    "G10": {"RUNTIME"},
+    "G11": {"RUNTIME"},
+    "G12": {"UNIT", "INTEGRATION", "RUNTIME"},
+    "G13": {"UNIT", "INTEGRATION", "RUNTIME", "SECURITY"},
+    "G14": {"BUILD", "UNIT", "INTEGRATION", "RUNTIME"},
+    "G15": {"INTEGRATION", "RUNTIME", "SECURITY"},
+}
 
 RISK_REQUIRED_GATES: dict[str, list[str]] = {
     "RISK-0": ["G00", "G01", "G04", "G13", "G15"],
@@ -78,11 +97,15 @@ def evaluate_gate_suite(
     """Verify all required gates for a risk class have clean, exact-SHA, minimum-strength trusted evidence."""
     if risk_class not in RISK_REQUIRED_GATES:
         raise QualityGateError(f"Unknown risk_class: {risk_class!r}")
+    if not is_valid_git_sha(candidate_sha):
+        raise QualityGateError(f"Invalid or all-zero candidate_sha forbidden: {candidate_sha!r}")
 
     required = list(RISK_REQUIRED_GATES[risk_class])
     na_map = non_applicable_gates or {}
 
     for gid, reason in na_map.items():
+        if gid not in GATE_CATALOG:
+            raise QualityGateError(f"Unknown gate_id in non_applicable_gates: {gid!r}")
         if gid in MANDATORY_NON_EXEMPTIBLE_GATES:
             raise QualityGateError(f"Mandatory anchor gate {gid} cannot be exempted via non_applicable_gates.")
         if not isinstance(reason, str) or not reason.strip():
@@ -92,12 +115,17 @@ def evaluate_gate_suite(
     for env in envelopes:
         validate_contract(env, "evidence-envelope.schema.json")
         gid = env["gate_id"]
+        if gid in by_gate:
+            raise QualityGateError(
+                f"Duplicate evidence envelope submitted for gate {gid} at candidate_sha {candidate_sha}; "
+                "prior gate results cannot be overwritten."
+            )
         if env["candidate_sha"] != candidate_sha:
             raise QualityGateError(
                 f"Stale evidence envelope for gate {gid}: envelope SHA {env['candidate_sha']} != candidate SHA {candidate_sha}"
             )
         if env["status"] == "PASS":
-            if candidate_sha == "0" * 40 or env["candidate_sha"] == "0" * 40:
+            if not is_valid_git_sha(env["candidate_sha"]):
                 raise QualityGateError(f"Unanchored zero SHA cannot produce a trusted PASS envelope for gate {gid}.")
             if env["dirty"] is True:
                 raise QualityGateError(f"Dirty working tree cannot produce a trusted PASS envelope for gate {gid}.")
@@ -115,13 +143,19 @@ def evaluate_gate_suite(
                     f"Certainty ceiling mismatch for gate {gid} ({actual_level}): "
                     f"got {env['certainty_ceiling']!r}, expected {expected_ceiling!r}."
                 )
-            if gid in STRICT_RUNTIME_ONLY_GATES and env["evidence_type"] != "RUNTIME":
+            ev_type = env["evidence_type"]
+            if ev_type == "NONE":
                 raise QualityGateError(
-                    f"Gate {gid} ({GATE_CATALOG[gid]['name']}) requires evidence_type='RUNTIME', got {env['evidence_type']!r}."
+                    f"Gate {gid} cannot claim PASS with evidence_type='NONE' (E0 only per EVIDENCE_CROSSWALK.md)."
                 )
-            if gid == "G08" and env["evidence_type"] not in ("RUNTIME", "SECURITY"):
+            if EVIDENCE_LEVEL_ORDER[actual_level] >= EVIDENCE_LEVEL_ORDER["E4"] and ev_type in ("NONE", "SOURCE"):
                 raise QualityGateError(
-                    f"Gate G08 requires evidence_type in ('RUNTIME', 'SECURITY'), got {env['evidence_type']!r}."
+                    f"Gate {gid} with {actual_level} PASS cannot carry evidence_type={ev_type!r} (SOURCE is E1 only)."
+                )
+            allowed_types = GATE_ALLOWED_PASS_EVIDENCE_TYPES[gid]
+            if ev_type not in allowed_types:
+                raise QualityGateError(
+                    f"Gate {gid} ({GATE_CATALOG[gid]['name']}) requires evidence_type in {sorted(allowed_types)}, got {ev_type!r}."
                 )
             if gid in E5_RUNTIME_GATES and env["provenance"] not in ("DIRECTLY_OBSERVED", "REPRODUCED"):
                 raise QualityGateError(
@@ -140,6 +174,12 @@ def evaluate_gate_suite(
 
     for gid in required:
         if gid in na_map:
+            if gid in by_gate:
+                st = by_gate[gid]["status"]
+                if st == "NOT_RUN":
+                    not_run.append(gid)
+                elif st != "PASS":
+                    failed.append(gid)
             continue
         if gid not in by_gate:
             missing.append(gid)
@@ -147,6 +187,20 @@ def evaluate_gate_suite(
         st = by_gate[gid]["status"]
         if st == "PASS":
             passed.append(gid)
+        elif st == "NOT_RUN":
+            not_run.append(gid)
+        else:
+            failed.append(gid)
+
+    # Any non-required gate envelope submitted must also be accounted for (failed/blocked/not-run cannot be hidden)
+    required_set = set(required)
+    for gid, env in by_gate.items():
+        if gid in required_set:
+            continue
+        st = env["status"]
+        if st == "PASS":
+            if gid not in na_map:
+                passed.append(gid)
         elif st == "NOT_RUN":
             not_run.append(gid)
         else:
@@ -190,8 +244,20 @@ class NoxReviewEngine:
         reviewer_persona: str = "Antigravity-Nox",
         reviewer_context_id: str | None = None,
     ) -> dict[str, Any]:
-        rev_ctx = reviewer_context_id or f"ctx-antigravity-nox-{uuid.uuid4().hex[:12]}"
-        if rev_ctx == author_context_id:
+        if not is_valid_git_sha(frozen_sha):
+            raise QualityGateError(f"Invalid or all-zero frozen_sha forbidden in Nox review: {frozen_sha!r}")
+        if not isinstance(author_context_id, str) or not author_context_id.strip():
+            raise QualityGateError("author_context_id must be a non-empty non-whitespace string.")
+        author_ctx = author_context_id.strip()
+
+        if reviewer_context_id is not None:
+            if not isinstance(reviewer_context_id, str) or not reviewer_context_id.strip():
+                raise QualityGateError("reviewer_context_id must be a non-empty non-whitespace string.")
+            rev_ctx = reviewer_context_id.strip()
+        else:
+            rev_ctx = f"ctx-antigravity-nox-{uuid.uuid4().hex[:12]}"
+
+        if rev_ctx == author_ctx:
             raise QualityGateError("Self-review prohibited: reviewer_context_id must be distinct from author_context_id.")
         if reviewer_persona not in ("Antigravity-Nox", "Antigravity-Aegis"):
             raise QualityGateError(f"Invalid adversarial reviewer persona: {reviewer_persona!r}")
@@ -210,7 +276,7 @@ class NoxReviewEngine:
             "frozen_sha": frozen_sha,
             "reviewer_context_id": rev_ctx,
             "reviewer_persona": reviewer_persona,
-            "author_context_id": author_context_id,
+            "author_context_id": author_ctx,
             "inspected_scope": inspected_scope,
             "evidence_inspected": evidence_inspected,
             "findings": findings,
@@ -227,6 +293,10 @@ class NoxReviewEngine:
         expected_mission_id: str | None = None,
     ) -> None:
         validate_contract(nox_result, "nox-result.schema.json")
+        if not is_valid_git_sha(current_candidate_sha):
+            raise QualityGateError(f"Invalid or all-zero current_candidate_sha: {current_candidate_sha!r}")
+        if not is_valid_git_sha(nox_result["frozen_sha"]):
+            raise QualityGateError(f"Invalid or all-zero frozen_sha in Nox review: {nox_result['frozen_sha']!r}")
         if expected_mission_id is not None and nox_result["mission_id"] != expected_mission_id:
             raise QualityGateError(
                 f"Nox review mission mismatch: review mission_id={nox_result['mission_id']!r} "
@@ -237,7 +307,11 @@ class NoxReviewEngine:
                 f"Stale Nox review invalidated by commit drift: review frozen_sha={nox_result['frozen_sha']} "
                 f"!= current candidate_sha={current_candidate_sha}"
             )
-        if nox_result["reviewer_context_id"] == nox_result["author_context_id"]:
+        rev_ctx = nox_result["reviewer_context_id"].strip()
+        auth_ctx = nox_result["author_context_id"].strip()
+        if not rev_ctx or not auth_ctx:
+            raise QualityGateError("Nox review invalid: reviewer_context_id and author_context_id cannot be blank/whitespace.")
+        if rev_ctx == auth_ctx:
             raise QualityGateError("Nox review invalid: reviewer and author share context_id.")
 
         # Independently recompute blocking finding invariants regardless of claimed verdict string
@@ -290,6 +364,8 @@ class SelfHealingController:
         repair_fn: Callable[[int, str, dict[str, Any]], dict[str, Any]],
         nox_review_fn: Callable[[str, str], dict[str, Any]],
     ) -> dict[str, Any]:
+        if not is_valid_git_sha(initial_sha):
+            raise QualityGateError(f"Invalid or all-zero initial_sha in SelfHealingController: {initial_sha!r}")
         current_sha = initial_sha
         cycles_used = 0
         failure_counts: dict[str, int] = {}
@@ -298,7 +374,7 @@ class SelfHealingController:
 
         while True:
             eval_state = evaluate_fn(current_sha)
-            author_ctx = eval_state.get("author_context_id", "ctx-antigravity-jane-initial")
+            author_ctx = str(eval_state.get("author_context_id", "ctx-antigravity-jane-initial")).strip()
 
             if eval_state["passed"]:
                 nox_res = nox_review_fn(current_sha, author_ctx)
@@ -312,10 +388,12 @@ class SelfHealingController:
                         "nox_result": nox_res,
                         "history": history,
                     }
-                if nox_res["reviewer_context_id"] == author_ctx or nox_res["reviewer_context_id"] == nox_res["author_context_id"]:
+                rev_ctx = nox_res["reviewer_context_id"].strip()
+                res_author_ctx = nox_res["author_context_id"].strip()
+                if not rev_ctx or not res_author_ctx or rev_ctx == author_ctx or rev_ctx == res_author_ctx:
                     return {
                         "status": "QUARANTINED",
-                        "reason": "Self-review rejected: reviewer_context_id matches author context.",
+                        "reason": "Self-review or blank context rejected: reviewer_context_id must be non-empty and distinct from author context.",
                         "final_sha": current_sha,
                         "cycles_used": cycles_used,
                         "nox_result": nox_res,
@@ -400,10 +478,10 @@ class SelfHealingController:
                 }
 
             next_sha = repair_outcome.get("new_sha")
-            if not isinstance(next_sha, str) or not SHA40_RE.fullmatch(next_sha) or next_sha == current_sha:
+            if not is_valid_git_sha(next_sha) or next_sha == current_sha:
                 return {
                     "status": "BLOCKED",
-                    "reason": f"Repair must produce a distinct valid 40-char SHA, got {next_sha!r}",
+                    "reason": f"Repair must produce a distinct valid non-zero 40-char SHA, got {next_sha!r}",
                     "final_sha": current_sha,
                     "cycles_used": cycles_used,
                     "history": history,

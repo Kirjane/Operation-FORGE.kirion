@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from . import REPO_ROOT
-from .authority import validate_contract
+from .authority import AuthorityError, is_valid_git_sha, validate_contract, verify_mission_packet
 from .delivery import compute_delivery_key
 from .scheduler import FactoryJournal
 
@@ -59,34 +59,48 @@ class RecoveryManager:
         """
         Reconstruct exact mission state after an orchestrator crash or interruption
         without duplicating local commits or remote broker writes.
-        Detects remote branch drift during PENDING_REMOTE reconciliation and halts BLOCKED.
+        Verifies hash-chain integrity and MissionPacket authority up front, halts terminal
+        QUARANTINED/REJECTED missions, detects remote or local SHA drift against any
+        unresolved PENDING_REMOTE receipt for (mission_id, branch), and performs WAL
+        BEGIN IMMEDIATE CAS updates.
         """
+        if not self.journal.verify_hash_chain():
+            raise AuthorityError("Journal hash-chain tamper verification failed; recovery halted.")
+
         m = self.journal.get_mission(mission_id)
         packet = m["packet"]
+        verify_mission_packet(packet)
+
         branch = packet["permitted_branch"]
         base_sha = m["base_sha"]
         candidate_sha = observed_local_sha or m["candidate_sha"]
+        if not is_valid_git_sha(candidate_sha):
+            raise AuthorityError(f"Invalid or all-zero candidate_sha during reconciliation: {candidate_sha!r}")
+
         delivery_key = compute_delivery_key(mission_id, branch, candidate_sha)
 
         delivery_reconciled = False
         remote_already_delivered = False
         remote_drift_or_unreconciled = False
-        conn = sqlite3.connect(self.journal.db_path)
-        conn.row_factory = sqlite3.Row
-        try:
-            table_check = conn.execute(
-                "SELECT name FROM sqlite_master WHERE type='table' AND name='delivery_receipts'"
-            ).fetchone()
-            if table_check is not None:
-                receipt = conn.execute(
-                    "SELECT * FROM delivery_receipts WHERE delivery_key = ?",
-                    (delivery_key,),
+        is_terminal_blocked = m["state"] in ("QUARANTINED", "REJECTED")
+
+        if not is_terminal_blocked:
+            conn = sqlite3.connect(self.journal.db_path, timeout=15.0, isolation_level=None)
+            conn.row_factory = sqlite3.Row
+            conn.execute("PRAGMA journal_mode=WAL;")
+            try:
+                table_check = conn.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table' AND name='delivery_receipts'"
                 ).fetchone()
-                if receipt is not None:
-                    if receipt["status"] == "DELIVERED":
-                        remote_already_delivered = True
-                        delivery_reconciled = True
-                    elif receipt["status"] == "PENDING_REMOTE":
+                if table_check is not None:
+                    pending_rows = conn.execute(
+                        "SELECT * FROM delivery_receipts WHERE mission_id = ? AND branch = ? AND status = 'PENDING_REMOTE'",
+                        (mission_id, branch),
+                    ).fetchall()
+                    if any(r["candidate_sha"] != candidate_sha for r in pending_rows):
+                        remote_drift_or_unreconciled = True
+                        delivery_reconciled = False
+                    elif any(r["delivery_key"] == delivery_key for r in pending_rows):
                         if remote_head_probe is None:
                             remote_drift_or_unreconciled = True
                             delivery_reconciled = False
@@ -97,28 +111,69 @@ class RecoveryManager:
                                 remote_drift_or_unreconciled = True
                                 delivery_reconciled = False
                             else:
+                                now_upd = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
                                 if remote_sha == candidate_sha:
-                                    conn.execute(
-                                        "UPDATE delivery_receipts SET status = 'DELIVERED' WHERE delivery_key = ?",
-                                        (delivery_key,),
+                                    conn.execute("BEGIN IMMEDIATE;")
+                                    cur = conn.execute(
+                                        """
+                                        UPDATE delivery_receipts
+                                        SET status = 'DELIVERED', updated_at_utc = ?
+                                        WHERE delivery_key = ? AND status = 'PENDING_REMOTE'
+                                        """,
+                                        (now_upd, delivery_key),
                                     )
-                                    conn.commit()
-                                    remote_already_delivered = True
-                                    delivery_reconciled = True
+                                    conn.execute("COMMIT;")
+                                    if cur.rowcount == 1:
+                                        remote_already_delivered = True
+                                        delivery_reconciled = True
+                                    else:
+                                        refreshed = conn.execute(
+                                            "SELECT status FROM delivery_receipts WHERE delivery_key = ?",
+                                            (delivery_key,),
+                                        ).fetchone()
+                                        if refreshed is not None and refreshed["status"] == "DELIVERED":
+                                            remote_already_delivered = True
+                                            delivery_reconciled = True
+                                        else:
+                                            remote_drift_or_unreconciled = True
+                                            delivery_reconciled = False
                                 elif remote_sha in (None, base_sha):
-                                    conn.execute(
-                                        "UPDATE delivery_receipts SET status = 'RECONCILED_RETRY_ALLOWED' WHERE delivery_key = ?",
-                                        (delivery_key,),
+                                    conn.execute("BEGIN IMMEDIATE;")
+                                    cur = conn.execute(
+                                        """
+                                        UPDATE delivery_receipts
+                                        SET status = 'RECONCILED_RETRY_ALLOWED', updated_at_utc = ?
+                                        WHERE delivery_key = ? AND status = 'PENDING_REMOTE'
+                                        """,
+                                        (now_upd, delivery_key),
                                     )
-                                    conn.commit()
-                                    delivery_reconciled = True
+                                    conn.execute("COMMIT;")
+                                    if cur.rowcount == 1:
+                                        delivery_reconciled = True
+                                    else:
+                                        remote_drift_or_unreconciled = True
+                                        delivery_reconciled = False
                                 else:
                                     remote_drift_or_unreconciled = True
                                     delivery_reconciled = False
-        finally:
-            conn.close()
+                    else:
+                        receipt = conn.execute(
+                            "SELECT * FROM delivery_receipts WHERE delivery_key = ?",
+                            (delivery_key,),
+                        ).fetchone()
+                        if receipt is not None and receipt["status"] == "DELIVERED":
+                            remote_already_delivered = True
+                            delivery_reconciled = True
+            except Exception:
+                if conn.in_transaction:
+                    conn.execute("ROLLBACK;")
+                raise
+            finally:
+                conn.close()
 
-        if remote_drift_or_unreconciled:
+        if is_terminal_blocked:
+            next_action = "HALT_BLOCKED_TERMINAL_QUARANTINED_OR_REJECTED"
+        elif remote_drift_or_unreconciled:
             next_action = "HALT_BLOCKED_REQUIRE_MAINTAINER_RECONCILIATION"
         elif remote_already_delivered:
             next_action = "NO_OP_ALREADY_DELIVERED_AWAIT_INDEPENDENT_REVIEW"

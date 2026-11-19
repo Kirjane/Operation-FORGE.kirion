@@ -11,6 +11,7 @@ from typing import Any
 
 from .authority import (
     AuthorityError,
+    is_valid_git_sha,
     validate_contract,
     validate_lifecycle_transition,
     verify_mission_packet,
@@ -18,6 +19,27 @@ from .authority import (
 from .policy import normalize_rel_path, path_matches_prefix
 
 GENESIS_EVENT_HASH = "0" * 64
+
+
+def _compute_event_chain_hash(ev: Any) -> str:
+    """Compute tamper-evident SHA-256 digest binding all immutable metadata and payload digest of a journal event."""
+    canonical = json.dumps(
+        {
+            "seq": ev["seq"],
+            "event_id": ev["event_id"],
+            "mission_id": ev["mission_id"],
+            "run_id": ev["run_id"],
+            "stage": ev["stage"],
+            "event_type": ev["event_type"],
+            "state_version": ev["state_version"],
+            "payload_sha256": ev["payload_sha256"],
+            "prev_event_sha256": ev["prev_event_sha256"],
+            "created_at_utc": ev["created_at_utc"],
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
 class SchedulerError(AuthorityError):
@@ -195,6 +217,7 @@ class FactoryJournal:
         mid = packet["mission_id"]
         run_id = packet["run_id"]
         base_sha = packet["base_sha"]
+        canonical_packet_json = json.dumps(packet, sort_keys=True)
         now = utc_now_iso()
         conn = self._connect()
         try:
@@ -202,7 +225,13 @@ class FactoryJournal:
             existing = conn.execute("SELECT * FROM missions WHERE mission_id = ?", (mid,)).fetchone()
             if existing is not None:
                 conn.execute("ROLLBACK;")
-                return dict(existing)
+                if existing["packet_json"] != canonical_packet_json:
+                    raise SchedulerError(
+                        f"Conflicting re-registration for mission_id={mid!r}: submitted packet differs from stored mission."
+                    )
+                data = dict(existing)
+                data["packet"] = json.loads(data["packet_json"])
+                return data
 
             conn.execute(
                 """
@@ -211,7 +240,7 @@ class FactoryJournal:
                     repair_cycles, identical_retries, last_failure_sig, packet_json, updated_at_utc
                 ) VALUES (?, ?, 'PLANNED', 1, ?, ?, 0, 0, '', ?, ?)
                 """,
-                (mid, run_id, base_sha, base_sha, json.dumps(packet, sort_keys=True), now),
+                (mid, run_id, base_sha, base_sha, canonical_packet_json, now),
             )
             self._append_event_in_tx(
                 conn,
@@ -242,12 +271,17 @@ class FactoryJournal:
         state_version: int,
         payload: dict[str, Any],
     ) -> dict[str, Any]:
-        last_row = conn.execute("SELECT payload_sha256, prev_event_sha256, seq FROM journal_events ORDER BY seq DESC LIMIT 1").fetchone()
+        last_row = conn.execute(
+            """
+            SELECT seq, event_id, mission_id, run_id, stage, event_type, state_version,
+                   payload_sha256, prev_event_sha256, created_at_utc
+            FROM journal_events ORDER BY seq DESC LIMIT 1
+            """
+        ).fetchone()
         if last_row is None:
             prev_hash = GENESIS_EVENT_HASH
         else:
-            chain_material = f"{last_row['seq']}:{last_row['prev_event_sha256']}:{last_row['payload_sha256']}".encode("utf-8")
-            prev_hash = hashlib.sha256(chain_material).hexdigest()
+            prev_hash = _compute_event_chain_hash(last_row)
 
         payload_json = json.dumps(payload, sort_keys=True)
         payload_sha256 = hashlib.sha256(payload_json.encode("utf-8")).hexdigest()
@@ -292,6 +326,8 @@ class FactoryJournal:
         stage: str = "LIFECYCLE",
         details: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
+        if candidate_sha is not None and not is_valid_git_sha(candidate_sha):
+            raise SchedulerError(f"Invalid or all-zero candidate_sha in transition_state: {candidate_sha!r}")
         conn = self._connect()
         try:
             conn.execute("BEGIN IMMEDIATE;")
@@ -419,7 +455,7 @@ class FactoryJournal:
             conn.close()
 
     def verify_hash_chain(self) -> bool:
-        """Verify tamper-evidence of the entire journal_events hash chain."""
+        """Verify tamper-evidence of the entire journal_events hash chain including all event metadata columns."""
         events = self.list_events()
         prev_hash = GENESIS_EVENT_HASH
         for ev in events:
@@ -428,6 +464,5 @@ class FactoryJournal:
             payload_json = json.dumps(ev["payload"], sort_keys=True)
             if hashlib.sha256(payload_json.encode("utf-8")).hexdigest() != ev["payload_sha256"]:
                 return False
-            chain_material = f"{ev['seq']}:{ev['prev_event_sha256']}:{ev['payload_sha256']}".encode("utf-8")
-            prev_hash = hashlib.sha256(chain_material).hexdigest()
+            prev_hash = _compute_event_chain_hash(ev)
         return True

@@ -9,7 +9,7 @@ from pathlib import Path
 
 FORBIDDEN_COMMAND_PATTERNS = [
     (r"\bgit\s+push\b[^\n]*(\s--force\b|\s-f\b|\s--force-with-lease\b|\s--delete\b)", "Force push or remote ref deletion is prohibited by KIRION Forge policy."),
-    (r"\bgit\s+ push\b[^\n]*\b(origin\s+main|origin\s+master)\b", "Direct push to main/master is prohibited by KIRION Forge policy."),
+    (r"\bgit\s+push\b[^\n]*\b(origin\s+main|origin\s+master)\b", "Direct push to main/master is prohibited by KIRION Forge policy."),
     (r"\bgh\s+pr\s+merge\b", "Autonomous PR merge is prohibited; promotion requires independent Engineer acceptance."),
     (r"\bgh\s+pr\s+review\b[^\n]*--approve\b", "Self-approval via gh pr review --approve is prohibited."),
     (r"\bgh\s+release\s+(create|delete|edit)\b", "Release mutation is prohibited without separate Engineer authorization."),

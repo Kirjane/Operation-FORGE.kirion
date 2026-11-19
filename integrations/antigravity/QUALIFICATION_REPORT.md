@@ -5,7 +5,7 @@
 **Frozen Planning Base SHA:** `a864b88bda5f26c44709c9239dc73ae63abc78ad`  
 **Parent Branch SHA (`feat/forge-obsidian-vault-r2`, PR #12):** `ffffa7e16137ce191d74be0fadd0fe18c2eae2f9`  
 **Accepted Forge Main SHA:** `ac7285d7cd866b4728c28d64a7c145a6bc43f812`  
-**Plugin Package Digest (`kirion-forge` v1.0.0-r1):** `a26ff327f5a8f7e9da227f767ccca645d783627d7a53cfb6b87ec35ea397b423`  
+**Plugin Package Digest (`kirion-forge` v1.0.0-r1):** `a29e3e3bab20eb4ebc561556cba6303d75574ee78dbf5cb6cb6f451be5bdb51a`  
 **Observed Factory Maturity:** `AF-3` demonstrated in workspace (`AF-1` host-discovered plugin/agents, `AF-2` enforced scope/leases/hooks, `AF-3` autonomous build/test/review/repair/recovery; `AF-4` candidate evidence packet complete and awaiting separate-session non-author Acceptance Agent review). **No Forge NEST promotion is claimed (`NEST-2` preserved).**
 
 ---
@@ -125,7 +125,18 @@ In accordance with `AGENTS.md` ("Tool absence narrows permissible operations/cla
 
 ---
 
-## 7. F17 — Controlled Adoption, Rollback, and Support Runbook
+## 7. Real Fresh-Context `Antigravity-Nox` Adversarial Review & Self-Healing Record (`F11`, `F12`)
+
+- **Cycle 1 Review (`G13`):** Executed via native `run_workflow` (`workflows/nox_adversarial_audit.py`) spawning isolated `research` agent `Antigravity-Nox` (`context_id: d02eac91-a129-4263-8f5b-516fd637c049`) at frozen candidate SHA `67e9ae7b08c31be68e15ba8647b64d5d6cb82c81`.
+  - **Verdict:** `REWORK` (3 findings identified and repaired):
+    1. `NOX-R1-001` (`P1`, `hooks/forge_guard.py:12`): Regex `r"\bgit\s+ push\b"` contained an extra literal space after `\s+`, allowing single-space `git push origin main` to pass the `PreToolUse` hook. **Fixed** in `hooks/forge_guard.py` (`r"\bgit\s+push\b"`) with discriminating regression check added to `E01_FORBIDDEN_BRANCH_WRITE_MAIN` in `benchmarks/security_qualification_suite.py`.
+    2. `NOX-R1-002` (`P2`, `QUALIFICATION_REPORT.md:8`): Stale `package_sha256` after `README.md` link edit. **Fixed** and guarded by an automated invariant assertion in `tests/test_factory_core.py`.
+    3. `NOX-R1-003` (`P3`, `F00_CAPABILITY_MATRIX.md:119`): Updated module reference from `plugin_packaging.py` to `dispatcher.py` (`verify_plugin_package`).
+- **Cycle 1 Commit Invalidation:** Per `F11` exact-SHA invalidation rule, committing the Cycle 1 repairs invalidated `67e9ae7b08c31be68e15ba8647b64d5d6cb82c81` and triggered a fresh-context Cycle 2 `Antigravity-Nox` review at the repaired candidate SHA.
+
+---
+
+## 8. F17 — Controlled Adoption, Rollback, and Support Runbook
 
 ### Adoption Readiness & Rollout Scope
 1. **Current Scope:** Workspace-local activation inside `Kirch-Nairu/Operation-FORGE.kirion` (`feat/antigravity-software-factory-r1`, PR #14) via `.agents/plugins.json`.

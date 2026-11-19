@@ -116,7 +116,7 @@ Executed in a disposable repository outside the project tree (`f00_probe.py`):
 
 - **F01 (Native Plugin Packaging):**
   - Package native Antigravity plugin at `integrations/antigravity/plugins/kirion-forge/` containing `plugin.json` (strictly conforming to verified host schema: `name`, `displayName`, `description`, `version`, `author`, `repository`, `logo`, `suggestedPrompts`), `rules/AGENTS.md`, root `hooks.json`, `hooks/forge_guard.py`, `assets/logo.svg`, and `README.md`.
-  - Provide workspace discovery registration via `.agents/plugins.json` and a deterministic manifest/discovery validator (`integrations/antigravity/factory/plugin_packaging.py`) without mutating `~/.gemini/config/`.
+  - Provide workspace discovery registration via `.agents/plugins.json` and a deterministic manifest/discovery validator (`integrations/antigravity/factory/dispatcher.py` `verify_plugin_package`) without mutating `~/.gemini/config/`.
 - **F06 (Mission and Authority Contracts):**
   - Author JSON Schema Draft 2020-12 contracts under `integrations/antigravity/schemas/` (`mission-packet.schema.json`, `writer-result.schema.json`, `nox-result.schema.json`, `evidence-envelope.schema.json`, `journal-event.schema.json`, `recovery-capsule.schema.json`).
   - Implement `integrations/antigravity/factory/authority.py` and `integrations/antigravity/factory/policy.py` enforcing exact 40-char SHA pins, untrusted input validation, deny-by-default operation guards, and canonical lifecycle state transitions (`PLANNED` → `AUTHORIZED` → `ACTIVE` → `READY` → `UNDER_REVIEW` → `ACCEPTED`/`REWORK`/`REJECTED`/`QUARANTINED` → `INTEGRATED` → `PROMOTED` → `OBSERVED`, plus `BLOCKED`).

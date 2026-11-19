@@ -128,6 +128,8 @@ class FactoryCoreTests(unittest.TestCase):
         self.assertEqual(pkg["core_skills_count"], 16)
         self.assertEqual(pkg["total_candidate_skills"], 32)
         self.assertTrue(pkg["hooks_present"])
+        qual_report = (ANTIGRAVITY_ROOT / "QUALIFICATION_REPORT.md").read_text(encoding="utf-8")
+        self.assertIn(pkg["package_sha256"], qual_report, "QUALIFICATION_REPORT.md must record exact current package_sha256")
 
         live = query_live_host_plugin_discovery(REPO_ROOT)
         if live["status"] == "OBSERVED":

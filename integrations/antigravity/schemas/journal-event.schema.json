@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kirion-forge.local/integrations/antigravity/schemas/journal-event.schema.json",
+  "title": "KIRION Forge SQLite WAL Journal Event",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "seq",
+    "event_id",
+    "mission_id",
+    "run_id",
+    "stage",
+    "event_type",
+    "state_version",
+    "payload",
+    "payload_sha256",
+    "prev_event_sha256",
+    "created_at_utc"
+  ],
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "seq": { "type": "integer", "minimum": 1 },
+    "event_id": { "type": "string", "minLength": 4 },
+    "mission_id": { "type": "string", "minLength": 2 },
+    "run_id": { "type": "string", "minLength": 3 },
+    "stage": { "type": "string", "minLength": 2 },
+    "event_type": { "type": "string", "minLength": 2 },
+    "state_version": { "type": "integer", "minimum": 1 },
+    "payload": { "type": "object" },
+    "payload_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "prev_event_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "created_at_utc": { "type": "string", "minLength": 10 }
+  }
+}

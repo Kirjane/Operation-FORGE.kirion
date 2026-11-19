@@ -1,0 +1,174 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kirion-forge.local/integrations/antigravity/schemas/mission-packet.schema.json",
+  "title": "KIRION Forge Antigravity Mission Packet",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "run_id",
+    "mission_id",
+    "authorization_ref",
+    "verifier",
+    "repo_name",
+    "base_sha",
+    "permitted_branch",
+    "project_origin",
+    "work_mode",
+    "contract_refs",
+    "acceptance_criteria",
+    "cognition_hash",
+    "selected_skills",
+    "assigned_persona",
+    "formal_role",
+    "owned_paths",
+    "depends_on",
+    "risk_class",
+    "required_gates",
+    "budget",
+    "stop_conditions",
+    "allowed_operations",
+    "delivery_destination"
+  ],
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "run_id": { "type": "string", "minLength": 3 },
+    "mission_id": { "type": "string", "pattern": "^[A-Z0-9][A-Z0-9_-]{1,63}$" },
+    "authorization_ref": { "type": "string", "minLength": 3 },
+    "verifier": { "type": "string", "minLength": 2 },
+    "repo_id": { "type": ["integer", "string", "null"] },
+    "repo_name": { "type": "string", "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$" },
+    "base_sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "permitted_branch": { "type": "string", "minLength": 2 },
+    "project_origin": { "type": "string", "enum": ["GREENFIELD", "BROWNFIELD"] },
+    "work_mode": {
+      "type": "string",
+      "enum": ["DISCOVERY", "IN_FLIGHT", "MAINTENANCE", "RECOVERY", "PAUSED"]
+    },
+    "contract_refs": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "acceptance_criteria": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "cognition_hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "selected_skills": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["skill_source_sha", "files"],
+      "properties": {
+        "skill_source_sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "files": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 8,
+          "items": { "type": "string", "minLength": 3 }
+        }
+      }
+    },
+    "assigned_persona": {
+      "type": "string",
+      "enum": [
+        "Antigravity-Maintainer",
+        "Antigravity-Lucien",
+        "Antigravity-Jane",
+        "Antigravity-Nox",
+        "Antigravity-Argon",
+        "Antigravity-Iris",
+        "Antigravity-QA",
+        "Antigravity-Aegis",
+        "Antigravity-Integrator",
+        "Antigravity-Scribe"
+      ]
+    },
+    "formal_role": {
+      "type": "string",
+      "enum": ["Maintainer", "Code Writer", "Integration Writer", "Reviewer"]
+    },
+    "owned_paths": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "owned_modules": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "owned_behaviors": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "depends_on": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^[A-Z0-9][A-Z0-9_-]{1,63}$" }
+    },
+    "risk_class": {
+      "type": "string",
+      "enum": ["RISK-0", "RISK-1", "RISK-2", "RISK-3", "RISK-4"]
+    },
+    "required_gates": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "pattern": "^G(0[0-9]|1[0-5])$"
+      }
+    },
+    "non_applicable_gates": {
+      "type": "object",
+      "additionalProperties": { "type": "string", "minLength": 1 }
+    },
+    "gate_commands": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": { "type": "string" }
+      }
+    },
+    "budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "max_parallel_writers",
+        "max_parallel_reviewers",
+        "max_repair_cycles",
+        "max_identical_retries",
+        "max_nesting_depth",
+        "max_wall_seconds"
+      ],
+      "properties": {
+        "max_parallel_writers": { "type": "integer", "minimum": 1, "maximum": 3 },
+        "max_parallel_reviewers": { "type": "integer", "minimum": 1, "maximum": 3 },
+        "max_repair_cycles": { "type": "integer", "minimum": 0, "maximum": 5 },
+        "max_identical_retries": { "type": "integer", "minimum": 0, "maximum": 2 },
+        "max_nesting_depth": { "type": "integer", "minimum": 1, "maximum": 2 },
+        "max_wall_seconds": { "type": "integer", "minimum": 1, "maximum": 86400 }
+      }
+    },
+    "stop_conditions": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "allowed_operations": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "enum": [
+          "READ",
+          "WRITE_OWNED",
+          "RUN_GATE",
+          "REVIEW_READONLY",
+          "INTEGRATE_BRANCH",
+          "DELIVER_DRAFT_PR"
+        ]
+      }
+    },
+    "delivery_destination": { "type": "string", "minLength": 2 }
+  }
+}

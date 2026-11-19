@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kirion-forge.local/integrations/antigravity/schemas/writer-result.schema.json",
+  "title": "KIRION Forge Antigravity Writer Result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "mission_id",
+    "worker_id",
+    "persona",
+    "run_id",
+    "start_sha",
+    "final_sha",
+    "owned_diff_files",
+    "commands_executed",
+    "evidence_refs",
+    "limitations",
+    "blocked_gates",
+    "remote_state",
+    "authority_returned",
+    "status"
+  ],
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "mission_id": { "type": "string", "minLength": 2 },
+    "worker_id": { "type": "string", "minLength": 2 },
+    "persona": { "type": "string", "minLength": 3 },
+    "run_id": { "type": "string", "minLength": 3 },
+    "start_sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "final_sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "owned_diff_files": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "commands_executed": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "evidence_refs": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "limitations": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "blocked_gates": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "remote_state": { "type": "string", "minLength": 2 },
+    "authority_returned": { "type": "boolean", "const": true },
+    "status": {
+      "type": "string",
+      "enum": ["READY", "BLOCKED", "QUARANTINED"]
+    }
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "profile_id": "frontend_web",
+  "name": "Accessible & Responsive Web Frontend Profile",
+  "stack_status": "CONTRACT_DRIVEN_PRESENTATION",
+  "required_skills": [
+    "kirion-core",
+    "kirion-dispatch",
+    "kirion-frontend",
+    "kirion-design-engineering",
+    "kirion-test-engineering"
+  ],
+  "viewports": [
+    "1440x900",
+    "1280x720",
+    "1024x768",
+    "768x1024",
+    "390x844",
+    "320x568"
+  ],
+  "performance_budgets": {
+    "LCP_ms_max": 2500,
+    "INP_ms_max": 200,
+    "CLS_max": 0.1
+  },
+  "invariants": [
+    "WCAG 2.2 AA semantic landmarks, labels, and keyboard focus-visible states",
+    "Zero unintended horizontal overflow across 320px to 1440px viewports",
+    "Explicit loading, empty, validation-error, server-error, and denied states",
+    "prefers-reduced-motion compliance",
+    "Truthful separation of static showcase simulations from live backend authority"
+  ]
+}

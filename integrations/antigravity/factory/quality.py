@@ -93,14 +93,20 @@ def evaluate_gate_suite(
     *,
     candidate_sha: str,
     non_applicable_gates: dict[str, str] | None = None,
+    required_gates: list[str] | None = None,
 ) -> dict[str, Any]:
-    """Verify all required gates for a risk class have clean, exact-SHA, minimum-strength trusted evidence."""
+    """Verify all required gates for a risk class (plus optional extra required_gates) have clean, exact-SHA trusted evidence."""
     if risk_class not in RISK_REQUIRED_GATES:
         raise QualityGateError(f"Unknown risk_class: {risk_class!r}")
     if not is_valid_git_sha(candidate_sha):
         raise QualityGateError(f"Invalid or all-zero candidate_sha forbidden: {candidate_sha!r}")
 
-    required = list(RISK_REQUIRED_GATES[risk_class])
+    extra_req = list(required_gates or [])
+    for gid in extra_req:
+        if gid not in GATE_CATALOG:
+            raise QualityGateError(f"Unknown gate_id in required_gates: {gid!r}")
+
+    required = list(dict.fromkeys(list(RISK_REQUIRED_GATES[risk_class]) + extra_req))
     na_map = non_applicable_gates or {}
 
     for gid, reason in na_map.items():
@@ -127,6 +133,8 @@ def evaluate_gate_suite(
         if env["status"] == "PASS":
             if not is_valid_git_sha(env["candidate_sha"]):
                 raise QualityGateError(f"Unanchored zero SHA cannot produce a trusted PASS envelope for gate {gid}.")
+            if not is_valid_git_sha(env["tree_sha"]):
+                raise QualityGateError(f"Unanchored zero tree_sha cannot produce a trusted PASS envelope for gate {gid}.")
             if env["dirty"] is True:
                 raise QualityGateError(f"Dirty working tree cannot produce a trusted PASS envelope for gate {gid}.")
             if env["exit_code"] != 0:
@@ -156,6 +164,14 @@ def evaluate_gate_suite(
             if ev_type not in allowed_types:
                 raise QualityGateError(
                     f"Gate {gid} ({GATE_CATALOG[gid]['name']}) requires evidence_type in {sorted(allowed_types)}, got {ev_type!r}."
+                )
+            if env["provenance"] == "ASSUMED":
+                raise QualityGateError(
+                    f"Gate {gid} cannot claim PASS with provenance='ASSUMED' (E0 only per EVIDENCE_CROSSWALK.md)."
+                )
+            if actual_level == "E1" and env["provenance"] == "REPORTED":
+                raise QualityGateError(
+                    f"Gate {gid} (E1) cannot carry provenance='REPORTED'; requires DIRECTLY_OBSERVED, AUTOMATED, or REPRODUCED."
                 )
             if gid in E5_RUNTIME_GATES and env["provenance"] not in ("DIRECTLY_OBSERVED", "REPRODUCED"):
                 raise QualityGateError(
@@ -375,6 +391,14 @@ class SelfHealingController:
         while True:
             eval_state = evaluate_fn(current_sha)
             author_ctx = str(eval_state.get("author_context_id", "ctx-antigravity-jane-initial")).strip()
+            if not author_ctx:
+                return {
+                    "status": "QUARANTINED",
+                    "reason": "Blank author_context_id from evaluate_fn rejected (fail-closed).",
+                    "final_sha": current_sha,
+                    "cycles_used": cycles_used,
+                    "history": history,
+                }
 
             if eval_state["passed"]:
                 nox_res = nox_review_fn(current_sha, author_ctx)
@@ -390,10 +414,13 @@ class SelfHealingController:
                     }
                 rev_ctx = nox_res["reviewer_context_id"].strip()
                 res_author_ctx = nox_res["author_context_id"].strip()
-                if not rev_ctx or not res_author_ctx or rev_ctx == author_ctx or rev_ctx == res_author_ctx:
+                if not rev_ctx or not res_author_ctx or res_author_ctx != author_ctx or rev_ctx == author_ctx:
                     return {
                         "status": "QUARANTINED",
-                        "reason": "Self-review or blank context rejected: reviewer_context_id must be non-empty and distinct from author context.",
+                        "reason": (
+                            "Self-review, blank context, or mismatched author_context_id rejected: "
+                            f"eval_author={author_ctx!r}, nox_author={res_author_ctx!r}, nox_reviewer={rev_ctx!r}."
+                        ),
                         "final_sha": current_sha,
                         "cycles_used": cycles_used,
                         "nox_result": nox_res,

@@ -22,12 +22,20 @@ try {
         exit;
     }
 
-    // Fail-closed authentication: require explicit non-empty tenant, user, and role headers on all /api/v1/* routes
+    // Fail-closed authentication: require positive integer tenant/user IDs and non-empty role on all /api/v1/* routes
     $rawTenant = trim((string)($_SERVER['HTTP_X_TENANT_ID'] ?? ''));
     $rawUser = trim((string)($_SERVER['HTTP_X_USER_ID'] ?? ''));
     $rawRole = trim((string)($_SERVER['HTTP_X_ACTOR_ROLE'] ?? ''));
-    if ($rawTenant === '' || $rawUser === '' || $rawRole === '' || !ctype_digit($rawTenant) || !ctype_digit($rawUser)) {
-        throw new DomainHttpException('Missing or invalid authentication headers (X-Tenant-Id, X-User-Id, X-Actor-Role required).', 401);
+    if (
+        $rawTenant === ''
+        || $rawUser === ''
+        || $rawRole === ''
+        || !ctype_digit($rawTenant)
+        || !ctype_digit($rawUser)
+        || (int)$rawTenant <= 0
+        || (int)$rawUser <= 0
+    ) {
+        throw new DomainHttpException('Missing or invalid authentication headers (positive integer X-Tenant-Id, X-User-Id, and non-empty X-Actor-Role required).', 401);
     }
 
     $actor = [

@@ -5,7 +5,7 @@
 **Frozen Planning Base SHA:** `a864b88bda5f26c44709c9239dc73ae63abc78ad`  
 **Parent Branch SHA (`feat/forge-obsidian-vault-r2`, PR #12):** `ffffa7e16137ce191d74be0fadd0fe18c2eae2f9`  
 **Accepted Forge Main SHA:** `ac7285d7cd866b4728c28d64a7c145a6bc43f812`  
-**Plugin Package Digest (`kirion-forge` v1.0.0-r1):** `fa5658f9455a77b4486dd9f68a1af4bbd86c7ab70f0568f2b5810159a6a3acf4`  
+**Plugin Package Digest (`kirion-forge` v1.0.0-r1):** `4119bf3f07b730bd05d65f6cfcabe1c5bc2179470f39061c602c8a3ab1437663`  
 **Observed Factory Maturity:** `AF-3` demonstrated in workspace (`AF-1` host-discovered plugin/agents, `AF-2` enforced scope/leases/hooks, `AF-3` autonomous build/test/review/repair/recovery; `AF-4` candidate evidence packet ready for separate-session non-author Acceptance Agent review). **No Forge NEST promotion is claimed (`NEST-2` preserved).**
 
 ---
@@ -24,7 +24,7 @@
   - Multi-step partial goods receiving (`PARTIALLY_RECEIVED` → `CLOSED`), exact prefix idempotency matching immune to SQL `LIKE` wildcards (`%`, `_`), excess quantity rejection (`422`), and injected-fault rollback.
   - Durable restart persistence and independent Python SQLite hidden-oracle verification over live HTTP (`php -S 127.0.0.1:<port> public/index.php`).
   - Binary PDF receipt verification (`%PDF-1.4` header, PO number, tenant ID, exact minor-unit total, `%%EOF` trailer).
-- **Result:** `PASS` across repeated trials (`37/37` runtime-counted CLI assertions + live HTTP hidden oracle per trial).
+- **Result:** `PASS` across repeated trials (`39/39` runtime-counted CLI assertions + live HTTP hidden oracle per trial).
 
 ---
 
@@ -176,7 +176,24 @@ In accordance with `AGENTS.md` ("Tool absence narrows permissible operations/cla
     - `NOX-R4-010` (`P2`): Bound all event metadata columns (`event_id`, `mission_id`, `run_id`, `stage`, `event_type`, `state_version`, `created_at_utc`) into the `FactoryJournal` hash chain, validated `candidate_sha` in `transition_state()`, and enforced conflict detection + consistent `"packet"` shape in `register_mission()`.
     - `NOX-R4-011` (`P2`): Enforced `verify_mission_packet()` in `FleetDispatcher.dispatch_worker()` and resolved `plugin_root` relative to `self.repo_root` with safe fallback across external worktree roots.
     - `NOX-R4-012` (`P3`): Added `kirion-laravel-runtime` to `STACK_SKILL_BUNDLES["php_laravel"]` (7 skills, within the `<= 8` cap) and added profile-to-dispatcher consistency tests across all 4 profiles.
-- **Cycle 5 Final Re-Review (`G13`):** Committing the Cycle 4 repairs invalidates `1f269c291001e5c1ffce86f7f18762b6bb78d753` and triggers a fresh-context Cycle 5 `Antigravity-Nox` review at the repaired candidate SHA.
+- **Cycle 5 Review (`G13`):** Executed via native `run_workflow` (`workflows/nox_adversarial_audit.py`, strictly schema-validated against `nox-result.schema.json`) spawning isolated `research` agent `Antigravity-Nox` (`context_id: ctx-antigravity-nox-162d6ee5-r1-cycle5`) at frozen candidate SHA `23604e63f489bb112e243f20f8d4b707f9dc4c4c`.
+  - **Verdict:** `REWORK` (15 findings `NOX-R5-001`..`NOX-R5-015`: 7 `P1`, 5 `P2`, 3 `P3`), all 15 remediated in Repair Cycle 5 (5 of 5 repair budget) with discriminating regression tests:
+    - `NOX-R5-001` (`P1`): Required all `documented_non_applicable` gates in `NairuDeliveryBroker._validate_gate_summary()` to be pre-authorized in `MissionPacket.non_applicable_gates` (blocking post-hoc exemptions of `required_gates`), and rejected overlapping `required_gates` / `non_applicable_gates` in `verify_mission_packet()`.
+    - `NOX-R5-002` (`P1`): Hardened `evaluate_gate_suite()` to reject `provenance='ASSUMED'` on all PASS envelopes, reject `provenance='REPORTED'` on `E1` PASS, validate `is_valid_git_sha(tree_sha)` on PASS, and support optional packet-level `required_gates` (e.g., `G11`).
+    - `NOX-R5-003` (`P1`): Re-read `_read_git_state(cwd)` after command completion in `TrustedEvidenceRunner.run_gate_command()` to mark mid-command working-tree/SHA/tree mutations as `dirty=True` (downgrading PASS), rejected `evidence_type='NONE'` for executed commands, and mapped clean `SOURCE` PASS to `E1/DIRECTLY_OBSERVED`.
+    - `NOX-R5-004` (`P1`): Hardened `is_prohibited_branch()` to reject embedded refspecs (`:`, `+`), revision/glob operators (`~`, `^`, `?`, `*`, `[`, `\`, `@{`, `//`, `..`), control chars, invalid dot/slash/lock boundaries, and `refs/tags/`.
+    - `NOX-R5-005` (`P1`): Hardened `hooks/forge_guard.py` with POSIX (`\`) and PowerShell (`` ` ``) line-continuation normalization, mixed quoted-value `_ARG` and `--flag` `_GIT_OPTS` (`git -c k="v s"`, `git --no-optional-locks`), attached `-XDELETE`/`-XPUT`, full `https://api.github.com/repos/...` URLs, `gh repo (delete|edit|archive|rename)`, and `gh api graphql` mutation blocking.
+    - `NOX-R5-006` (`P1`): Classified both `Code Writer` and `Integration Writer` (`WRITE_OWNED` / `INTEGRATE_BRANCH`) packets as writers in `detect_parallel_collisions()` and `enforce_wave_budget()`, enforced tightest packet-level `max_parallel_writers`/`max_parallel_reviewers` caps (`<= 3`), and normalized `owned_modules`/`owned_behaviors` case-insensitively across scheduler and lease manager.
+    - `NOX-R5-007` (`P1`): Validated `mission_id` against `MISSION_ID_RE`, `observed_sha` via `is_valid_git_sha()`, and canonical `relative_to(proposals_dir)` containment in `KnowledgeManager.propose_skill_or_test_lesson()`.
+    - `NOX-R5-008` (`P2`): Made `RecoveryManager.reconcile_interrupted_mission()` probe `remote_head_probe` unconditionally when provided, checked `pr_mode == 'VALIDATED_DRAFT_PR'` before returning `NO_OP_ALREADY_DELIVERED_AWAIT_INDEPENDENT_REVIEW`, and made `restore_journal()` fail closed on missing backup files or missing required tables.
+    - `NOX-R5-009` (`P2`): Required `WRITE_OWNED` (Code Writer) or `WRITE_OWNED`/`INTEGRATE_BRANCH` (Integration Writer) in `NairuDeliveryBroker.prepare_and_record_delivery()`, and distinguished `pr_mode` on `DELIVERED` receipts so `BLOCKED_DIAGNOSTIC_DRAFT` can upgrade cleanly to `VALIDATED_DRAFT_PR`.
+    - `NOX-R5-010` (`P2`): Quarantined blank or mismatched `author_context_id` between `evaluate_fn` and `nox_review_fn` in `SelfHealingController.run_repair_loop()`.
+    - `NOX-R5-011` (`P2`): Guarded `workflows/self_healing_repair.py` against non-repairable failure classes (`requirements`/`drift`/`resource`) and non-`READY` writer results, guarded Phase 2 of `workflows/feature_delivery.py` on `writer_res['status'] == 'READY'`, and loaded `schemas/recovery-capsule.schema.json` in `workflows/recovery_reconcile.py`.
+    - `NOX-R5-012` (`P2`): Added `_wait_for_health()` catching `(urllib.error.URLError, OSError)` with explicit HTTP 200 readiness assertion in `benchmarks/hidden_oracles.py`.
+    - `NOX-R5-013` (`P3`): Rejected unknown `profile_key`, invalid/zero `skill_source_sha`, and unsafe `extra_specialists` slugs in `select_skills_for_mission()`, and verified `enabled: true` plus non-empty `PreToolUse` command hooks in `verify_plugin_package()`.
+    - `NOX-R5-014` (`P3`): Replaced substring `'test'` matching with strict directory-segment and filename-boundary matching for `Antigravity-QA` in `factory/policy.py`.
+    - `NOX-R5-015` (`P3`): Enforced strictly positive `X-Tenant-Id > 0` and `X-User-Id > 0` (`401`) in Benchmark A `public/index.php` and positive `tenant_id` / non-empty supplier fields in `ProcurementEngine.php`.
+- **Post-Repair Cycle 5 Verification (`G13`):** Committing Repair Cycle 5 invalidates `23604e63f489bb112e243f20f8d4b707f9dc4c4c` and triggers the final post-repair fresh-context `Antigravity-Nox` verification (respecting the hard 5-candidate-repair-cycle cap).
 
 ---
 

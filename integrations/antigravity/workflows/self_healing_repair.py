@@ -27,27 +27,48 @@ classification = await agent(
     type_name="research"
 )
 
-phase("2-Root-Cause-Writer-Repair")
-writer_res = await agent(
-    f"You are Antigravity-Jane executing bounded self-healing repair for mission {mission_id} (run_id={run_id}) "
-    f"from start_sha={candidate_sha} on owned_paths={owned_paths}. Failure class: {classification['failure_class']}. "
-    f"Required discriminating regression test: {classification['discriminating_regression_test']}. "
-    "Fix the root cause without weakening assertions, commit in your isolated workspace, and return a JSON object strictly matching writer-result.schema.json.",
-    schema=writer_schema,
-    role=f"Antigravity-Jane (Repair {mission_id})",
-    type_name="self",
-    workspace="share"
-)
+non_repairable_classes = {"requirements", "drift", "resource"}
+failure_class = str(classification.get("failure_class", "")).strip().lower()
 
-phase("3-Fresh-Context-Nox-Post-Repair-Review")
-repaired_sha = writer_res["final_sha"]
-author_context_id = writer_res["worker_id"]
-nox_recheck = await agent(
-    f"You are Antigravity-Nox performing a fresh-context read-only review of repaired mission {mission_id} "
-    f"at frozen_sha={repaired_sha} (author_context_id={author_context_id}, diff {candidate_sha}..{repaired_sha}). "
-    "Verify root-cause fix, discriminating regression test, and zero assertion weakening; return a JSON object strictly matching nox-result.schema.json.",
-    schema=nox_schema,
-    role=f"Antigravity-Nox (Post-Repair @ {repaired_sha[:12]})",
-    type_name="research"
-)
-print({"classification": classification, "writer": writer_res, "nox_recheck": nox_recheck})
+if failure_class in non_repairable_classes:
+    print({
+        "status": "BLOCKED",
+        "reason": f"Non-repairable stop condition ({failure_class}); halting before writer mutation.",
+        "classification": classification,
+        "writer": None,
+        "nox_recheck": None,
+    })
+else:
+    phase("2-Root-Cause-Writer-Repair")
+    writer_res = await agent(
+        f"You are Antigravity-Jane executing bounded self-healing repair for mission {mission_id} (run_id={run_id}) "
+        f"from start_sha={candidate_sha} on owned_paths={owned_paths}. Failure class: {classification['failure_class']}. "
+        f"Required discriminating regression test: {classification['discriminating_regression_test']}. "
+        "Fix the root cause without weakening assertions, commit in your isolated workspace, and return a JSON object strictly matching writer-result.schema.json.",
+        schema=writer_schema,
+        role=f"Antigravity-Jane (Repair {mission_id})",
+        type_name="self",
+        workspace="share"
+    )
+
+    if writer_res.get("status") != "READY":
+        print({
+            "status": "BLOCKED",
+            "reason": f"Writer repair halted with status={writer_res.get('status')!r}; skipping Nox post-repair review.",
+            "classification": classification,
+            "writer": writer_res,
+            "nox_recheck": None,
+        })
+    else:
+        phase("3-Fresh-Context-Nox-Post-Repair-Review")
+        repaired_sha = writer_res["final_sha"]
+        author_context_id = writer_res["worker_id"]
+        nox_recheck = await agent(
+            f"You are Antigravity-Nox performing a fresh-context read-only review of repaired mission {mission_id} "
+            f"at frozen_sha={repaired_sha} (author_context_id={author_context_id}, diff {candidate_sha}..{repaired_sha}). "
+            "Verify root-cause fix, discriminating regression test, and zero assertion weakening; return a JSON object strictly matching nox-result.schema.json.",
+            schema=nox_schema,
+            role=f"Antigravity-Nox (Post-Repair @ {repaired_sha[:12]})",
+            type_name="research"
+        )
+        print({"classification": classification, "writer": writer_res, "nox_recheck": nox_recheck})

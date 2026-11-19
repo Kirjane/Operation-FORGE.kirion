@@ -172,10 +172,18 @@ final class ProcurementEngine
     public function createSupplier(array $actor, string $code, string $name): array
     {
         $this->assertRole($actor, ['requester', 'approver']);
-        $tenantId = (int)$actor['tenant_id'];
+        $tenantId = (int)($actor['tenant_id'] ?? 0);
+        if ($tenantId <= 0) {
+            throw new DomainHttpException('Positive tenant_id is required to create supplier.', 403);
+        }
+        $trimmedCode = trim($code);
+        $trimmedName = trim($name);
+        if ($trimmedCode === '' || $trimmedName === '') {
+            throw new DomainHttpException('Supplier code and name must be non-empty.', 422);
+        }
         $stmt = $this->pdo->prepare('INSERT INTO suppliers (tenant_id, code, name) VALUES (:t, :c, :n)');
-        $stmt->execute([':t' => $tenantId, ':c' => trim($code), ':n' => trim($name)]);
-        return ['id' => (int)$this->pdo->lastInsertId(), 'tenant_id' => $tenantId, 'code' => $code, 'name' => $name];
+        $stmt->execute([':t' => $tenantId, ':c' => $trimmedCode, ':n' => $trimmedName]);
+        return ['id' => (int)$this->pdo->lastInsertId(), 'tenant_id' => $tenantId, 'code' => $trimmedCode, 'name' => $trimmedName];
     }
 
     /**
@@ -185,8 +193,11 @@ final class ProcurementEngine
     public function createAndSubmitPurchaseOrder(array $actor, array $payload): array
     {
         $this->assertRole($actor, ['requester']);
-        $tenantId = (int)$actor['tenant_id'];
-        $actorId = (int)$actor['user_id'];
+        $tenantId = (int)($actor['tenant_id'] ?? 0);
+        $actorId = (int)($actor['user_id'] ?? 0);
+        if ($tenantId <= 0 || $actorId <= 0) {
+            throw new DomainHttpException('Positive tenant_id and user_id are required.', 403);
+        }
         $supplierId = (int)($payload['supplier_id'] ?? 0);
         $poNumber = trim((string)($payload['po_number'] ?? ''));
         $items = $payload['items'] ?? [];
@@ -534,7 +545,10 @@ final class ProcurementEngine
     public function reconcileTenant(array $actor): array
     {
         $this->assertRole($actor, ['auditor', 'approver']);
-        $tenantId = (int)$actor['tenant_id'];
+        $tenantId = (int)($actor['tenant_id'] ?? 0);
+        if ($tenantId <= 0) {
+            throw new DomainHttpException('Positive tenant_id is required to reconcile.', 403);
+        }
 
         $poHeaderStmt = $this->pdo->prepare('SELECT COALESCE(SUM(total_minor), 0) AS s FROM purchase_orders WHERE tenant_id = :t');
         $poHeaderStmt->execute([':t' => $tenantId]);

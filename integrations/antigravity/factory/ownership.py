@@ -189,6 +189,8 @@ class LeaseManager:
         ttl_seconds: float = 300.0,
         now_epoch: float | None = None,
     ) -> list[dict[str, Any]]:
+        if ttl_seconds <= 0:
+            raise LeaseConflictError(f"ttl_seconds must be positive, got {ttl_seconds}")
         now = now_epoch if now_epoch is not None else dt.datetime.now(dt.timezone.utc).timestamp()
         repo = packet["repo_name"]
         mid = packet["mission_id"]
@@ -197,9 +199,13 @@ class LeaseManager:
         for p in packet.get("owned_paths", []):
             targets.append(("PATH", normalize_rel_path(p)))
         for m in packet.get("owned_modules", []):
-            targets.append(("MODULE", m.strip()))
+            cleaned_m = str(m).strip().lower()
+            if cleaned_m:
+                targets.append(("MODULE", cleaned_m))
         for b in packet.get("owned_behaviors", []):
-            targets.append(("BEHAVIOR", b.strip()))
+            cleaned_b = str(b).strip().lower()
+            if cleaned_b:
+                targets.append(("BEHAVIOR", cleaned_b))
 
         conn = self._connect()
         try:

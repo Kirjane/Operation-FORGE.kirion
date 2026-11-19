@@ -47,6 +47,8 @@ $auditB = ['tenant_id' => 2, 'user_id' => 204, 'role' => 'auditor'];
 $engine = new ProcurementEngine($dbFile);
 $engine->initSchemaV1();
 assertSame(1, $engine->getSchemaVersion(), 'schema v1 init');
+assertThrowsStatus(fn() => $engine->createSupplier(['tenant_id' => 0, 'user_id' => 101, 'role' => 'requester'], 'SUP-ZERO', 'Zero Tenant'), 403, 'Zero tenant_id cannot create supplier');
+assertThrowsStatus(fn() => $engine->createSupplier($reqA, '   ', ''), 422, 'Blank supplier code/name rejected with 422');
 $supA = $engine->createSupplier($reqA, 'SUP-A1', 'Apex Industrial Supplies');
 $supB = $engine->createSupplier($reqB, 'SUP-B1', 'Beacon Logistics');
 

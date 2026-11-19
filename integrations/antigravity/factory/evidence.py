@@ -8,8 +8,10 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-from .authority import AuthorityError, validate_contract
+from .authority import AuthorityError, is_valid_git_sha, validate_contract
 from .ownership import sanitize_worker_env
+
+VALID_COMMAND_EVIDENCE_TYPES = {"SOURCE", "UNIT", "INTEGRATION", "BUILD", "RUNTIME", "SECURITY"}
 
 SECRET_REDACTION_PATTERNS = [
     re.compile(r"\b(gh[pousr]_[A-Za-z0-9_]{8,})\b"),
@@ -122,8 +124,13 @@ class TrustedEvidenceRunner:
     ) -> dict[str, Any]:
         if not command_argv:
             raise AuthorityError("command_argv cannot be empty.")
+        if evidence_type not in VALID_COMMAND_EVIDENCE_TYPES:
+            raise AuthorityError(
+                f"Invalid evidence_type={evidence_type!r} for executed gate command; "
+                f"expected one of {sorted(VALID_COMMAND_EVIDENCE_TYPES)}."
+            )
 
-        candidate_sha, tree_sha, dirty = self._read_git_state(cwd)
+        pre_sha, pre_tree, pre_dirty = self._read_git_state(cwd)
         started = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
         try:
@@ -147,22 +154,33 @@ class TrustedEvidenceRunner:
             status = "FAIL"
             combined_output = f"COMMAND: {' '.join(command_argv)}\nTIMEOUT after {timeout_seconds}s: {exc}\n"
 
+        post_sha, post_tree, post_dirty = self._read_git_state(cwd)
+        drifted = (post_sha != pre_sha) or (post_tree != pre_tree)
+        dirty = pre_dirty or post_dirty or drifted
+        candidate_sha = post_sha if is_valid_git_sha(post_sha) else pre_sha
+        tree_sha = post_tree if is_valid_git_sha(post_tree) else pre_tree
+
         completed = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
         blob_path, size_bytes, digest = self._store_artifact(combined_output)
 
         # Prevent E4 build from being claimed as E5 runtime; permit G08 SECURITY runtime gates;
-        # downgrade dirty/unanchored PASS to E2; keep NOT_RUN strictly at E0/NONE/ASSUMED/HYPOTHESIS.
+        # map SOURCE to E1/DIRECTLY_OBSERVED; downgrade dirty/drifted/unanchored PASS; keep NOT_RUN at E0/NONE/ASSUMED.
         recorded_evidence_type = evidence_type
+        unanchored = (not is_valid_git_sha(candidate_sha)) or (not is_valid_git_sha(tree_sha)) or dirty
         if status == "PASS":
-            if is_runtime_gate and (evidence_type == "RUNTIME" or (gate_id == "G08" and evidence_type == "SECURITY")):
-                ev_level = "E5"
-                prov = "DIRECTLY_OBSERVED"
+            if evidence_type == "SOURCE":
+                ev_level = "E1"
+                prov = "REPORTED" if unanchored else "DIRECTLY_OBSERVED"
             else:
-                ev_level = "E4"
-                prov = "AUTOMATED"
-            if candidate_sha == "0" * 40 or dirty:
-                ev_level = "E2"
-                prov = "REPORTED"
+                if is_runtime_gate and (evidence_type == "RUNTIME" or (gate_id == "G08" and evidence_type == "SECURITY")):
+                    ev_level = "E5"
+                    prov = "DIRECTLY_OBSERVED"
+                else:
+                    ev_level = "E4"
+                    prov = "AUTOMATED"
+                if unanchored:
+                    ev_level = "E2"
+                    prov = "REPORTED"
         elif status == "NOT_RUN":
             ev_level = "E0"
             recorded_evidence_type = "NONE"

@@ -101,30 +101,50 @@ class PolicyViolationError(AuthorityError):
     """Raised when an operation, path mutation, or untrusted input violates deny-default policy."""
 
 
+QA_TEST_DIR_SEGMENTS = {"test", "tests", "__tests__", "spec", "specs", "benchmark", "benchmarks"}
+QA_TEST_FILENAME_RE = re.compile(
+    r"^(?:test_|spec_|benchmark_)"
+    r"|(?:_test|_tests|_spec|_benchmark|\.test|\.tests|\.spec|\.benchmark)(?:\.[^.]+)+$"
+    r"|(?:Test|Tests|Spec|Specs|Benchmark|Benchmarks)\.[A-Za-z0-9]+$"
+)
+
+
+def _is_qa_test_or_benchmark_path(norm_path: str) -> bool:
+    """Segment- and filename-boundary matcher for QA-writable test/benchmark paths."""
+    parts = PurePosixPath(norm_path).parts
+    if not parts:
+        return False
+    if any(seg.lower() in QA_TEST_DIR_SEGMENTS for seg in parts[:-1]):
+        return True
+    return bool(QA_TEST_FILENAME_RE.search(parts[-1]))
+
+
 def is_prohibited_branch(branch: str) -> bool:
-    """Case-insensitive, refspec-aware check denying protected branches, whitespace, and option-like names."""
+    """Case-insensitive, refspec-rejecting check denying protected branches, refspecs, tags, globs, and invalid names."""
     if not isinstance(branch, str):
         return True
     raw = branch.strip()
-    if not raw or raw != branch or any(ch.isspace() for ch in raw):
+    if not raw or raw != branch or any(ch.isspace() or ord(ch) < 32 or ord(ch) == 127 for ch in raw):
         return True
-    if raw.startswith("-") or ".." in raw or raw.startswith("+") or raw.startswith(":"):
+    if any(tok in raw for tok in (":", "+", "~", "^", "?", "*", "[", "\\", "@{", "//", "..")):
+        return True
+    if raw.startswith(("-", "/", ".")) or raw.endswith(("/", ".", ".lock")):
+        return True
+    segments = raw.split("/")
+    if any(not seg or seg.startswith(".") or seg.endswith(".lock") for seg in segments):
         return True
 
-    candidates = [raw]
-    if ":" in raw:
-        candidates.extend(part for part in raw.split(":") if part)
-
-    for cand in candidates:
-        low = cand.lower()
-        low = re.sub(r"^(?:refs/heads/|refs/remotes/[^/]+/|remotes/[^/]+/)", "", low)
-        if low in PROHIBITED_BRANCH_NAMES_LOWER:
+    low = raw.lower()
+    if low.startswith(("refs/tags/", "tags/")):
+        return True
+    low = re.sub(r"^(?:refs/heads/|refs/remotes/[^/]+/|remotes/[^/]+/)", "", low)
+    if low in PROHIBITED_BRANCH_NAMES_LOWER:
+        return True
+    if "/" in low:
+        # Reject <remote>/<protected> (e.g., origin/main, upstream/main, fork/master)
+        _first, rest = low.split("/", 1)
+        if rest in PROHIBITED_BRANCH_NAMES_LOWER:
             return True
-        if "/" in low:
-            # Reject <remote>/<protected> (e.g., origin/main, upstream/main, fork/master)
-            first, rest = low.split("/", 1)
-            if rest in PROHIBITED_BRANCH_NAMES_LOWER:
-                return True
     return False
 
 
@@ -246,7 +266,7 @@ def assert_paths_within_ownership(
         if persona == "Antigravity-QA":
             if packet.get("formal_role") != "Code Writer":
                 raise PolicyViolationError("Antigravity-QA requires explicit Code Writer role transition to write test files.")
-            if not ("test" in norm_low or "benchmark" in norm_low):
+            if not _is_qa_test_or_benchmark_path(norm):
                 raise PolicyViolationError(f"Antigravity-QA test-writer scope forbids non-test path: {norm!r}")
 
         validated.append(norm)

@@ -11,8 +11,10 @@ from pathlib import Path
 from typing import Any
 
 from . import PLUGIN_ROOT, REPO_ROOT
-from .authority import AuthorityError, verify_mission_packet
+from .authority import AuthorityError, is_valid_git_sha, verify_mission_packet
 from .policy import PERSONA_PERMISSIONS, PolicyViolationError
+
+SKILL_SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{1,63}\Z")
 
 ALLOWED_PLUGIN_MANIFEST_KEYS = {
     "name",
@@ -110,13 +112,30 @@ def verify_plugin_package(plugin_dir: Path = PLUGIN_ROOT, repo_root: Path = REPO
     if rules_bytes.decode("utf-8").lstrip().startswith("---"):
         raise AuthorityError("rules/AGENTS.md must be plain markdown without YAML frontmatter.")
 
-    # Hooks check: must be at plugin root
+    # Hooks check: must be at plugin root with enabled: true and active PreToolUse command hooks
     hooks_path = plugin_dir / "hooks.json"
     if not hooks_path.is_file():
         raise AuthorityError("Missing root hooks.json in plugin.")
     hooks_data = json.loads(hooks_path.read_text(encoding="utf-8"))
-    if "kirion-forge-safety-gate" not in hooks_data:
+    if not isinstance(hooks_data, dict) or "kirion-forge-safety-gate" not in hooks_data:
         raise AuthorityError("hooks.json missing 'kirion-forge-safety-gate'.")
+    gate_cfg = hooks_data["kirion-forge-safety-gate"]
+    if not isinstance(gate_cfg, dict) or gate_cfg.get("enabled") is not True:
+        raise AuthorityError("hooks.json 'kirion-forge-safety-gate' must be an object with enabled: true.")
+    pre_entries = gate_cfg.get("PreToolUse")
+    if not isinstance(pre_entries, list) or not pre_entries:
+        raise AuthorityError("hooks.json 'kirion-forge-safety-gate' must define non-empty PreToolUse hooks.")
+    has_cmd_hook = any(
+        isinstance(entry, dict)
+        and isinstance(entry.get("hooks"), list)
+        and any(
+            isinstance(h, dict) and h.get("type") == "command" and isinstance(h.get("command"), str) and h["command"].strip()
+            for h in entry["hooks"]
+        )
+        for entry in pre_entries
+    )
+    if not has_cmd_hook:
+        raise AuthorityError("hooks.json 'kirion-forge-safety-gate' PreToolUse must declare at least one command hook.")
     guard_script = plugin_dir / "hooks" / "forge_guard.py"
     if not guard_script.is_file():
         raise AuthorityError("Missing hooks/forge_guard.py in plugin.")
@@ -240,11 +259,19 @@ def select_skills_for_mission(
     repo_root: Path = REPO_ROOT,
 ) -> dict[str, Any]:
     """Progressive disclosure skill selector: kirion-core + kirion-dispatch + bounded specialist pack (<= 8 files)."""
+    if not is_valid_git_sha(skill_source_sha):
+        raise AuthorityError(f"Invalid or all-zero skill_source_sha forbidden: {skill_source_sha!r}")
+    if profile_key not in STACK_SKILL_BUNDLES:
+        raise AuthorityError(
+            f"Unknown skill profile_key {profile_key!r}; expected one of {sorted(STACK_SKILL_BUNDLES.keys())}."
+        )
     selected_names = ["kirion-core", "kirion-dispatch"]
-    for name in STACK_SKILL_BUNDLES.get(profile_key, []):
+    for name in STACK_SKILL_BUNDLES[profile_key]:
         if name not in selected_names:
             selected_names.append(name)
     for name in extra_specialists or []:
+        if not isinstance(name, str) or not SKILL_SLUG_RE.fullmatch(name):
+            raise AuthorityError(f"Invalid extra specialist skill slug: {name!r}")
         if name not in selected_names:
             selected_names.append(name)
     if len(selected_names) > 8:

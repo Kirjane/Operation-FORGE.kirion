@@ -20,15 +20,23 @@ writer_res = await agent(
     workspace="share"
 )
 
-phase("2-Fresh-Context-Nox-Review")
-candidate_sha = writer_res["final_sha"]
-author_context_id = writer_res["worker_id"]
-nox_res = await agent(
-    f"You are Antigravity-Nox in a fresh read-only context reviewing mission {mission_id} at frozen_sha={candidate_sha} "
-    f"(diff {base_sha}..{candidate_sha}, author_context_id={author_context_id}). "
-    "Evaluate scope compliance, defects, and evidence; return a JSON object strictly matching nox-result.schema.json.",
-    schema=nox_schema,
-    role=f"Antigravity-Nox ({mission_id} @ {candidate_sha[:12]})",
-    type_name="research"
-)
-print({"writer": writer_res, "nox": nox_res})
+if writer_res.get("status") != "READY":
+    print({
+        "status": "BLOCKED",
+        "reason": f"Writer halted with status={writer_res.get('status')!r}; skipping Phase 2 Nox review.",
+        "writer": writer_res,
+        "nox": None,
+    })
+else:
+    phase("2-Fresh-Context-Nox-Review")
+    candidate_sha = writer_res["final_sha"]
+    author_context_id = writer_res["worker_id"]
+    nox_res = await agent(
+        f"You are Antigravity-Nox in a fresh read-only context reviewing mission {mission_id} at frozen_sha={candidate_sha} "
+        f"(diff {base_sha}..{candidate_sha}, author_context_id={author_context_id}). "
+        "Evaluate scope compliance, defects, and evidence; return a JSON object strictly matching nox-result.schema.json.",
+        schema=nox_schema,
+        role=f"Antigravity-Nox ({mission_id} @ {candidate_sha[:12]})",
+        type_name="research"
+    )
+    print({"writer": writer_res, "nox": nox_res})

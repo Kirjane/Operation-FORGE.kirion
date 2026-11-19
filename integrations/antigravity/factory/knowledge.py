@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from .authority import SHA40_RE, AuthorityError
+from .authority import MISSION_ID_RE, AuthorityError, is_valid_git_sha
 from .evidence import FORGE_LEVEL_TO_CERTAINTY_CEILING, translate_harness_capabilities_to_forge
 
 
@@ -31,7 +31,7 @@ class KnowledgeManager:
         is_stale: bool = False,
     ) -> dict[str, Any]:
         """Translate evidence between Second Brain harness capabilities, Forge E-levels, and Brain certainty states."""
-        has_durable = bool(SHA40_RE.fullmatch(candidate_sha)) and candidate_sha != "0" * 40
+        has_durable = is_valid_git_sha(candidate_sha)
         translated = translate_harness_capabilities_to_forge(
             harness_capabilities,
             has_automated_provenance=has_automated_provenance,
@@ -71,13 +71,19 @@ class KnowledgeManager:
         Emit a review-only lesson proposal file in `proposals/` without mutating `.agents/skills/`
         or `plugins/kirion-forge/skills/` in place.
         """
-        if not SHA40_RE.fullmatch(observed_sha):
-            raise AuthorityError(f"Lesson proposal requires 40-char observed_sha, got {observed_sha!r}")
+        if not isinstance(mission_id, str) or not MISSION_ID_RE.fullmatch(mission_id):
+            raise AuthorityError(f"Invalid mission_id for lesson proposal: {mission_id!r}")
+        if not is_valid_git_sha(observed_sha):
+            raise AuthorityError(f"Lesson proposal requires valid non-zero 40-char observed_sha, got {observed_sha!r}")
 
         proposal_id = f"LESSON-{mission_id}-{hashlib.sha256(failure_signature.encode('utf-8')).hexdigest()[:8]}"
-        proposals_dir = self.knowledge_dir / "proposals"
+        proposals_dir = (self.knowledge_dir / "proposals").resolve()
         proposals_dir.mkdir(parents=True, exist_ok=True)
-        proposal_path = proposals_dir / f"{proposal_id}.json"
+        proposal_path = (proposals_dir / f"{proposal_id}.json").resolve()
+        try:
+            proposal_path.relative_to(proposals_dir)
+        except ValueError as exc:
+            raise AuthorityError(f"Proposal path escapes proposals directory: {proposal_path}") from exc
 
         payload = {
             "proposal_id": proposal_id,

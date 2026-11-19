@@ -41,6 +41,32 @@ def _http_request(url: str, *, method: str = "GET", headers: dict[str, str] | No
         return err.code, err.read()
 
 
+def _wait_for_health(
+    base_url: str,
+    *,
+    retries: int = 40,
+    delay_seconds: float = 0.1,
+    requester: Any | None = None,
+) -> int:
+    """Poll /health retrying transient connection errors until HTTP 200 or fail closed on startup timeout."""
+    req_fn = requester or _http_request
+    last_status: int | None = None
+    last_err: Exception | None = None
+    for _ in range(retries):
+        try:
+            st, _ = req_fn(f"{base_url}/health")
+            last_status = st
+            if st == 200:
+                return 200
+        except (urllib.error.URLError, OSError) as exc:
+            last_err = exc
+        time.sleep(delay_seconds)
+    raise RuntimeError(
+        f"HTTP server at {base_url}/health failed to report 200 after {retries} attempts "
+        f"(last_status={last_status!r}, last_error={last_err!r})."
+    )
+
+
 def run_benchmark_a_with_hidden_oracle(trials: int = 2) -> dict[str, Any]:
     """Run Benchmark A CLI suite + live HTTP server + independent SQLite hidden-oracle verification across repeated trials."""
     bench_dir = BENCHMARKS_ROOT / "php_procurement_inventory"
@@ -74,19 +100,22 @@ def run_benchmark_a_with_hidden_oracle(trials: int = 2) -> dict[str, Any]:
             )
             try:
                 base_url = f"http://127.0.0.1:{port}"
-                for _ in range(30):
-                    st, _ = _http_request(f"{base_url}/health")
-                    if st == 200:
-                        break
-                    time.sleep(0.1)
+                _wait_for_health(base_url, retries=30)
 
-                # Negative HTTP auth checks: missing headers must fail closed with 401
+                # Negative HTTP auth checks: missing or zero headers must fail closed with 401
                 st_unauth, _ = _http_request(
                     f"{base_url}/api/v1/suppliers",
                     method="POST",
                     body={"code": "NO-AUTH", "name": "Should Fail"},
                 )
                 assert st_unauth == 401, f"Expected 401 on missing auth headers, got {st_unauth}"
+                st_zero_tenant, _ = _http_request(
+                    f"{base_url}/api/v1/suppliers",
+                    method="POST",
+                    headers={"X-Tenant-Id": "0", "X-User-Id": "0", "X-Actor-Role": "requester"},
+                    body={"code": "ZERO-TENANT", "name": "Should Fail"},
+                )
+                assert st_zero_tenant == 401, f"Expected 401 on zero X-Tenant-Id/X-User-Id, got {st_zero_tenant}"
 
                 # Tenant A supplier & PO
                 st, sup_raw = _http_request(
@@ -270,11 +299,7 @@ def run_benchmark_b_with_hidden_oracle(trials: int = 2) -> dict[str, Any]:
             )
             try:
                 base_url = f"http://127.0.0.1:{port}"
-                for _ in range(40):
-                    st, _ = _http_request(f"{base_url}/health")
-                    if st == 200:
-                        break
-                    time.sleep(0.1)
+                _wait_for_health(base_url, retries=40)
 
                 # Missing header fails closed with 401
                 st_unauth_b, _ = _http_request(

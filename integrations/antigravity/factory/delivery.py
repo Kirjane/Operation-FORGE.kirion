@@ -182,6 +182,9 @@ class NairuDeliveryBroker:
         else:
             raise DeliveryBrokerError("Gate summary documented_non_applicable must be a mapping of gate_id -> justification.")
 
+        packet_req = set(packet["required_gates"])
+        packet_na = packet.get("non_applicable_gates") or {}
+
         for gid, reason in na_map.items():
             if gid not in GATE_CATALOG:
                 raise DeliveryBrokerError(f"Unknown gate ID in documented_non_applicable: {gid!r}")
@@ -193,6 +196,14 @@ class NairuDeliveryBroker:
                 raise DeliveryBrokerError(
                     f"Non-applicable gate {gid} requires a non-empty justification string; delivery denied."
                 )
+            if gid in packet_req:
+                raise DeliveryBrokerError(
+                    f"Gate {gid} is required by MissionPacket.required_gates and cannot be exempted post-hoc; delivery denied."
+                )
+            if gid not in packet_na:
+                raise DeliveryBrokerError(
+                    f"Gate {gid} in documented_non_applicable was not pre-authorized in MissionPacket.non_applicable_gates; delivery denied."
+                )
 
         passed_set = set(passed_gates)
         missing_mandatory = sorted(MANDATORY_NON_EXEMPTIBLE_GATES - passed_set)
@@ -201,9 +212,15 @@ class NairuDeliveryBroker:
                 f"Mandatory anchor gates {missing_mandatory} must appear in passed_gates; delivery denied."
             )
 
-        required_all = set(RISK_REQUIRED_GATES[packet["risk_class"]]) | set(packet["required_gates"])
-        passed_or_na = passed_set | set(na_map.keys())
-        missing_required = sorted(required_all - passed_or_na)
+        missing_packet_req = sorted(packet_req - passed_set)
+        if missing_packet_req:
+            raise DeliveryBrokerError(
+                f"Gate summary missing passed results for MissionPacket.required_gates {missing_packet_req}; delivery denied."
+            )
+
+        required_all = set(RISK_REQUIRED_GATES[packet["risk_class"]]) | packet_req
+        passed_or_pre_na = passed_set | (set(na_map.keys()) & set(packet_na.keys()))
+        missing_required = sorted(required_all - passed_or_pre_na)
         if missing_required:
             raise DeliveryBrokerError(
                 f"Gate summary missing required gates {missing_required} for {packet['risk_class']}; delivery denied."
@@ -283,6 +300,17 @@ class NairuDeliveryBroker:
         if not effective_changed_files:
             raise DeliveryBrokerError("Candidate has zero changed files to deliver.")
 
+        packet_ops = set(packet.get("allowed_operations", []))
+        formal_role = packet.get("formal_role")
+        if formal_role == "Code Writer" and "WRITE_OWNED" not in packet_ops:
+            raise DeliveryBrokerError(
+                "Code Writer MissionPacket must authorize WRITE_OWNED in allowed_operations to deliver changed files."
+            )
+        if formal_role == "Integration Writer" and not (packet_ops & {"WRITE_OWNED", "INTEGRATE_BRANCH"}):
+            raise DeliveryBrokerError(
+                "Integration Writer MissionPacket must authorize WRITE_OWNED or INTEGRATE_BRANCH to deliver changed files."
+            )
+
         for f in effective_changed_files:
             if is_protected_governance_path(f):
                 raise DeliveryBrokerError(f"Delivery rejected: protected governance file modified ({f}).")
@@ -326,17 +354,35 @@ class NairuDeliveryBroker:
             existing = conn.execute("SELECT * FROM delivery_receipts WHERE delivery_key = ?", (delivery_key,)).fetchone()
             if existing is not None:
                 if existing["status"] == "DELIVERED":
-                    conn.execute("ROLLBACK;")
-                    result = dict(existing)
-                    result["idempotent_replay"] = True
-                    return result
-                if existing["status"] == "PENDING_REMOTE":
+                    if existing["pr_mode"] == pr_mode:
+                        conn.execute("ROLLBACK;")
+                        result = dict(existing)
+                        result["idempotent_replay"] = True
+                        return result
+                    if existing["pr_mode"] == "BLOCKED_DIAGNOSTIC_DRAFT" and pr_mode == "VALIDATED_DRAFT_PR":
+                        cur = conn.execute(
+                            """
+                            UPDATE delivery_receipts
+                            SET status = 'PENDING_REMOTE', pr_mode = ?, receipt_markdown = ?, updated_at_utc = ?
+                            WHERE delivery_key = ? AND status = 'DELIVERED' AND pr_mode = 'BLOCKED_DIAGNOSTIC_DRAFT'
+                            """,
+                            (pr_mode, receipt_md, now, delivery_key),
+                        )
+                        if cur.rowcount != 1:
+                            conn.execute("ROLLBACK;")
+                            raise DeliveryBrokerError(f"Concurrent upgrade conflict for {delivery_key}")
+                    else:
+                        conn.execute("ROLLBACK;")
+                        raise DeliveryBrokerError(
+                            f"Cannot overwrite DELIVERED {existing['pr_mode']} receipt with {pr_mode} for {delivery_key}"
+                        )
+                elif existing["status"] == "PENDING_REMOTE":
                     conn.execute("ROLLBACK;")
                     raise DeliveryBrokerError(
                         f"Uncertain PENDING_REMOTE delivery exists for delivery_key={delivery_key}; "
                         "run RecoveryManager.reconcile_interrupted_mission() read-only before retrying."
                     )
-                if existing["status"] == "RECONCILED_RETRY_ALLOWED":
+                elif existing["status"] == "RECONCILED_RETRY_ALLOWED":
                     cur = conn.execute(
                         """
                         UPDATE delivery_receipts

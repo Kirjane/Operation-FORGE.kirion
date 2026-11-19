@@ -56,9 +56,16 @@ def paths_overlap(path_a: str, path_b: str) -> bool:
     return path_matches_prefix(norm_a, norm_b) or path_matches_prefix(norm_b, norm_a)
 
 
+def _is_writer_packet(packet: dict[str, Any]) -> bool:
+    """Return True for any Code Writer, Integration Writer, or mutating packet."""
+    role = packet.get("formal_role")
+    ops = set(packet.get("allowed_operations", []))
+    return role in ("Code Writer", "Integration Writer") or bool(ops & {"WRITE_OWNED", "INTEGRATE_BRANCH"})
+
+
 def detect_parallel_collisions(packets: list[dict[str, Any]]) -> list[str]:
-    """Detect overlapping owned_paths, owned_modules, or owned_behaviors across concurrent writer packets."""
-    writers = [p for p in packets if "WRITE_OWNED" in p.get("allowed_operations", [])]
+    """Detect overlapping owned_paths, owned_modules, or owned_behaviors across concurrent writer/integrator packets."""
+    writers = [p for p in packets if _is_writer_packet(p)]
     collisions: list[str] = []
     for i in range(len(writers)):
         for j in range(i + 1, len(writers)):
@@ -67,13 +74,13 @@ def detect_parallel_collisions(packets: list[dict[str, Any]]) -> list[str]:
                 for pb in b.get("owned_paths", []):
                     if paths_overlap(pa, pb):
                         collisions.append(f"Path collision between {a['mission_id']} ({pa}) and {b['mission_id']} ({pb})")
-            mods_a = set(a.get("owned_modules", []))
-            mods_b = set(b.get("owned_modules", []))
+            mods_a = {str(x).strip().lower() for x in a.get("owned_modules", []) if str(x).strip()}
+            mods_b = {str(x).strip().lower() for x in b.get("owned_modules", []) if str(x).strip()}
             shared_mods = sorted(mods_a & mods_b)
             if shared_mods:
                 collisions.append(f"Module collision between {a['mission_id']} and {b['mission_id']}: {shared_mods}")
-            beh_a = set(a.get("owned_behaviors", []))
-            beh_b = set(b.get("owned_behaviors", []))
+            beh_a = {str(x).strip().lower() for x in a.get("owned_behaviors", []) if str(x).strip()}
+            beh_b = {str(x).strip().lower() for x in b.get("owned_behaviors", []) if str(x).strip()}
             shared_beh = sorted(beh_a & beh_b)
             if shared_beh:
                 collisions.append(f"Behavior collision between {a['mission_id']} and {b['mission_id']}: {shared_beh}")
@@ -126,13 +133,28 @@ def build_topological_waves(missions: list[dict[str, Any]]) -> list[list[str]]:
 
 
 def enforce_wave_budget(packets: list[dict[str, Any]]) -> None:
-    """Enforce max 3 parallel writers and max 3 parallel read-only reviewers per wave."""
-    writers = [p for p in packets if "WRITE_OWNED" in p.get("allowed_operations", [])]
+    """Enforce tightest packet budget (capped at 3 parallel writers and 3 parallel read-only reviewers) and zero collisions."""
+    writers = [p for p in packets if _is_writer_packet(p)]
     reviewers = [p for p in packets if p.get("formal_role") == "Reviewer"]
-    if len(writers) > 3:
-        raise SchedulerError(f"Wave exceeds max_parallel_writers budget ({len(writers)} > 3)")
-    if len(reviewers) > 3:
-        raise SchedulerError(f"Wave exceeds max_parallel_reviewers budget ({len(reviewers)} > 3)")
+
+    writer_caps = [3]
+    reviewer_caps = [3]
+    for p in packets:
+        budget = p.get("budget")
+        if isinstance(budget, dict):
+            mw = budget.get("max_parallel_writers")
+            mr = budget.get("max_parallel_reviewers")
+            if isinstance(mw, int) and not isinstance(mw, bool) and mw >= 1:
+                writer_caps.append(mw)
+            if isinstance(mr, int) and not isinstance(mr, bool) and mr >= 1:
+                reviewer_caps.append(mr)
+
+    max_writers = min(writer_caps)
+    max_reviewers = min(reviewer_caps)
+    if len(writers) > max_writers:
+        raise SchedulerError(f"Wave exceeds max_parallel_writers budget ({len(writers)} > {max_writers})")
+    if len(reviewers) > max_reviewers:
+        raise SchedulerError(f"Wave exceeds max_parallel_reviewers budget ({len(reviewers)} > {max_reviewers})")
     collisions = detect_parallel_collisions(packets)
     if collisions:
         raise SchedulerError("Parallel ownership collision rejected: " + "; ".join(collisions))

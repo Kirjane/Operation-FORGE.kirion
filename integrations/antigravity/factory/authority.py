@@ -265,6 +265,11 @@ def verify_mission_packet(
             raise AuthorityError(f"Mandatory anchor gate {gid} cannot be exempted via MissionPacket.non_applicable_gates.")
         if not isinstance(reason, str) or not reason.strip():
             raise AuthorityError(f"MissionPacket.non_applicable_gates[{gid!r}] requires a non-empty justification.")
+    overlap_gates = sorted(req_gates & set(na_gates.keys()))
+    if overlap_gates:
+        raise AuthorityError(
+            f"MissionPacket cannot list gates {overlap_gates} in both required_gates and non_applicable_gates."
+        )
     risk_floor = set(RISK_REQUIRED_GATES[packet["risk_class"]])
     missing_floor = sorted(risk_floor - (req_gates | set(na_gates.keys())))
     if missing_floor:

@@ -7,12 +7,12 @@ import posixpath
 import re
 import sys
 
-# Matches quoted or unquoted argument tokens (supporting paths with spaces)
-_ARG = r'(?:"[^"]*"|\'[^\']*\'|\S+)'
+# Matches quoted, unquoted, or mixed key="value with spaces" shell argument tokens
+_ARG = r'''(?:(?:"[^"]*"|'[^']*'|[^\s"'])+)'''
 _GIT_BIN = r"""\bgit(?:\.exe)?['"]?"""
 _GH_BIN = r"""\bgh(?:\.exe)?['"]?"""
 _PHP_BIN = r"""\bphp(?:\.exe)?['"]?"""
-_GIT_OPTS = rf"(?:\s+(?:-[Cc]\s*{_ARG}|--git-dir(?:={_ARG}|\s+{_ARG})|--work-tree(?:={_ARG}|\s+{_ARG})|--no-pager|-p|--paginate))*"
+_GIT_OPTS = rf"(?:\s+(?:-[Cc]\s*{_ARG}|--(?:git-dir|work-tree|namespace|config-env|super-prefix)(?:={_ARG}|\s+{_ARG})|--[a-z][a-z0-9-]*(?:={_ARG})?|-p))*"
 _SEP_END = r"""(?:['"]?(?:\s|[;&|`)<>$]|$))"""
 
 FORBIDDEN_COMMAND_PATTERNS = [
@@ -50,6 +50,10 @@ FORBIDDEN_COMMAND_PATTERNS = [
         "Release mutation is prohibited without separate Engineer authorization.",
     ),
     (
+        rf"{_GH_BIN}\s+repo\s+(delete|edit|archive|rename)\b",
+        "Repository admin mutation via gh repo (delete/edit/archive/rename) is prohibited.",
+    ),
+    (
         r"\b(JetboxWriteState|DeletePlugin|InstallCustomization)\b",
         "Language Server state-mutation RPCs are restricted.",
     ),
@@ -61,19 +65,27 @@ FORBIDDEN_COMMAND_PATTERNS = [
 
 GH_API_BIN_RE = re.compile(rf"{_GH_BIN}\s+api\b", re.IGNORECASE)
 GH_API_MUTATING_METHOD_RE = re.compile(
-    r"(?:^|\s)(?:(?:-X|--method)(?:\s+|=)['\"]?(?:PUT|DELETE|PATCH|POST)\b|(?:-[fF](?:\s+|=|\S)|--(?:raw-)?field(?:\s+|=)|--input(?:\s+|=)))",
+    r"(?:^|\s)(?:(?:-X\s*|--method(?:\s+|=))['\"]?(?:PUT|DELETE|PATCH|POST)\b|(?:-[fF](?:\s+|=|\S)|--(?:raw-)?field(?:\s+|=)|--input(?:\s+|=)))",
     re.IGNORECASE,
 )
+_GH_REPO_PREFIX = r"(?:https?://[^/\s\"']+)?/?repos/[^/\s\"']+/[^/\s\"']+"
 GH_API_PROTECTED_ENDPOINT_RE = re.compile(
-    r"/?repos/[^/\s\"']+/[^/\s\"']+/(?:branches|rulesets|collaborators|hooks|git/refs|merges|releases|pulls/[^/\s\"']+/merge|pulls/[^/\s\"']+/reviews)(?:[/\s\"';&|]|$)",
+    rf"{_GH_REPO_PREFIX}/(?:branches|rulesets|collaborators|hooks|git/refs|merges|releases|pulls/[^/\s\"']+/merge|pulls/[^/\s\"']+/reviews)(?:[/\s\"';&|]|$)",
     re.IGNORECASE,
 )
 GH_API_DIRECT_REPO_ENDPOINT_RE = re.compile(
-    r"(?:^|[\s'\"])/?repos/[^/\s\"']+/[^/\s\"']+(?:['\"]?(?:\s|[;&|]|$))",
+    rf"(?:^|[\s'\"]){_GH_REPO_PREFIX}(?:['\"]?(?:\s|[;&|]|$))",
     re.IGNORECASE,
 )
+GH_API_GRAPHQL_RE = re.compile(rf"{_GH_BIN}\s+api\b[^\n]*\bgraphql\b", re.IGNORECASE)
+GH_GRAPHQL_MUTATION_RE = re.compile(r"\bmutation\b", re.IGNORECASE)
 
 GLOBAL_CONFIG_TREE_RE = re.compile(r"(^|/)\.gemini/config(/|$)", re.IGNORECASE)
+
+
+def _normalize_shell_continuations(cmd: str) -> str:
+    """Collapse POSIX backslash-newline and PowerShell backtick-newline continuations before policy matching."""
+    return re.sub(r"(?:\\|`)[ \t]*\r?\n[ \t]*", " ", cmd)
 
 
 def evaluate_pre_tool_use(payload: dict) -> dict:
@@ -87,7 +99,7 @@ def evaluate_pre_tool_use(payload: dict) -> dict:
         return {"decision": "deny", "reason": "Fail-closed: missing or invalid toolCall.args in PreToolUse payload."}
 
     if tool_name == "run_command":
-        cmd = str(args.get("CommandLine") or "")
+        cmd = _normalize_shell_continuations(str(args.get("CommandLine") or ""))
         for pattern, reason in FORBIDDEN_COMMAND_PATTERNS:
             if re.search(pattern, cmd, flags=re.IGNORECASE):
                 return {"decision": "deny", "reason": reason}
@@ -100,6 +112,12 @@ def evaluate_pre_tool_use(payload: dict) -> dict:
             return {
                 "decision": "deny",
                 "reason": "Repository admin, branch-protection, PR merge/review, release, or git/refs API mutation is prohibited.",
+            }
+        # Block GraphQL mutations via gh api graphql
+        if GH_API_GRAPHQL_RE.search(cmd) and GH_GRAPHQL_MUTATION_RE.search(cmd):
+            return {
+                "decision": "deny",
+                "reason": "GraphQL mutation via gh api graphql is prohibited.",
             }
 
     if tool_name in ("write_file", "edit_file"):

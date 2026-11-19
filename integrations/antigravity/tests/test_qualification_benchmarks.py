@@ -22,7 +22,7 @@ class QualificationBenchmarksTests(unittest.TestCase):
         self.assertEqual(res["status"], "PASS")
         self.assertEqual(res["trials_executed"], 2)
         for t in res["trials"]:
-            self.assertEqual(t["cli_assertions"], 37)
+            self.assertEqual(t["cli_assertions"], 39)
             self.assertTrue(t["http_oracle_verified"])
 
     def test_benchmark_b_csharp_aspnet_transaction_engine(self) -> None:

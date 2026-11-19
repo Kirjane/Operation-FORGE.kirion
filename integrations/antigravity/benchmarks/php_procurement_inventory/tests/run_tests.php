@@ -6,11 +6,15 @@ require_once __DIR__ . '/../src/ProcurementEngine.php';
 use Kirion\BenchmarkA\DomainHttpException;
 use Kirion\BenchmarkA\ProcurementEngine;
 
+$assertionsExecuted = 0;
+
 function assertSame(mixed $expected, mixed $actual, string $label): void
 {
+    global $assertionsExecuted;
     if ($expected !== $actual) {
         throw new RuntimeException("ASSERTION FAILED [{$label}]: expected " . var_export($expected, true) . ", got " . var_export($actual, true));
     }
+    $assertionsExecuted++;
 }
 
 function assertThrowsStatus(callable $fn, int $expectedStatus, string $label): void
@@ -135,14 +139,28 @@ $closedA = $engine->receiveGoods($clerkA, (int)$poA['id'], 'REC_%_002', [
 ]);
 assertSame('CLOSED', $closedA['status'], 'PO A transitions to CLOSED when all items fully received');
 
+// Cross-PO idempotency key reuse inside same tenant must fail closed with 409 Conflict
+$poA2 = $engine->createAndSubmitPurchaseOrder($reqA, [
+    'supplier_id' => $supA['id'],
+    'po_number' => 'PO-2026-0002',
+    'items' => [['sku' => 'BOLT-M8', 'ordered_qty' => 2, 'unit_price_minor' => 5000]],
+]);
+$engine->approvePurchaseOrder($appA, (int)$poA2['id'], false);
+assertThrowsStatus(
+    fn() => $engine->receiveGoods($clerkA, (int)$poA2['id'], 'REC-A-001', [['sku' => 'BOLT-M8', 'qty' => 1]]),
+    409,
+    'Reusing receipt idempotency key from another PO in same tenant throws 409'
+);
+$engine->receiveGoods($clerkA, (int)$poA2['id'], 'REC-A2-001', [['sku' => 'BOLT-M8', 'qty' => 2]]);
+
 // 8. Durable restart simulation (open fresh ProcurementEngine connection on same SQLite WAL file)
 unset($engine);
 $restartedEngine = new ProcurementEngine($dbFile);
 $recA = $restartedEngine->reconcileTenant($auditA);
 assertSame(true, $recA['reconciled'], 'Tenant A ledger/inventory/movements reconcile after restart');
-assertSame(750000, $recA['po_header_total_minor'], 'Tenant A PO header sum == 750000');
-assertSame(750000, $recA['inventory_valuation_minor'], 'Tenant A inventory valuation == 750000');
-assertSame(14, $recA['inventory_qty_on_hand'], 'Tenant A inventory qty == 14');
+assertSame(760000, $recA['po_header_total_minor'], 'Tenant A PO header sum == 760000 (750000 + 10000)');
+assertSame(760000, $recA['inventory_valuation_minor'], 'Tenant A inventory valuation == 760000');
+assertSame(16, $recA['inventory_qty_on_hand'], 'Tenant A inventory qty == 16');
 
 $recB = $restartedEngine->reconcileTenant($auditB);
 assertSame(true, $recB['reconciled'], 'Tenant B reconciles independently');
@@ -164,8 +182,8 @@ unset($restartedEngine);
 echo json_encode([
     'benchmark' => 'A_PHP_LARAVEL_PROCUREMENT_INVENTORY',
     'status' => 'PASS',
-    'assertions_verified' => 28,
-    'tenant_a_reconciled_minor' => 750000,
+    'assertions_verified' => $assertionsExecuted,
+    'tenant_a_reconciled_minor' => 760000,
     'tenant_b_reconciled_minor' => 600000,
     'pdf_bytes_verified' => strlen($pdfBytes),
 ], JSON_PRETTY_PRINT) . PHP_EOL;

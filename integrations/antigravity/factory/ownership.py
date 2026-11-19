@@ -311,26 +311,32 @@ class WorktreeSandbox:
             assert_canonical_path_inside_worktree(wt_path, item)
 
         diff_p = subprocess.run(
-            ["git", "diff", "--name-only", base_sha],
+            ["git", "-c", "core.quotepath=false", "diff", "--no-renames", "--name-only", "-z", base_sha],
             cwd=wt_path,
             capture_output=True,
             text=True,
             check=False,
         )
+        if diff_p.returncode != 0:
+            raise AuthorityError(
+                f"Failed to inspect git diff against base_sha={base_sha!r} in {wt_path}: {diff_p.stderr.strip()}"
+            )
+
         untracked_p = subprocess.run(
-            ["git", "ls-files", "--others", "--exclude-standard"],
+            ["git", "-c", "core.quotepath=false", "ls-files", "--others", "--exclude-standard", "-z"],
             cwd=wt_path,
             capture_output=True,
             text=True,
             check=False,
         )
-        changed = sorted(
-            {
-                line.strip()
-                for line in (diff_p.stdout.splitlines() + untracked_p.stdout.splitlines())
-                if line.strip()
-            }
-        )
+        if untracked_p.returncode != 0:
+            raise AuthorityError(
+                f"Failed to inspect untracked files in {wt_path}: {untracked_p.stderr.strip()}"
+            )
+
+        diff_entries = [entry for entry in diff_p.stdout.split("\0") if entry]
+        untracked_entries = [entry for entry in untracked_p.stdout.split("\0") if entry]
+        changed = sorted(set(diff_entries + untracked_entries))
         if changed:
             assert_paths_within_ownership(packet, changed)
         return changed

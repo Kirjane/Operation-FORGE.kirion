@@ -5,7 +5,7 @@
 **Frozen Planning Base SHA:** `a864b88bda5f26c44709c9239dc73ae63abc78ad`  
 **Parent Branch SHA (`feat/forge-obsidian-vault-r2`, PR #12):** `ffffa7e16137ce191d74be0fadd0fe18c2eae2f9`  
 **Accepted Forge Main SHA:** `ac7285d7cd866b4728c28d64a7c145a6bc43f812`  
-**Plugin Package Digest (`kirion-forge` v1.0.0-r1):** `d18db99b03763ca18cb32b840109d76987cafeb30aabe98a51fc8410a877f998`  
+**Plugin Package Digest (`kirion-forge` v1.0.0-r1):** `aedd4192f582a77437a221e1fe2058809b375e3fa29b4f231fd260ad445f5e79`  
 **Observed Factory Maturity:** `AF-3` demonstrated in workspace (`AF-1` host-discovered plugin/agents, `AF-2` enforced scope/leases/hooks, `AF-3` autonomous build/test/review/repair/recovery; `AF-4` candidate evidence packet ready for separate-session non-author Acceptance Agent review). **No Forge NEST promotion is claimed (`NEST-2` preserved).**
 
 ---
@@ -18,13 +18,13 @@
   - Schema v1 initialization, seeding of Tenant A (`tenant_id=1`) and Tenant B (`tenant_id=2`) suppliers, and retained-data v1 → v2 schema migration (`migrateV1ToV2`).
   - Fail-closed HTTP authentication (`401 Unauthorized` when `X-Tenant-Id`, `X-User-Id`, or `X-Actor-Role` headers are absent/invalid), role matrix (`requester`, `approver`, `stock_clerk`, `auditor`, `worker`), segregation of duties (requester cannot self-approve → HTTP `403`), and cross-tenant A/B IDOR denial (`403`).
   - Explicit mass-assignment defense (ignoring injected `status: APPROVED` and `tenant_id: 999` on PO creation).
-  - Exact integer minor-unit monetary totals (`750,000` minor units for Tenant A; `600,000` minor units for Tenant B).
+  - Exact integer minor-unit monetary totals (`750,000` + `10,000` = `760,000` minor units for Tenant A across 2 POs; `600,000` minor units for Tenant B), with cross-PO receipt idempotency key reuse rejected (`409 Conflict`).
   - Single atomic approval (`200 OK`), concurrent/repeat approval rejection (`409 Conflict`), and injected-fault atomic rollback (`500`) leaving status `SUBMITTED` and zero queued outbox jobs.
   - Transactional outbox after-commit queue worker (`processOutboxQueue`) with explicit role gating (`403` for `requester`) and retry idempotency (`processed_jobs` effect count remains `1` across repeated runs).
   - Multi-step partial goods receiving (`PARTIALLY_RECEIVED` → `CLOSED`), exact prefix idempotency matching immune to SQL `LIKE` wildcards (`%`, `_`), excess quantity rejection (`422`), and injected-fault rollback.
   - Durable restart persistence and independent Python SQLite hidden-oracle verification over live HTTP (`php -S 127.0.0.1:<port> public/index.php`).
   - Binary PDF receipt verification (`%PDF-1.4` header, PO number, tenant ID, exact minor-unit total, `%%EOF` trailer).
-- **Result:** `PASS` across repeated trials (`28/28` CLI assertions + live HTTP hidden oracle per trial).
+- **Result:** `PASS` across repeated trials (`37/37` runtime-counted CLI assertions + live HTTP hidden oracle per trial).
 
 ---
 
@@ -41,9 +41,9 @@
   - **10 repeated same-key requests** (`IK-SAME-01`, `150.25 PHP`) over live Kestrel HTTP → exactly-once balance and ledger effect (`+15,025` minor units).
   - **5 controlled concurrent distinct payments** (`10.00`, `20.00`, `30.00`, `40.00`, `50.00 PHP`) via `Task.WhenAll` over live HTTP → zero lost updates (`+15,000` minor units).
   - Injected fault rollback (`InjectFault: true`) → HTTP `500` Problem Details and zero partial account or ledger changes.
-  - Payment reversal (`SETTLED` → `REVERSED` for `50.00 PHP` / `-5,000` minor units) and repeat reversal denial (`409 Conflict`).
+  - Payment reversal (`SETTLED` → `REVERSED` for `50.00 PHP` / `-5,000` minor units) with validated `ReversalIdempotencyKey` (`200 OK` idempotent replay for identical key; `409 Conflict` for distinct key) and persisted audit `Reason`.
   - Durable Kestrel host restart against the same SQLite WAL file + external Python hidden-oracle SQLite query verifying `balance_minor == ledger_sum_minor == 125025` (`1,250.25 PHP`) across 8 immutable ledger entries.
-- **Result:** `PASS` across repeated trials (`25/25` live Kestrel HTTP assertions + external Python hidden oracle per trial).
+- **Result:** `PASS` across repeated trials (`35/35` runtime-counted live Kestrel HTTP assertions + external Python hidden oracle per trial).
 
 ---
 
@@ -148,7 +148,21 @@ In accordance with `AGENTS.md` ("Tool absence narrows permissible operations/cla
     - `NOX-R2-011` (`P2`): Added remote branch drift detection during `PENDING_REMOTE` reconciliation and `export_canonical_forge_sandbox_capsule()` matching root `schemas/sandbox-capsule.schema.json`.
     - `NOX-R2-012` (`P2`): Enforced fail-closed `401` auth headers and explicit role checks on all `/api/v1/*` routes (including `/api/v1/reconcile` and `/api/v1/queue/work`) in Benchmarks A & B.
     - `NOX-R2-013` (`P3`): Synchronized Benchmark C case IDs across plugin `SKILL.md` files and replaced SQL `LIKE` idempotency check in `ProcurementEngine.php` with wildcard-immune `SUBSTR(...)` exact prefix matching.
-- **Cycle 3 Re-Review (`G13`):** Committing the Cycle 2 repairs invalidates `e313a75a24b34cb81aad95687f62dc4d9533bbdc` and triggers a fresh-context Cycle 3 `Antigravity-Nox` review at the repaired candidate SHA.
+- **Cycle 3 Review (`G13`):** Executed via native `run_workflow` (`workflows/nox_adversarial_audit.py`, strictly schema-validated against `nox-result.schema.json`) spawning isolated `research` agent `Antigravity-Nox` (`context_id: ctx-antigravity-nox-82c0284d-r1-cycle3`) at frozen candidate SHA `a1633782747c051aa12a8af27e7c71072aac3ef1`.
+  - **Verdict:** `REWORK` (12 findings `NOX-R3-001`..`NOX-R3-012`: 6 `P1`, 5 `P2`, 1 `P3`), all 12 remediated with discriminating regression tests:
+    - `NOX-R3-001` (`P1`): Enforced `--no-renames -z` with `core.quotepath=false` and non-zero exit checks in `WorktreeSandbox.inspect_and_validate_worktree()` so `git mv AGENTS.md owned/AGENTS.md` and invalid `base_sha` fail closed.
+    - `NOX-R3-002` (`P1`): Enforced strict `gate_summary` SHA/risk/gate validation, `expected_mission_id` binding on Nox review, `PAUSED` blocking `WRITE_OWNED`/`INTEGRATE_BRANCH`/`DELIVER_DRAFT_PR`, and single atomic `BEGIN IMMEDIATE` reservation in `NairuDeliveryBroker`.
+    - `NOX-R3-003` (`P1`): Hardened `SelfHealingController.run_repair_loop()` to validate Nox schema/SHA/context/P0 invariants, fail closed when `regression_failed_prefix` is omitted, and require distinct valid 40-char `new_sha`.
+    - `NOX-R3-004` (`P1`): Hardened `hooks/forge_guard.py` for Windows `.exe` suffixes, quoted paths with spaces, combined short flags (`-uf`/`-df`), `--mirror`/`--prune`, shell separators/quotes on protected branches, `gh pr review -a`, and order-independent `gh api` mutating checks covering `git/refs`.
+    - `NOX-R3-005` (`P1`): Enabled `G08` `SECURITY` runtime gates to emit `E5/DIRECTLY_OBSERVED`, made failed `git status` fail closed (`dirty=True`), and downgraded dirty trees to `E2/REPORTED` in `factory/evidence.py`.
+    - `NOX-R3-006` (`P1`): Enforced `evidence_type` strictly on `PASS` (allowing clean `G10` `NOT_RUN` → `BLOCKED`), enforced exact `certainty_ceiling` match per `EVIDENCE_CROSSWALK.md`, and blocked zero-SHA `PASS` envelopes in `factory/quality.py`.
+    - `NOX-R3-007` (`P2`): Halted `BLOCKED` whenever `PENDING_REMOTE` reconciliation runs without a probe or when the probe raises in `factory/recovery.py`.
+    - `NOX-R3-008` (`P2`): Hardened Scribe/Lucien extension checks (case-insensitive, rejecting executable files inside `adr/`/`schemas/`) and generalized remote prefix stripping (`upstream/main`, `refs/remotes/upstream/main`) in `factory/policy.py`.
+    - `NOX-R3-009` (`P2`): Split `workflows/self_healing_repair.py` into explicit `Antigravity-Jane` (`self`/`share`, `writer-result.schema.json`) repair + fresh-context `Antigravity-Nox` (`nox-result.schema.json`) post-repair review.
+    - `NOX-R3-010` (`P2`): Added `ANTIGRAVITY_CSRF_TOKEN` assignment/header redaction to `SECRET_REDACTION_PATTERNS` in `factory/evidence.py`.
+    - `NOX-R3-011` (`P2`): Implemented persisted `ReversalIdempotencyKey` replay (`200 OK`) vs distinct-key conflict (`409`) and audit `Reason` persistence in Benchmark B (`Program.cs`), and per-PO conflict checking (`409`) on cross-PO receipt key reuse in Benchmark A (`ProcurementEngine.php`).
+    - `NOX-R3-012` (`P3`): Replaced hardcoded assertion counts with runtime-incremented counters (`37` in Benchmark A, `35` in Benchmark B).
+- **Cycle 4 Re-Review (`G13`):** Committing the Cycle 3 repairs invalidates `a1633782747c051aa12a8af27e7c71072aac3ef1` and triggers a fresh-context Cycle 4 `Antigravity-Nox` review at the repaired candidate SHA.
 
 ---
 

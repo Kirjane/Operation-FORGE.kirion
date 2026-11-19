@@ -119,6 +119,19 @@ def make_valid_packet(
     }
 
 
+def _make_clean_git_repo(parent_dir: Path) -> Path:
+    repo = parent_dir / "clean_repo"
+    repo.mkdir(parents=True, exist_ok=True)
+    subprocess.run(["git", "init"], cwd=repo, capture_output=True, check=True)
+    subprocess.run(["git", "config", "core.autocrlf", "false"], cwd=repo, capture_output=True, check=True)
+    subprocess.run(["git", "config", "user.name", "Kirch-Nairu"], cwd=repo, capture_output=True, check=True)
+    subprocess.run(["git", "config", "user.email", "nairu@example.com"], cwd=repo, capture_output=True, check=True)
+    (repo / "README.md").write_text("clean\n", encoding="utf-8")
+    subprocess.run(["git", "add", "README.md"], cwd=repo, capture_output=True, check=True)
+    subprocess.run(["git", "commit", "-m", "init"], cwd=repo, capture_output=True, check=True)
+    return repo
+
+
 class FactoryCoreTests(unittest.TestCase):
     def test_f01_plugin_packaging_and_live_discovery(self) -> None:
         pkg = verify_plugin_package(PLUGIN_ROOT, REPO_ROOT)
@@ -276,6 +289,7 @@ class FactoryCoreTests(unittest.TestCase):
     def test_f09_f10_f11_f12_f13_f14_end_to_end_pipeline(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_root = Path(tmp)
+            clean_repo = _make_clean_git_repo(tmp_root)
             runner = TrustedEvidenceRunner(tmp_root / "artifacts")
             env = runner.run_gate_command(
                 run_id="run-e2e",
@@ -283,7 +297,7 @@ class FactoryCoreTests(unittest.TestCase):
                 stage="VERIFY",
                 gate_id="G05",
                 command_argv=[sys.executable, "-c", "print('unit pass; token ghp_1234567890abcdefghijklmnop')"],
-                cwd=REPO_ROOT,
+                cwd=clean_repo,
                 evidence_type="UNIT",
             )
             self.assertEqual(env["status"], "PASS")
@@ -374,6 +388,7 @@ class FactoryCoreTests(unittest.TestCase):
 
         # NOX-R2-002: TrustedEvidenceRunner never coerces BUILD to RUNTIME when is_runtime_gate=True
         with tempfile.TemporaryDirectory() as tmp:
+            clean_repo = _make_clean_git_repo(Path(tmp))
             runner = TrustedEvidenceRunner(Path(tmp) / "artifacts")
             env_b = runner.run_gate_command(
                 run_id="run-r2",
@@ -381,7 +396,7 @@ class FactoryCoreTests(unittest.TestCase):
                 stage="VERIFY",
                 gate_id="G10",
                 command_argv=[sys.executable, "-c", "print('ok')"],
-                cwd=REPO_ROOT,
+                cwd=clean_repo,
                 evidence_type="BUILD",
                 is_runtime_gate=True,
             )
@@ -521,6 +536,269 @@ class FactoryCoreTests(unittest.TestCase):
             (fake_repo / ".agents" / "plugins.json").write_text("{broken-json", encoding="utf-8")
             with self.assertRaises(AuthorityError):
                 verify_plugin_package(PLUGIN_ROOT, fake_repo)
+
+    def test_nox_cycle3_security_and_governance_regressions(self) -> None:
+        """Discriminating regression tests for NOX-R3-001..010 findings."""
+        from integrations.antigravity.factory.policy import is_prohibited_branch
+
+        # NOX-R3-001: inspect_and_validate_worktree fails closed on invalid base_sha
+        with tempfile.TemporaryDirectory() as tmp:
+            sb = WorktreeSandbox(REPO_ROOT, Path(tmp) / "wts")
+            wt = sb.create_worktree("feat/r3-invalid-sha", BASE_SHA, "wt_r3")
+            try:
+                with self.assertRaises(AuthorityError):
+                    sb.inspect_and_validate_worktree(wt, make_valid_packet(), base_sha="deadbeef" * 5)
+            finally:
+                sb.remove_worktree(wt)
+
+        # NOX-R3-002: Delivery broker rejects mismatched gate_summary SHA/risk/missing gates, mismatched Nox mission_id, and PAUSED delivery
+        base_pkt = make_valid_packet("R3-MISSION-B")
+        with self.assertRaises(AuthorityError):
+            verify_mission_packet({**base_pkt, "work_mode": "PAUSED", "allowed_operations": ["READ", "DELIVER_DRAFT_PR"]})
+
+        nox = NoxReviewEngine()
+        wrong_mission_nox = nox.execute_review(
+            mission_id="R3-MISSION-A",
+            frozen_sha=NEXT_SHA,
+            author_context_id="ctx-jane",
+            inspected_scope=["integrations/antigravity/factory/"],
+            evidence_inspected=["env-1"],
+            findings=[],
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            broker = NairuDeliveryBroker(
+                Path(tmp) / "b.db",
+                actor_verifier=lambda: {"login": EXPECTED_BROKER_LOGIN, "id": EXPECTED_BROKER_USER_ID, "type": "User"},
+            )
+            # Stale/mismatched gate summary rejected
+            with self.assertRaises(DeliveryBrokerError):
+                broker.prepare_and_record_delivery(
+                    packet=base_pkt,
+                    candidate_sha=NEXT_SHA,
+                    changed_files=["integrations/antigravity/factory/policy.py"],
+                    gate_summary={
+                        "risk_class": "RISK-0",
+                        "candidate_sha": BASE_SHA,
+                        "overall_status": "PASS",
+                        "passed_gates": ["G00"],
+                        "failed_gates": ["G08"],
+                        "missing_gates": ["G10"],
+                    },
+                    nox_result=wrong_mission_nox,
+                )
+            # Mismatched Nox mission_id rejected even when gate summary matches
+            with self.assertRaises(QualityGateError):
+                broker.prepare_and_record_delivery(
+                    packet=base_pkt,
+                    candidate_sha=NEXT_SHA,
+                    changed_files=["integrations/antigravity/factory/policy.py"],
+                    gate_summary={
+                        "risk_class": base_pkt["risk_class"],
+                        "candidate_sha": NEXT_SHA,
+                        "overall_status": "PASS",
+                        "passed_gates": base_pkt["required_gates"],
+                        "failed_gates": [],
+                        "missing_gates": [],
+                        "not_run_gates": [],
+                    },
+                    nox_result=wrong_mission_nox,
+                )
+
+        # NOX-R3-003: SelfHealingController enforces Nox SHA/context/P0 invariants, fail-closed regression_failed_prefix, and valid distinct new_sha
+        healer = SelfHealingController(max_repair_cycles=2, max_identical_retries=2)
+        forged_p0 = {
+            "schema_version": 1,
+            "mission_id": "R3-HEAL",
+            "frozen_sha": NEXT_SHA,
+            "reviewer_context_id": "ctx-nox-distinct",
+            "reviewer_persona": "Antigravity-Nox",
+            "author_context_id": "ctx-author-1",
+            "inspected_scope": ["integrations/antigravity/factory/quality.py"],
+            "evidence_inspected": ["env-1"],
+            "findings": [
+                {
+                    "id": "P0-LIVE",
+                    "severity": "P0",
+                    "path": "integrations/antigravity/factory/quality.py",
+                    "line": 1,
+                    "contract_violated": "Critical flaw",
+                    "reproduction": "Repro",
+                    "requested_correction": "Fix",
+                    "disposition": "OPEN",
+                }
+            ],
+            "verdict": "PASS",
+        }
+        res_forged_p0 = healer.run_repair_loop(
+            initial_sha=NEXT_SHA,
+            evaluate_fn=lambda _s: {"passed": True, "author_context_id": "ctx-author-1"},
+            repair_fn=lambda _c, _fc, _e: {"new_sha": BASE_SHA, "regression_failed_prefix": True},
+            nox_review_fn=lambda _s, _a: forged_p0,
+        )
+        self.assertEqual(res_forged_p0["status"], "QUARANTINED")
+
+        # Missing regression_failed_prefix fails closed (BLOCKED)
+        res_no_reg = healer.run_repair_loop(
+            initial_sha=NEXT_SHA,
+            evaluate_fn=lambda _s: {"passed": False, "failure_output": "unit failed", "author_context_id": "ctx-author-1"},
+            repair_fn=lambda _c, _fc, _e: {"new_sha": BASE_SHA},
+            nox_review_fn=lambda _s, _a: forged_p0,
+        )
+        self.assertEqual(res_no_reg["status"], "BLOCKED")
+
+        # NOX-R3-005 & NOX-R3-006: G08 SECURITY -> E5 passes evaluate_gate_suite; dirty tree downgrades to E2; UNIT on G07 / certainty inflation rejected; G10 NOT_RUN -> BLOCKED cleanly
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_root = Path(tmp)
+            clean_repo = _make_clean_git_repo(tmp_root)
+            runner = TrustedEvidenceRunner(tmp_root / "arts")
+            g08_env = runner.run_gate_command(
+                run_id="run-r3",
+                mission_id="R3-SEC",
+                stage="VERIFY",
+                gate_id="G08",
+                command_argv=[sys.executable, "-c", "print('sec ok')"],
+                cwd=clean_repo,
+                evidence_type="SECURITY",
+                is_runtime_gate=True,
+            )
+            self.assertFalse(g08_env["dirty"])
+            self.assertEqual(g08_env["evidence_level"], "E5")
+            self.assertEqual(g08_env["provenance"], "DIRECTLY_OBSERVED")
+            ev_res = evaluate_gate_suite("RISK-3", [g08_env], candidate_sha=g08_env["candidate_sha"])
+            self.assertIn("G08", ev_res["passed_gates"])
+
+            # Dirtying a file in clean_repo downgrades PASS envelope to E2/REPORTED
+            (clean_repo / "dirty.txt").write_text("uncommitted\n", encoding="utf-8")
+            dirty_env = runner.run_gate_command(
+                run_id="run-r3",
+                mission_id="R3-DIRTY",
+                stage="VERIFY",
+                gate_id="G08",
+                command_argv=[sys.executable, "-c", "print('sec ok')"],
+                cwd=clean_repo,
+                evidence_type="SECURITY",
+                is_runtime_gate=True,
+            )
+            self.assertTrue(dirty_env["dirty"])
+            self.assertEqual(dirty_env["evidence_level"], "E2")
+            self.assertEqual(dirty_env["provenance"], "REPORTED")
+
+            # Non-git directory fails git status -> dirty=True and downgraded to E2/REPORTED
+            non_git_dir = tmp_root / "not_a_git_repo"
+            non_git_dir.mkdir()
+            non_git_env = runner.run_gate_command(
+                run_id="run-r3",
+                mission_id="R3-NONGIT",
+                stage="VERIFY",
+                gate_id="G05",
+                command_argv=[sys.executable, "-c", "print('ok')"],
+                cwd=non_git_dir,
+                evidence_type="UNIT",
+            )
+            self.assertTrue(non_git_env["dirty"])
+            self.assertEqual(non_git_env["evidence_level"], "E2")
+
+        # Certainty ceiling inflation & UNIT-on-G07 rejected
+        inflated_g07 = {
+            "schema_version": 1,
+            "run_id": "run-r3",
+            "mission_id": "R3-TEST",
+            "stage": "VERIFY",
+            "gate_id": "G07",
+            "candidate_sha": BASE_SHA,
+            "tree_sha": BASE_SHA,
+            "dirty": False,
+            "command_argv": ["pytest"],
+            "cwd": ".",
+            "started_at_utc": "2026-11-19T00:00:00Z",
+            "completed_at_utc": "2026-11-19T00:00:01Z",
+            "exit_code": 0,
+            "status": "PASS",
+            "environment_versions": {"python": "3.13.5"},
+            "fixture_sha256": "0" * 64,
+            "artifact_path": "a.log",
+            "artifact_size_bytes": 1,
+            "artifact_sha256": "a" * 64,
+            "evidence_level": "E5",
+            "evidence_type": "UNIT",
+            "provenance": "DIRECTLY_OBSERVED",
+            "certainty_ceiling": "PRODUCTION_PROVEN",
+            "redacted": True,
+        }
+        with self.assertRaises(QualityGateError):
+            evaluate_gate_suite("RISK-3", [inflated_g07], candidate_sha=BASE_SHA)
+        with self.assertRaises(QualityGateError):
+            evaluate_gate_suite("RISK-3", [{**inflated_g07, "certainty_ceiling": "VERIFIED"}], candidate_sha=BASE_SHA)
+
+        # Clean G10 NOT_RUN returns BLOCKED with G10 in not_run_gates without crashing
+        g10_not_run = {
+            **inflated_g07,
+            "gate_id": "G10",
+            "exit_code": None,
+            "status": "NOT_RUN",
+            "evidence_level": "E0",
+            "evidence_type": "NONE",
+            "provenance": "ASSUMED",
+            "certainty_ceiling": "HYPOTHESIS",
+        }
+        nr_res = evaluate_gate_suite("RISK-2", [g10_not_run], candidate_sha=BASE_SHA)
+        self.assertEqual(nr_res["overall_status"], "BLOCKED")
+        self.assertIn("G10", nr_res["not_run_gates"])
+
+        # NOX-R3-007: PENDING_REMOTE with remote_head_probe=None halts BLOCKED
+        with tempfile.TemporaryDirectory() as tmp:
+            db = Path(tmp) / "r3_rec.db"
+            j = FactoryJournal(db)
+            rm = RecoveryManager(j)
+            br = NairuDeliveryBroker(db, actor_verifier=lambda: {"login": EXPECTED_BROKER_LOGIN, "id": EXPECTED_BROKER_USER_ID})
+            j.register_mission(base_pkt)
+            from integrations.antigravity.factory.delivery import compute_delivery_key
+            dk = compute_delivery_key(base_pkt["mission_id"], base_pkt["permitted_branch"], NEXT_SHA)
+            c = br._connect()
+            try:
+                c.execute(
+                    """
+                    INSERT INTO delivery_receipts (
+                        delivery_key, mission_id, branch, base_sha, candidate_sha,
+                        actor_login, actor_id, status, pr_mode, receipt_markdown, updated_at_utc
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, 'PENDING_REMOTE', 'VALIDATED_DRAFT_PR', 'md', '2026-11-19T00:00:00Z')
+                    """,
+                    (dk, base_pkt["mission_id"], base_pkt["permitted_branch"], BASE_SHA, NEXT_SHA, EXPECTED_BROKER_LOGIN, EXPECTED_BROKER_USER_ID),
+                )
+            finally:
+                c.close()
+            cap_no_probe = rm.reconcile_interrupted_mission(
+                base_pkt["mission_id"],
+                interruption_point="PRE_BROKER_RECEIPT",
+                observed_local_sha=NEXT_SHA,
+                remote_head_probe=None,
+            )
+            self.assertFalse(cap_no_probe["delivery_reconciled"])
+            self.assertEqual(cap_no_probe["next_allowed_action"], "HALT_BLOCKED_REQUIRE_MAINTAINER_RECONCILIATION")
+
+        # NOX-R3-008: Scribe/Lucien executable paths rejected, uppercase .MD allowed, upstream/main rejected
+        scribe_pkt = make_valid_packet("R3-SCRIBE", persona="Antigravity-Scribe", formal_role="Code Writer", owned_paths=["integrations/antigravity/"])
+        lucien_pkt = make_valid_packet("R3-LUCIEN", persona="Antigravity-Lucien", formal_role="Code Writer", owned_paths=["integrations/antigravity/"])
+        with self.assertRaises(PolicyViolationError):
+            assert_paths_within_ownership(scribe_pkt, ["integrations/antigravity/adr/exploit.py"])
+        with self.assertRaises(PolicyViolationError):
+            assert_paths_within_ownership(lucien_pkt, ["integrations/antigravity/schemas/evil.sh"])
+        self.assertEqual(
+            assert_paths_within_ownership(scribe_pkt, ["integrations/antigravity/README.MD"]),
+            ["integrations/antigravity/README.MD"],
+        )
+        self.assertTrue(is_prohibited_branch("refs/remotes/upstream/main"))
+        self.assertTrue(is_prohibited_branch("upstream/main"))
+        self.assertFalse(is_prohibited_branch("feat/antigravity-software-factory-r1"))
+
+        # NOX-R3-009: self_healing_repair.py invokes writer repair + schema-synced Nox re-review
+        repair_wf = (ANTIGRAVITY_ROOT / "workflows" / "self_healing_repair.py").read_text(encoding="utf-8")
+        self.assertIn("writer-result.schema.json", repair_wf)
+        self.assertIn("nox-result.schema.json", repair_wf)
+        self.assertIn('writer_res["final_sha"]', repair_wf)
+
+        # NOX-R3-010: ANTIGRAVITY_CSRF_TOKEN= redacted
+        self.assertNotIn("secret_csrf_token_12345", redact_secrets("ANTIGRAVITY_CSRF_TOKEN=secret_csrf_token_12345"))
 
 
 if __name__ == "__main__":

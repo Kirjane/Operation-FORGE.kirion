@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from . import EXPECTED_BROKER_LOGIN, EXPECTED_BROKER_USER_ID
-from .authority import SHA40_RE, AuthorityError, verify_mission_packet
+from .authority import SHA40_RE, verify_mission_packet
 from .evidence import redact_secrets
 from .policy import (
     PolicyViolationError,
@@ -20,8 +20,6 @@ from .policy import (
     is_protected_governance_path,
 )
 from .quality import NoxReviewEngine
-
-PROHIBITED_BRANCH_NAMES = {"main", "master", "HEAD", "production", "release"}
 
 
 class DeliveryBrokerError(PolicyViolationError):
@@ -51,7 +49,7 @@ def probe_live_github_actor() -> dict[str, Any]:
 
 
 class NairuDeliveryBroker:
-    """Narrow remote write broker enforcing Kirch-Nairu actor verification, diff scope, and idempotent draft PR receipts."""
+    """Narrow remote write broker enforcing Kirch-Nairu actor verification, diff scope, and atomic idempotent draft PR receipts."""
 
     def __init__(
         self,
@@ -143,6 +141,34 @@ class NairuDeliveryBroker:
         ]
         return redact_secrets("\n".join(lines))
 
+    def _validate_gate_summary(self, packet: dict[str, Any], candidate_sha: str, gate_summary: dict[str, Any]) -> None:
+        if gate_summary.get("overall_status") != "PASS":
+            raise DeliveryBrokerError(
+                f"Required quality gates not satisfied ({gate_summary.get('overall_status')}); "
+                "cannot deliver validated candidate."
+            )
+        if gate_summary.get("candidate_sha") != candidate_sha:
+            raise DeliveryBrokerError(
+                f"Gate summary SHA mismatch: summary={gate_summary.get('candidate_sha')!r} != candidate={candidate_sha!r}"
+            )
+        if gate_summary.get("risk_class") != packet["risk_class"]:
+            raise DeliveryBrokerError(
+                f"Gate summary risk_class mismatch: summary={gate_summary.get('risk_class')!r} != packet={packet['risk_class']!r}"
+            )
+        for bad_key in ("failed_gates", "missing_gates", "not_run_gates"):
+            if gate_summary.get(bad_key):
+                raise DeliveryBrokerError(
+                    f"Gate summary reports non-empty {bad_key}={gate_summary.get(bad_key)!r}; delivery denied."
+                )
+        passed_or_na = set(gate_summary.get("passed_gates", [])) | set(
+            (gate_summary.get("documented_non_applicable") or {}).keys()
+        )
+        missing_required = [g for g in packet["required_gates"] if g not in passed_or_na]
+        if missing_required:
+            raise DeliveryBrokerError(
+                f"Gate summary missing required mission gates {missing_required}; delivery denied."
+            )
+
     def prepare_and_record_delivery(
         self,
         *,
@@ -157,7 +183,7 @@ class NairuDeliveryBroker:
     ) -> dict[str, Any]:
         """
         Verify actor, mission authority, branch policy, path ownership, symlink absence, gate results,
-        and exact-SHA Nox review before recording an idempotent delivery receipt.
+        and exact-SHA Nox review before atomically reserving and recording an idempotent delivery receipt.
         """
         verify_mission_packet(packet)
         assert_operation_allowed(packet, "DELIVER_DRAFT_PR", actor_persona="Antigravity-Maintainer")
@@ -176,31 +202,10 @@ class NairuDeliveryBroker:
         if not changed_files:
             raise DeliveryBrokerError("Candidate has zero changed files to deliver.")
 
-        # Verify every changed file is within packet owned_paths and not protected governance (case-insensitive)
         for f in changed_files:
             if is_protected_governance_path(f):
                 raise DeliveryBrokerError(f"Delivery rejected: protected governance file modified ({f}).")
-        assert_paths_within_ownership(
-            {**packet, "allowed_operations": list(set(packet["allowed_operations"]) | {"WRITE_OWNED"})},
-            changed_files,
-        )
-
-        delivery_key = compute_delivery_key(packet["mission_id"], branch, candidate_sha)
-        conn = self._connect()
-        try:
-            existing = conn.execute("SELECT * FROM delivery_receipts WHERE delivery_key = ?", (delivery_key,)).fetchone()
-            if existing is not None:
-                if existing["status"] == "DELIVERED":
-                    result = dict(existing)
-                    result["idempotent_replay"] = True
-                    return result
-                if existing["status"] == "PENDING_REMOTE":
-                    raise DeliveryBrokerError(
-                        f"Uncertain PENDING_REMOTE delivery exists for delivery_key={delivery_key}; "
-                        "run RecoveryManager.reconcile_interrupted_mission() read-only before retrying."
-                    )
-        finally:
-            conn.close()
+        assert_paths_within_ownership(packet, changed_files, require_write_operation=False)
 
         is_blocked_diag = False
         if gate_summary.get("overall_status") != "PASS":
@@ -212,10 +217,16 @@ class NairuDeliveryBroker:
             is_blocked_diag = True
 
         if not is_blocked_diag:
+            self._validate_gate_summary(packet, candidate_sha, gate_summary)
             if nox_result is None:
                 raise DeliveryBrokerError("Missing fresh-context Antigravity-Nox review (G13) for validated candidate.")
-            NoxReviewEngine().assert_review_valid_for_sha(nox_result, candidate_sha)
+            NoxReviewEngine().assert_review_valid_for_sha(
+                nox_result,
+                candidate_sha,
+                expected_mission_id=packet["mission_id"],
+            )
 
+        delivery_key = compute_delivery_key(packet["mission_id"], branch, candidate_sha)
         receipt_md = self.format_start_close_receipt(
             packet=packet,
             candidate_sha=candidate_sha,
@@ -227,31 +238,64 @@ class NairuDeliveryBroker:
         pr_mode = "BLOCKED_DIAGNOSTIC_DRAFT" if is_blocked_diag else "VALIDATED_DRAFT_PR"
         now = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
-        # Pre-write INTENT before calling remote executor for crash recovery
+        # Single atomic BEGIN IMMEDIATE check + PENDING_REMOTE reservation (no TOCTOU race, no INSERT OR REPLACE)
         conn = self._connect()
         try:
             conn.execute("BEGIN IMMEDIATE;")
-            conn.execute(
-                """
-                INSERT OR REPLACE INTO delivery_receipts (
-                    delivery_key, mission_id, branch, base_sha, candidate_sha,
-                    actor_login, actor_id, status, pr_mode, receipt_markdown, updated_at_utc
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, 'PENDING_REMOTE', ?, ?, ?)
-                """,
-                (
-                    delivery_key,
-                    packet["mission_id"],
-                    branch,
-                    packet["base_sha"],
-                    candidate_sha,
-                    actor["login"],
-                    actor["id"],
-                    pr_mode,
-                    receipt_md,
-                    now,
-                ),
-            )
+            existing = conn.execute("SELECT * FROM delivery_receipts WHERE delivery_key = ?", (delivery_key,)).fetchone()
+            if existing is not None:
+                if existing["status"] == "DELIVERED":
+                    conn.execute("ROLLBACK;")
+                    result = dict(existing)
+                    result["idempotent_replay"] = True
+                    return result
+                if existing["status"] == "PENDING_REMOTE":
+                    conn.execute("ROLLBACK;")
+                    raise DeliveryBrokerError(
+                        f"Uncertain PENDING_REMOTE delivery exists for delivery_key={delivery_key}; "
+                        "run RecoveryManager.reconcile_interrupted_mission() read-only before retrying."
+                    )
+                if existing["status"] == "RECONCILED_RETRY_ALLOWED":
+                    cur = conn.execute(
+                        """
+                        UPDATE delivery_receipts
+                        SET status = 'PENDING_REMOTE', pr_mode = ?, receipt_markdown = ?, updated_at_utc = ?
+                        WHERE delivery_key = ? AND status = 'RECONCILED_RETRY_ALLOWED'
+                        """,
+                        (pr_mode, receipt_md, now, delivery_key),
+                    )
+                    if cur.rowcount != 1:
+                        conn.execute("ROLLBACK;")
+                        raise DeliveryBrokerError(f"Concurrent delivery reservation conflict for {delivery_key}")
+                else:
+                    conn.execute("ROLLBACK;")
+                    raise DeliveryBrokerError(f"Unexpected delivery_receipts status {existing['status']!r} for {delivery_key}")
+            else:
+                conn.execute(
+                    """
+                    INSERT INTO delivery_receipts (
+                        delivery_key, mission_id, branch, base_sha, candidate_sha,
+                        actor_login, actor_id, status, pr_mode, receipt_markdown, updated_at_utc
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, 'PENDING_REMOTE', ?, ?, ?)
+                    """,
+                    (
+                        delivery_key,
+                        packet["mission_id"],
+                        branch,
+                        packet["base_sha"],
+                        candidate_sha,
+                        actor["login"],
+                        actor["id"],
+                        pr_mode,
+                        receipt_md,
+                        now,
+                    ),
+                )
             conn.execute("COMMIT;")
+        except Exception:
+            if conn.in_transaction:
+                conn.execute("ROLLBACK;")
+            raise
         finally:
             conn.close()
 
@@ -263,7 +307,7 @@ class NairuDeliveryBroker:
         try:
             conn.execute("BEGIN IMMEDIATE;")
             conn.execute(
-                "UPDATE delivery_receipts SET status = 'DELIVERED', updated_at_utc = ? WHERE delivery_key = ?",
+                "UPDATE delivery_receipts SET status = 'DELIVERED', updated_at_utc = ? WHERE delivery_key = ? AND status = 'PENDING_REMOTE'",
                 (now_done, delivery_key),
             )
             row = conn.execute("SELECT * FROM delivery_receipts WHERE delivery_key = ?", (delivery_key,)).fetchone()

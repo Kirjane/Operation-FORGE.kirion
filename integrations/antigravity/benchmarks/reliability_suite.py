@@ -113,7 +113,15 @@ def run_benchmark_d_suite(trials_per_point: int = 3) -> dict[str, Any]:
                     evidence_inspected=["env-1"],
                     findings=[],
                 )
-                gate_summary = {"overall_status": "PASS", "passed_gates": ["G00", "G01", "G03", "G05", "G13", "G15"]}
+                gate_summary = {
+                    "risk_class": "RISK-2",
+                    "candidate_sha": CANDIDATE_SHA,
+                    "overall_status": "PASS",
+                    "passed_gates": ["G00", "G01", "G03", "G05", "G13", "G15"],
+                    "failed_gates": [],
+                    "missing_gates": [],
+                    "not_run_gates": [],
+                }
 
                 if point == "PRE_LOCAL_COMMIT":
                     capsule = recovery.reconcile_interrupted_mission(

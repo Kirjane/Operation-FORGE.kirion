@@ -191,8 +191,10 @@ def verify_mission_packet(
 
     validate_contract(packet, "mission-packet.schema.json")
 
-    if packet.get("work_mode") == "PAUSED" and "WRITE_OWNED" in packet.get("allowed_operations", []):
-        raise AuthorityError("PAUSED work_mode forbids WRITE_OWNED mutations.")
+    if packet.get("work_mode") == "PAUSED" and (
+        set(packet.get("allowed_operations", [])) & {"WRITE_OWNED", "INTEGRATE_BRANCH", "DELIVER_DRAFT_PR"}
+    ):
+        raise AuthorityError("PAUSED work_mode forbids WRITE_OWNED, INTEGRATE_BRANCH, and DELIVER_DRAFT_PR operations.")
 
     branch = packet["permitted_branch"]
     if is_prohibited_branch(branch):

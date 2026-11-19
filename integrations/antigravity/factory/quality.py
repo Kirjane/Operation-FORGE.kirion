@@ -5,7 +5,8 @@ import hashlib
 import uuid
 from typing import Any, Callable
 
-from .authority import AuthorityError, validate_contract
+from .authority import SHA40_RE, AuthorityError, validate_contract
+from .evidence import FORGE_LEVEL_TO_CERTAINTY_CEILING
 
 GATE_CATALOG: dict[str, dict[str, str]] = {
     "G00": {"name": "Authority & Full SHA Verification", "min_evidence": "E1"},
@@ -39,6 +40,7 @@ EVIDENCE_LEVEL_ORDER: dict[str, int] = {
 
 MANDATORY_NON_EXEMPTIBLE_GATES = {"G00", "G13", "G15"}
 E5_RUNTIME_GATES = {"G07", "G08", "G09", "G10", "G11"}
+STRICT_RUNTIME_ONLY_GATES = {"G07", "G09", "G10", "G11"}
 
 RISK_REQUIRED_GATES: dict[str, list[str]] = {
     "RISK-0": ["G00", "G01", "G04", "G13", "G15"],
@@ -94,11 +96,9 @@ def evaluate_gate_suite(
             raise QualityGateError(
                 f"Stale evidence envelope for gate {gid}: envelope SHA {env['candidate_sha']} != candidate SHA {candidate_sha}"
             )
-        if gid in E5_RUNTIME_GATES and env["evidence_type"] in ("BUILD", "NONE", "SOURCE"):
-            raise QualityGateError(
-                f"Evidence type {env['evidence_type']!r} cannot satisfy runtime gate {gid} ({GATE_CATALOG[gid]['name']})."
-            )
         if env["status"] == "PASS":
+            if candidate_sha == "0" * 40 or env["candidate_sha"] == "0" * 40:
+                raise QualityGateError(f"Unanchored zero SHA cannot produce a trusted PASS envelope for gate {gid}.")
             if env["dirty"] is True:
                 raise QualityGateError(f"Dirty working tree cannot produce a trusted PASS envelope for gate {gid}.")
             if env["exit_code"] != 0:
@@ -109,8 +109,20 @@ def evaluate_gate_suite(
                 raise QualityGateError(
                     f"Insufficient evidence level for gate {gid}: got {actual_level}, requires >= {min_level}."
                 )
-            if gid == "G10" and env["evidence_type"] != "RUNTIME":
-                raise QualityGateError(f"Gate G10 requires evidence_type='RUNTIME', got {env['evidence_type']!r}.")
+            expected_ceiling = FORGE_LEVEL_TO_CERTAINTY_CEILING[actual_level]
+            if env["certainty_ceiling"] != expected_ceiling:
+                raise QualityGateError(
+                    f"Certainty ceiling mismatch for gate {gid} ({actual_level}): "
+                    f"got {env['certainty_ceiling']!r}, expected {expected_ceiling!r}."
+                )
+            if gid in STRICT_RUNTIME_ONLY_GATES and env["evidence_type"] != "RUNTIME":
+                raise QualityGateError(
+                    f"Gate {gid} ({GATE_CATALOG[gid]['name']}) requires evidence_type='RUNTIME', got {env['evidence_type']!r}."
+                )
+            if gid == "G08" and env["evidence_type"] not in ("RUNTIME", "SECURITY"):
+                raise QualityGateError(
+                    f"Gate G08 requires evidence_type in ('RUNTIME', 'SECURITY'), got {env['evidence_type']!r}."
+                )
             if gid in E5_RUNTIME_GATES and env["provenance"] not in ("DIRECTLY_OBSERVED", "REPRODUCED"):
                 raise QualityGateError(
                     f"Gate {gid} (E5) requires provenance in ('DIRECTLY_OBSERVED', 'REPRODUCED'), got {env['provenance']!r}."
@@ -207,8 +219,19 @@ class NoxReviewEngine:
         validate_contract(result, "nox-result.schema.json")
         return result
 
-    def assert_review_valid_for_sha(self, nox_result: dict[str, Any], current_candidate_sha: str) -> None:
+    def assert_review_valid_for_sha(
+        self,
+        nox_result: dict[str, Any],
+        current_candidate_sha: str,
+        *,
+        expected_mission_id: str | None = None,
+    ) -> None:
         validate_contract(nox_result, "nox-result.schema.json")
+        if expected_mission_id is not None and nox_result["mission_id"] != expected_mission_id:
+            raise QualityGateError(
+                f"Nox review mission mismatch: review mission_id={nox_result['mission_id']!r} "
+                f"!= expected {expected_mission_id!r}"
+            )
         if nox_result["frozen_sha"] != current_candidate_sha:
             raise QualityGateError(
                 f"Stale Nox review invalidated by commit drift: review frozen_sha={nox_result['frozen_sha']} "
@@ -271,6 +294,7 @@ class SelfHealingController:
         cycles_used = 0
         failure_counts: dict[str, int] = {}
         history: list[dict[str, Any]] = []
+        nox_engine = NoxReviewEngine()
 
         while True:
             eval_state = evaluate_fn(current_sha)
@@ -278,7 +302,38 @@ class SelfHealingController:
 
             if eval_state["passed"]:
                 nox_res = nox_review_fn(current_sha, author_ctx)
-                if nox_res["verdict"] == "PASS":
+                validate_contract(nox_res, "nox-result.schema.json")
+                if nox_res["frozen_sha"] != current_sha:
+                    return {
+                        "status": "QUARANTINED",
+                        "reason": f"Stale/mismatched Nox frozen_sha ({nox_res['frozen_sha']} != {current_sha})",
+                        "final_sha": current_sha,
+                        "cycles_used": cycles_used,
+                        "nox_result": nox_res,
+                        "history": history,
+                    }
+                if nox_res["reviewer_context_id"] == author_ctx or nox_res["reviewer_context_id"] == nox_res["author_context_id"]:
+                    return {
+                        "status": "QUARANTINED",
+                        "reason": "Self-review rejected: reviewer_context_id matches author context.",
+                        "final_sha": current_sha,
+                        "cycles_used": cycles_used,
+                        "nox_result": nox_res,
+                        "history": history,
+                    }
+
+                has_p0, has_p1_or_p2 = _has_blocking_findings(nox_res["findings"])
+                if has_p0 or nox_res["verdict"] == "QUARANTINED":
+                    return {
+                        "status": "QUARANTINED",
+                        "reason": "Unresolved P0 finding or QUARANTINED verdict in Antigravity-Nox review",
+                        "final_sha": current_sha,
+                        "cycles_used": cycles_used,
+                        "nox_result": nox_res,
+                        "history": history,
+                    }
+                if not has_p1_or_p2 and nox_res["verdict"] == "PASS":
+                    nox_engine.assert_review_valid_for_sha(nox_res, current_sha)
                     return {
                         "status": "READY",
                         "final_sha": current_sha,
@@ -286,15 +341,7 @@ class SelfHealingController:
                         "nox_result": nox_res,
                         "history": history,
                     }
-                if nox_res["verdict"] == "QUARANTINED":
-                    return {
-                        "status": "QUARANTINED",
-                        "reason": "P0 finding in Antigravity-Nox review",
-                        "final_sha": current_sha,
-                        "cycles_used": cycles_used,
-                        "nox_result": nox_res,
-                        "history": history,
-                    }
+
                 failure_output = "Nox findings: " + "; ".join(
                     f"{f['id']}:{f['severity']}:{f['contract_violated']}" for f in nox_res["findings"]
                 )
@@ -342,7 +389,8 @@ class SelfHealingController:
                     "cycles_used": cycles_used,
                     "history": history,
                 }
-            if not repair_outcome.get("regression_failed_prefix", True):
+            # Fail-closed default: repair MUST explicitly prove discriminating pre-fix failure
+            if repair_outcome.get("regression_failed_prefix", False) is not True:
                 return {
                     "status": "BLOCKED",
                     "reason": "Repair did not include a discriminating regression check that fails pre-fix.",
@@ -351,7 +399,16 @@ class SelfHealingController:
                     "history": history,
                 }
 
-            next_sha = repair_outcome["new_sha"]
+            next_sha = repair_outcome.get("new_sha")
+            if not isinstance(next_sha, str) or not SHA40_RE.fullmatch(next_sha) or next_sha == current_sha:
+                return {
+                    "status": "BLOCKED",
+                    "reason": f"Repair must produce a distinct valid 40-char SHA, got {next_sha!r}",
+                    "final_sha": current_sha,
+                    "cycles_used": cycles_used,
+                    "history": history,
+                }
+
             history.append(
                 {
                     "cycle": cycles_used,

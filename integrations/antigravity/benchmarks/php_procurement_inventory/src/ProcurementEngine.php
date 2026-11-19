@@ -338,17 +338,25 @@ final class ProcurementEngine
             $this->assertTenantMatch($actor, $tenantId);
 
             // Check exact idempotency key prefix inside transaction (immune to SQL LIKE '%'/'_' wildcards)
+            // Scope by po_id: same PO returns idempotent replay; different PO in same tenant raises 409 Conflict
             $prefix = $idempotencyKey . ':';
             $dupStmt = $this->pdo->prepare(
-                'SELECT COUNT(*) AS cnt FROM stock_movements WHERE tenant_id = :t AND SUBSTR(idempotency_key, 1, :plen) = :pref'
+                'SELECT DISTINCT po_id FROM stock_movements WHERE tenant_id = :t AND SUBSTR(idempotency_key, 1, :plen) = :pref'
             );
             $dupStmt->bindValue(':t', $tenantId, PDO::PARAM_INT);
             $dupStmt->bindValue(':plen', strlen($prefix), PDO::PARAM_INT);
             $dupStmt->bindValue(':pref', $prefix, PDO::PARAM_STR);
             $dupStmt->execute();
-            if ((int)$dupStmt->fetch()['cnt'] > 0) {
-                $this->pdo->exec('COMMIT;');
-                return $this->getPurchaseOrder($actor, $poId);
+            $existingPoIds = array_map(static fn(array $r): int => (int)$r['po_id'], $dupStmt->fetchAll());
+            if (count($existingPoIds) > 0) {
+                if (in_array($poId, $existingPoIds, true)) {
+                    $this->pdo->exec('COMMIT;');
+                    return $this->getPurchaseOrder($actor, $poId);
+                }
+                throw new DomainHttpException(
+                    "Idempotency key '{$idempotencyKey}' was already used for a different purchase order in tenant {$tenantId}.",
+                    409
+                );
             }
 
             if (!in_array($po['status'], ['APPROVED', 'PARTIALLY_RECEIVED'], true)) {

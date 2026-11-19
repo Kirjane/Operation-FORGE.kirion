@@ -16,6 +16,7 @@ SECRET_REDACTION_PATTERNS = [
     re.compile(r"\b(github_pat_[A-Za-z0-9_]{8,})\b"),
     re.compile(r"(Bearer\s+)[A-Za-z0-9._\-]{8,}", re.IGNORECASE),
     re.compile(r"(x-codeium-csrf-token:\s*)[^\s\"']+", re.IGNORECASE),
+    re.compile(r"(ANTIGRAVITY_CSRF_TOKEN\s*[:=]\s*)[^\s;&\"']+", re.IGNORECASE),
     re.compile(r"\b(sk-[A-Za-z0-9]{16,})\b"),
     re.compile(r"(password\s*=\s*)[^\s;&\"']+", re.IGNORECASE),
 ]
@@ -92,7 +93,7 @@ class TrustedEvidenceRunner:
         status_p = subprocess.run(["git", "status", "--porcelain"], cwd=cwd, capture_output=True, text=True)
         head_sha = head_p.stdout.strip() if head_p.returncode == 0 and len(head_p.stdout.strip()) == 40 else "0" * 40
         tree_sha = tree_p.stdout.strip() if tree_p.returncode == 0 and len(tree_p.stdout.strip()) == 40 else "0" * 40
-        dirty = bool(status_p.stdout.strip()) if status_p.returncode == 0 else False
+        dirty = bool(status_p.stdout.strip()) if status_p.returncode == 0 else True
         return head_sha, tree_sha, dirty
 
     def _store_artifact(self, content: str) -> tuple[Path, int, str]:
@@ -149,15 +150,15 @@ class TrustedEvidenceRunner:
         completed = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
         blob_path, size_bytes, digest = self._store_artifact(combined_output)
 
-        # Prevent E4 build from being claimed as E5 runtime
+        # Prevent E4 build from being claimed as E5 runtime; permit G08 SECURITY runtime gates; downgrade dirty/unanchored to E2
         if status == "PASS":
-            if is_runtime_gate and evidence_type == "RUNTIME":
+            if is_runtime_gate and (evidence_type == "RUNTIME" or (gate_id == "G08" and evidence_type == "SECURITY")):
                 ev_level = "E5"
                 prov = "DIRECTLY_OBSERVED"
             else:
                 ev_level = "E4"
                 prov = "AUTOMATED"
-            if candidate_sha == "0" * 40:
+            if candidate_sha == "0" * 40 or dirty:
                 ev_level = "E2"
                 prov = "REPORTED"
         else:

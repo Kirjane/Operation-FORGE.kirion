@@ -103,6 +103,7 @@ public sealed class ScopedTransactionStore : IDisposable
                     amount_minor INTEGER NOT NULL CHECK (amount_minor > 0),
                     currency TEXT NOT NULL,
                     state TEXT NOT NULL CHECK (state IN ('SETTLED', 'REVERSED')),
+                    reversal_idempotency_key TEXT NULL UNIQUE,
                     created_at_utc TEXT NOT NULL,
                     reversed_at_utc TEXT NULL,
                     FOREIGN KEY (account_id) REFERENCES accounts(account_id)
@@ -124,6 +125,7 @@ public sealed class ScopedTransactionStore : IDisposable
                     entity_id TEXT NOT NULL,
                     action TEXT NOT NULL,
                     actor_role TEXT NOT NULL,
+                    details TEXT NULL,
                     created_at_utc TEXT NOT NULL
                 );
 
@@ -387,6 +389,8 @@ public sealed class ScopedTransactionStore : IDisposable
         ct.ThrowIfCancellationRequested();
         if (actorRole is not "treasurer")
             throw new DomainException($"Role '{actorRole}' is denied from reversing payments (requires treasurer).", 403);
+        if (string.IsNullOrWhiteSpace(req.ReversalIdempotencyKey))
+            throw new DomainException("ReversalIdempotencyKey is required.", 422);
 
         await WriteGate.WaitAsync(ct);
         try
@@ -399,11 +403,12 @@ public sealed class ScopedTransactionStore : IDisposable
                 string direction;
                 long amountMinor;
                 string state;
+                string? existingRevKey;
 
                 await using (var pCmd = conn.CreateCommand())
                 {
                     pCmd.Transaction = (SqliteTransaction)tx;
-                    pCmd.CommandText = "SELECT account_id, direction, amount_minor, state FROM payments WHERE payment_id = $pid;";
+                    pCmd.CommandText = "SELECT account_id, direction, amount_minor, state, reversal_idempotency_key FROM payments WHERE payment_id = $pid;";
                     pCmd.Parameters.AddWithValue("$pid", paymentId);
                     await using var r = await pCmd.ExecuteReaderAsync(ct);
                     if (!await r.ReadAsync(ct))
@@ -412,30 +417,65 @@ public sealed class ScopedTransactionStore : IDisposable
                     direction = r.GetString(1);
                     amountMinor = r.GetInt64(2);
                     state = r.GetString(3);
+                    existingRevKey = r.IsDBNull(4) ? null : r.GetString(4);
+                }
+
+                var reversalSignedDelta = direction == "CREDIT" ? -amountMinor : amountMinor;
+
+                if (state == "REVERSED")
+                {
+                    if (string.Equals(existingRevKey, req.ReversalIdempotencyKey, StringComparison.Ordinal))
+                    {
+                        long curBal;
+                        await using (var bCmd = conn.CreateCommand())
+                        {
+                            bCmd.Transaction = (SqliteTransaction)tx;
+                            bCmd.CommandText = "SELECT balance_minor FROM accounts WHERE account_id = $aid;";
+                            bCmd.Parameters.AddWithValue("$aid", accountId);
+                            curBal = Convert.ToInt64(await bCmd.ExecuteScalarAsync(ct), CultureInfo.InvariantCulture);
+                        }
+                        await tx.CommitAsync(ct);
+                        return new Dictionary<string, object>
+                        {
+                            ["payment_id"] = paymentId,
+                            ["account_id"] = accountId,
+                            ["state"] = "REVERSED",
+                            ["reversal_idempotency_key"] = req.ReversalIdempotencyKey,
+                            ["reversal_delta_minor"] = reversalSignedDelta,
+                            ["balance"] = FromMinorUnits(curBal),
+                            ["balance_minor"] = curBal,
+                            ["idempotent_replay"] = true
+                        };
+                    }
+                    throw new DomainException($"Payment '{paymentId}' is already REVERSED with a different reversal key.", 409);
                 }
 
                 if (state != "SETTLED")
                     throw new DomainException($"Payment '{paymentId}' is in state '{state}' and cannot be reversed.", 409);
 
-                var reversalSignedDelta = direction == "CREDIT" ? -amountMinor : amountMinor;
                 var now = DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture);
+                var reasonText = string.IsNullOrWhiteSpace(req.Reason) ? "Unspecified" : req.Reason.Trim();
 
                 await using (var updCmd = conn.CreateCommand())
                 {
                     updCmd.Transaction = (SqliteTransaction)tx;
                     updCmd.CommandText = """
-                        UPDATE payments SET state = 'REVERSED', reversed_at_utc = $now WHERE payment_id = $pid AND state = 'SETTLED';
+                        UPDATE payments
+                        SET state = 'REVERSED', reversal_idempotency_key = $rik, reversed_at_utc = $now
+                        WHERE payment_id = $pid AND state = 'SETTLED';
                         UPDATE accounts SET balance_minor = balance_minor + $delta, version = version + 1, updated_at_utc = $now WHERE account_id = $aid;
                         INSERT INTO ledger_entries (account_id, payment_id, entry_kind, signed_amount_minor, created_at_utc)
                         VALUES ($aid, $pid, 'REVERSAL', $delta, $now);
-                        INSERT INTO audit_trail (entity_id, action, actor_role, created_at_utc)
-                        VALUES ($pid, 'PAYMENT_REVERSED', $role, $now);
+                        INSERT INTO audit_trail (entity_id, action, actor_role, details, created_at_utc)
+                        VALUES ($pid, 'PAYMENT_REVERSED', $role, $reason, $now);
                         """;
                     updCmd.Parameters.AddWithValue("$now", now);
+                    updCmd.Parameters.AddWithValue("$rik", req.ReversalIdempotencyKey);
                     updCmd.Parameters.AddWithValue("$pid", paymentId);
                     updCmd.Parameters.AddWithValue("$delta", reversalSignedDelta);
                     updCmd.Parameters.AddWithValue("$aid", accountId);
                     updCmd.Parameters.AddWithValue("$role", actorRole);
+                    updCmd.Parameters.AddWithValue("$reason", reasonText);
                     await updCmd.ExecuteNonQueryAsync(ct);
                 }
 
@@ -457,9 +497,11 @@ public sealed class ScopedTransactionStore : IDisposable
                     ["payment_id"] = paymentId,
                     ["account_id"] = accountId,
                     ["state"] = "REVERSED",
+                    ["reversal_idempotency_key"] = req.ReversalIdempotencyKey,
                     ["reversal_delta_minor"] = reversalSignedDelta,
                     ["balance"] = FromMinorUnits(finalBal),
-                    ["balance_minor"] = finalBal
+                    ["balance_minor"] = finalBal,
+                    ["idempotent_replay"] = false
                 };
             }
             catch
@@ -600,10 +642,13 @@ public static class Program
         return app;
     }
 
+    private static int _assertionsExecuted;
+
     private static void AssertTrue(bool condition, string label)
     {
         if (!condition)
             throw new InvalidOperationException($"ASSERTION FAILED: {label}");
+        Interlocked.Increment(ref _assertionsExecuted);
     }
 
     public static async Task<int> Main(string[] args)
@@ -756,12 +801,24 @@ public static class Program
                     AssertTrue(r.StatusCode == HttpStatusCode.OK, "Treasurer reversed 50.00 payment (200)");
                 }
 
+                // Same reversal idempotency key -> idempotent 200 OK replay without double debit
+                using (var revReplay = new HttpRequestMessage(HttpMethod.Post, "/api/v1/payments/PAY-CONC-4/reverse"))
+                {
+                    revReplay.Headers.Add("X-Actor-Role", "treasurer");
+                    revReplay.Content = JsonContent.Create(new ReversePaymentRequest("REV-IK-1", "Authorized reversal of 50.00"));
+                    var r = await client.SendAsync(revReplay);
+                    AssertTrue(r.StatusCode == HttpStatusCode.OK, "Same-key reversal retry returns idempotent 200 OK");
+                    var body = await r.Content.ReadFromJsonAsync<JsonElement>();
+                    AssertTrue(body.GetProperty("idempotent_replay").GetBoolean(), "Same-key reversal sets idempotent_replay=true");
+                }
+
+                // Distinct reversal key on already-reversed payment -> 409 Conflict
                 using (var revDup = new HttpRequestMessage(HttpMethod.Post, "/api/v1/payments/PAY-CONC-4/reverse"))
                 {
                     revDup.Headers.Add("X-Actor-Role", "treasurer");
                     revDup.Content = JsonContent.Create(new ReversePaymentRequest("REV-IK-2", "Second reversal attempt"));
                     var r = await client.SendAsync(revDup);
-                    AssertTrue(r.StatusCode == HttpStatusCode.Conflict, "Second reversal rejected with 409 Conflict");
+                    AssertTrue(r.StatusCode == HttpStatusCode.Conflict, "Distinct reversal key rejected with 409 Conflict");
                 }
 
                 await app.StopAsync();
@@ -796,7 +853,7 @@ public static class Program
             {
                 benchmark = "B_ASPNET_CSHARP_TRANSACTION_ENGINE",
                 status = "PASS",
-                assertions_verified = 25,
+                assertions_verified = _assertionsExecuted,
                 final_balance_minor = 125025,
                 final_balance_decimal = 1250.25m,
                 ledger_entries_verified = 8,

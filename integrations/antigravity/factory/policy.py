@@ -111,11 +111,14 @@ def is_prohibited_branch(branch: str) -> bool:
 
     for cand in candidates:
         low = cand.lower()
-        for prefix in ("refs/heads/", "refs/remotes/origin/", "remotes/origin/", "origin/"):
-            if low.startswith(prefix):
-                low = low[len(prefix):]
+        low = re.sub(r"^(?:refs/heads/|refs/remotes/[^/]+/|remotes/[^/]+/)", "", low)
         if low in PROHIBITED_BRANCH_NAMES_LOWER:
             return True
+        if "/" in low:
+            # Reject <remote>/<protected> (e.g., origin/main, upstream/main, fork/master)
+            first, rest = low.split("/", 1)
+            if rest in PROHIBITED_BRANCH_NAMES_LOWER:
+                return True
     return False
 
 
@@ -186,15 +189,18 @@ def assert_paths_within_ownership(
     changed_paths: list[str],
     *,
     allow_protected_governance: bool = False,
+    require_write_operation: bool = True,
 ) -> list[str]:
     """Verify every touched file is inside MissionPacket.owned_paths and respects persona path restrictions."""
-    assert_operation_allowed(packet, "WRITE_OWNED")
+    if require_write_operation:
+        assert_operation_allowed(packet, "WRITE_OWNED")
     owned_prefixes = packet.get("owned_paths", [])
     persona = packet.get("assigned_persona", "")
     validated: list[str] = []
 
     for raw in changed_paths:
         norm = normalize_rel_path(raw)
+        norm_low = norm.lower()
         if not allow_protected_governance and is_protected_governance_path(norm):
             raise PolicyViolationError(f"Protected governance file {norm!r} cannot be modified by worker.")
 
@@ -203,20 +209,16 @@ def assert_paths_within_ownership(
                 f"Out-of-scope file mutation denied: {norm!r} is not inside owned_paths {owned_prefixes}"
             )
 
-        if persona == "Antigravity-Scribe" and not (
-            norm.endswith((".md", ".json", ".txt")) or "/adr/" in f"/{norm.lower()}" or "/evidence/" in f"/{norm.lower()}"
-        ):
-            raise PolicyViolationError(f"Antigravity-Scribe is restricted to documentation/capsule paths, denied: {norm!r}")
+        if persona == "Antigravity-Scribe" and not norm_low.endswith((".md", ".json", ".txt")):
+            raise PolicyViolationError(f"Antigravity-Scribe is restricted to documentation/capsule files (.md/.json/.txt), denied: {norm!r}")
 
-        if persona == "Antigravity-Lucien" and not (
-            norm.endswith((".md", ".schema.json", ".json")) or "/adr/" in f"/{norm.lower()}" or "/schemas/" in f"/{norm.lower()}"
-        ):
-            raise PolicyViolationError(f"Antigravity-Lucien is restricted to architecture/ADR/schema paths, denied: {norm!r}")
+        if persona == "Antigravity-Lucien" and not norm_low.endswith((".md", ".schema.json", ".json")):
+            raise PolicyViolationError(f"Antigravity-Lucien is restricted to architecture/ADR/schema files (.md/.json), denied: {norm!r}")
 
         if persona == "Antigravity-QA":
             if packet.get("formal_role") != "Code Writer":
                 raise PolicyViolationError("Antigravity-QA requires explicit Code Writer role transition to write test files.")
-            if not ("test" in norm.lower() or "benchmark" in norm.lower()):
+            if not ("test" in norm_low or "benchmark" in norm_low):
                 raise PolicyViolationError(f"Antigravity-QA test-writer scope forbids non-test path: {norm!r}")
 
         validated.append(norm)

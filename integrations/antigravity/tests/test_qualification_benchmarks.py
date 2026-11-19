@@ -22,7 +22,7 @@ class QualificationBenchmarksTests(unittest.TestCase):
         self.assertEqual(res["status"], "PASS")
         self.assertEqual(res["trials_executed"], 2)
         for t in res["trials"]:
-            self.assertEqual(t["cli_assertions"], 28)
+            self.assertEqual(t["cli_assertions"], 37)
             self.assertTrue(t["http_oracle_verified"])
 
     def test_benchmark_b_csharp_aspnet_transaction_engine(self) -> None:
@@ -31,7 +31,7 @@ class QualificationBenchmarksTests(unittest.TestCase):
         self.assertTrue(res["build_output_clean"])
         self.assertEqual(res["trials_executed"], 2)
         for t in res["trials"]:
-            self.assertEqual(t["self_test_assertions"], 25)
+            self.assertEqual(t["self_test_assertions"], 35)
             self.assertTrue(t["external_hidden_oracle_verified"])
 
     def test_benchmark_c_blind_seeded_deceptive_defects(self) -> None:

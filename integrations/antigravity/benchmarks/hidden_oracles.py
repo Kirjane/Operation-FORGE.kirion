@@ -247,7 +247,7 @@ def run_benchmark_b_with_hidden_oracle(trials: int = 2) -> dict[str, Any]:
 
         for trial in range(1, trials + 1):
             started = time.perf_counter()
-            # 1. Run built-in self-test suite (22 assertions over live Kestrel HTTP + SQLite WAL)
+            # 1. Run built-in self-test suite (runtime-counted assertions over live Kestrel HTTP + SQLite WAL)
             run_proc = subprocess.run(
                 [str(exe_path), "--self-test"],
                 cwd=out_dir,

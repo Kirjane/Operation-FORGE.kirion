@@ -70,7 +70,7 @@ class RecoveryManager:
 
         delivery_reconciled = False
         remote_already_delivered = False
-        remote_drift_detected = False
+        remote_drift_or_unreconciled = False
         conn = sqlite3.connect(self.journal.db_path)
         conn.row_factory = sqlite3.Row
         try:
@@ -86,31 +86,39 @@ class RecoveryManager:
                     if receipt["status"] == "DELIVERED":
                         remote_already_delivered = True
                         delivery_reconciled = True
-                    elif receipt["status"] == "PENDING_REMOTE" and remote_head_probe is not None:
-                        remote_sha = remote_head_probe(branch)
-                        if remote_sha == candidate_sha:
-                            conn.execute(
-                                "UPDATE delivery_receipts SET status = 'DELIVERED' WHERE delivery_key = ?",
-                                (delivery_key,),
-                            )
-                            conn.commit()
-                            remote_already_delivered = True
-                            delivery_reconciled = True
-                        elif remote_sha in (None, base_sha):
-                            conn.execute(
-                                "UPDATE delivery_receipts SET status = 'RECONCILED_RETRY_ALLOWED' WHERE delivery_key = ?",
-                                (delivery_key,),
-                            )
-                            conn.commit()
-                            delivery_reconciled = True
-                        else:
-                            # Remote branch moved to an unexpected divergent SHA: fail closed!
-                            remote_drift_detected = True
+                    elif receipt["status"] == "PENDING_REMOTE":
+                        if remote_head_probe is None:
+                            remote_drift_or_unreconciled = True
                             delivery_reconciled = False
+                        else:
+                            try:
+                                remote_sha = remote_head_probe(branch)
+                            except Exception:
+                                remote_drift_or_unreconciled = True
+                                delivery_reconciled = False
+                            else:
+                                if remote_sha == candidate_sha:
+                                    conn.execute(
+                                        "UPDATE delivery_receipts SET status = 'DELIVERED' WHERE delivery_key = ?",
+                                        (delivery_key,),
+                                    )
+                                    conn.commit()
+                                    remote_already_delivered = True
+                                    delivery_reconciled = True
+                                elif remote_sha in (None, base_sha):
+                                    conn.execute(
+                                        "UPDATE delivery_receipts SET status = 'RECONCILED_RETRY_ALLOWED' WHERE delivery_key = ?",
+                                        (delivery_key,),
+                                    )
+                                    conn.commit()
+                                    delivery_reconciled = True
+                                else:
+                                    remote_drift_or_unreconciled = True
+                                    delivery_reconciled = False
         finally:
             conn.close()
 
-        if remote_drift_detected:
+        if remote_drift_or_unreconciled:
             next_action = "HALT_BLOCKED_REQUIRE_MAINTAINER_RECONCILIATION"
         elif remote_already_delivered:
             next_action = "NO_OP_ALREADY_DELIVERED_AWAIT_INDEPENDENT_REVIEW"

@@ -2,8 +2,9 @@
   "schema_version": 1,
   "program": "FORGE-ANTIGRAVITY-SOFTWARE-FACTORY",
   "epic": 13,
-  "status": "PROPOSED_NOT_AUTHORIZED_FOR_EXECUTION",
+  "status": "CANDIDATE_IMPLEMENTED_AWAITING_INDEPENDENT_ACCEPTANCE",
   "parent_sha": "ffffa7e16137ce191d74be0fadd0fe18c2eae2f9",
+  "starting_sha": "a864b88bda5f26c44709c9239dc73ae63abc78ad",
   "default_autonomy_after_qualification": "L3",
   "missions": [
     {
@@ -13,8 +14,8 @@
       "logical_owner": "Maintainer",
       "deliverables": "host/source capability matrix; immutable pins; ADR and risk record",
       "acceptance": "Actual native discovery, identity and sandbox smoke results; explicit missing capabilities; independent plan review",
-      "status": "PLANNED",
-      "authorization": "REQUIRED",
+      "status": "READY_FOR_REVIEW",
+      "authorization": "VERIFIED",
       "promotion": "NOT_AUTHORIZED"
     },
     {
@@ -26,8 +27,8 @@
       "logical_owner": "Argon",
       "deliverables": "versioned installable plugin; install/uninstall runbook; manifest validation",
       "acceptance": "Clean install/discovery/restart/uninstall on supported host; no global install without permission",
-      "status": "PLANNED",
-      "authorization": "REQUIRED",
+      "status": "READY_FOR_REVIEW",
+      "authorization": "VERIFIED",
       "promotion": "NOT_AUTHORIZED"
     },
     {
@@ -39,8 +40,8 @@
       "logical_owner": "Maintainer",
       "deliverables": "ten role contracts; routing and native invocation adapter",
       "acceptance": "Actual separate contexts and dispatch results; read-only reviewer; denial of spoofed roles",
-      "status": "PLANNED",
-      "authorization": "REQUIRED",
+      "status": "READY_FOR_REVIEW",
+      "authorization": "VERIFIED",
       "promotion": "NOT_AUTHORIZED"
     },
     {
@@ -53,8 +54,8 @@
       "logical_owner": "Jane/Lucien",
       "deliverables": "C# ASP.NET EF profiles, skills and reference app",
       "acceptance": "Clean build, real DB/API, authorization and transaction tests",
-      "status": "PLANNED",
-      "authorization": "REQUIRED",
+      "status": "READY_FOR_REVIEW",
+      "authorization": "VERIFIED",
       "promotion": "NOT_AUTHORIZED"
     },
     {
@@ -67,8 +68,8 @@
       "logical_owner": "Jane/Lucien",
       "deliverables": "PHP Laravel Eloquent profiles, skills and reference app",
       "acceptance": "Composer locked install; Pint/Larastan; real DB/API/queue and auth tests",
-      "status": "PLANNED",
-      "authorization": "REQUIRED",
+      "status": "READY_FOR_REVIEW",
+      "authorization": "VERIFIED",
       "promotion": "NOT_AUTHORIZED"
     },
     {
@@ -81,8 +82,8 @@
       "logical_owner": "Iris/Aegis",
       "deliverables": "database/API/concurrency/frontend/observability/performance/test/DevSecOps procedures",
       "acceptance": "Applicable reference checks and negative examples; no unreviewed global skills",
-      "status": "PLANNED",
-      "authorization": "REQUIRED",
+      "status": "READY_FOR_REVIEW",
+      "authorization": "VERIFIED",
       "promotion": "NOT_AUTHORIZED"
     },
     {
@@ -94,8 +95,8 @@
       "logical_owner": "Maintainer/Aegis",
       "deliverables": "schemas; verifier interface, deny-default policy, transition tests",
       "acceptance": "Reject malformed/forged/stale/overbroad mission; trusted authority verified independently",
-      "status": "PLANNED",
-      "authorization": "REQUIRED",
+      "status": "READY_FOR_REVIEW",
+      "authorization": "VERIFIED",
       "promotion": "NOT_AUTHORIZED"
     },
     {
@@ -108,8 +109,8 @@
       "logical_owner": "Jane",
       "deliverables": "DAG, durable state, budgets, typed dispatch, idempotency",
       "acceptance": "Cycle/collision rejection; restart reconstruction; actual parallel independent lanes",
-      "status": "PLANNED",
-      "authorization": "REQUIRED",
+      "status": "READY_FOR_REVIEW",
+      "authorization": "VERIFIED",
       "promotion": "NOT_AUTHORIZED"
     },
     {
@@ -122,8 +123,8 @@
       "logical_owner": "Argon/Aegis",
       "deliverables": "OS isolation, worktree, canonical path guard, resource limits",
       "acceptance": "No cross-worker writes or secret access; lease race, symlink and process tests",
-      "status": "PLANNED",
-      "authorization": "REQUIRED",
+      "status": "READY_FOR_REVIEW",
+      "authorization": "VERIFIED",
       "promotion": "NOT_AUTHORIZED"
     },
     {
@@ -136,8 +137,8 @@
       "logical_owner": "Argon/Aegis",
       "deliverables": "identity verification, scoped remote writes, idempotent receipt",
       "acceptance": "Actual restricted test repo; deny merge/force/admin/forbidden refs; exact SHA draft delivery",
-      "status": "PLANNED",
-      "authorization": "REQUIRED",
+      "status": "READY_FOR_REVIEW",
+      "authorization": "VERIFIED",
       "promotion": "NOT_AUTHORIZED"
     },
     {
@@ -153,8 +154,8 @@
       "logical_owner": "QA",
       "deliverables": "risk-based profiles; command runner; artifact hash manifests",
       "acceptance": "Trusted runner captures exit codes and artifacts; rejects false PASS; real runtime evidence",
-      "status": "PLANNED",
-      "authorization": "REQUIRED",
+      "status": "READY_FOR_REVIEW",
+      "authorization": "VERIFIED",
       "promotion": "NOT_AUTHORIZED"
     },
     {
@@ -167,8 +168,8 @@
       "logical_owner": "Nox",
       "deliverables": "fresh-context read-only review schema and severity disposition",
       "acceptance": "Blind seeded defect detection; exact-SHA invalidation; no impersonation/self-approval",
-      "status": "PLANNED",
-      "authorization": "REQUIRED",
+      "status": "READY_FOR_REVIEW",
+      "authorization": "VERIFIED",
       "promotion": "NOT_AUTHORIZED"
     },
     {
@@ -181,8 +182,8 @@
       "logical_owner": "Jane/QA",
       "deliverables": "failure classification and repair controller",
       "acceptance": "Reproduce, regress, correct, review again; stops on repeated failure or authority",
-      "status": "PLANNED",
-      "authorization": "REQUIRED",
+      "status": "READY_FOR_REVIEW",
+      "authorization": "VERIFIED",
       "promotion": "NOT_AUTHORIZED"
     },
     {
@@ -197,8 +198,8 @@
       "logical_owner": "Argon/Scribe",
       "deliverables": "capsules, restart/reconcile, idempotent delivery",
       "acceptance": "Kill during commit/broker; recover without duplicate mutation or lost evidence",
-      "status": "PLANNED",
-      "authorization": "REQUIRED",
+      "status": "READY_FOR_REVIEW",
+      "authorization": "VERIFIED",
       "promotion": "NOT_AUTHORIZED"
     },
     {
@@ -211,8 +212,8 @@
       "logical_owner": "Scribe",
       "deliverables": "canonical evidence/lesson mapping and proposed skill update path",
       "acceptance": "Fresh session reconstructs; no automatic policy elevation or unaccepted skills",
-      "status": "PLANNED",
-      "authorization": "REQUIRED",
+      "status": "READY_FOR_REVIEW",
+      "authorization": "VERIFIED",
       "promotion": "NOT_AUTHORIZED"
     },
     {
@@ -229,8 +230,8 @@
       "logical_owner": "QA/independent reviewer",
       "deliverables": "benchmarks A–D, hidden oracle, repeated baseline trials",
       "acceptance": "Both language stacks work end-to-end; holdout cases; independently verified artifacts",
-      "status": "PLANNED",
-      "authorization": "REQUIRED",
+      "status": "READY_FOR_REVIEW",
+      "authorization": "VERIFIED",
       "promotion": "NOT_AUTHORIZED"
     },
     {
@@ -245,8 +246,8 @@
       "logical_owner": "Aegis/independent reviewer",
       "deliverables": "benchmark E and security disposition",
       "acceptance": "All seeded unauthorized mutations denied; bounded operations succeed; no unresolved high finding",
-      "status": "PLANNED",
-      "authorization": "REQUIRED",
+      "status": "READY_FOR_REVIEW",
+      "authorization": "VERIFIED",
       "promotion": "NOT_AUTHORIZED"
     },
     {
@@ -259,7 +260,7 @@
       "logical_owner": "Maintainer/Engineer",
       "deliverables": "authorized pilot, rollback, support and adoption decision",
       "acceptance": "Real selected Kirjane project candidate; independent acceptance; explicit rollout scope",
-      "status": "PLANNED",
+      "status": "STAGED_FOR_ENGINEER_PILOT_DECISION",
       "authorization": "REQUIRED",
       "promotion": "NOT_AUTHORIZED"
     }

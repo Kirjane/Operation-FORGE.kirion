@@ -1,0 +1,32 @@
+{
+  "profile_id": "csharp_aspnet",
+  "name": "C# / ASP.NET Core / EF Core Production Profile",
+  "stack_status": "DEFAULT_ENTERPRISE_BACKEND",
+  "policy_reconciliation_ref": "PR #10 (b0355f326bd96bcb29db40e3e358cc8a7bac058e) opt-in profile",
+  "verified_host_runtime": {
+    "dotnet_sdk": "10.0.401",
+    "aspnet_runtime": "10.0.12",
+    "target_framework": "net10.0"
+  },
+  "required_skills": [
+    "kirion-core",
+    "kirion-dispatch",
+    "kirion-csharp",
+    "kirion-aspnet",
+    "kirion-efcore",
+    "kirion-concurrency"
+  ],
+  "invariants": [
+    "Nullable reference types enabled",
+    "Exact decimal (scale 2) or integer minor-unit monetary arithmetic",
+    "Explicit CancellationToken propagation on async I/O",
+    "Scoped DbContext/connection confinement (never captured in Singleton)",
+    "Explicit database transaction and idempotency key enforcement",
+    "RFC 9457 Problem Details error responses without stack trace leakage"
+  ],
+  "validation_commands": [
+    ["dotnet", "--info"],
+    ["dotnet", "build", "-c", "Release"],
+    ["dotnet", "test", "-c", "Release", "--no-build"]
+  ]
+}

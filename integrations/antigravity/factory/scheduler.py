@@ -1,0 +1,433 @@
+"""F07 — Deterministic DAG scheduler, collision detector, budget guard, and SQLite WAL hash-chained journal."""
+from __future__ import annotations
+
+import datetime as dt
+import hashlib
+import json
+import sqlite3
+import uuid
+from pathlib import Path
+from typing import Any
+
+from .authority import (
+    AuthorityError,
+    validate_contract,
+    validate_lifecycle_transition,
+    verify_mission_packet,
+)
+from .policy import normalize_rel_path, path_matches_prefix
+
+GENESIS_EVENT_HASH = "0" * 64
+
+
+class SchedulerError(AuthorityError):
+    """Raised on DAG cycles, parallel path collisions, budget exhaustion, or CAS conflicts."""
+
+
+def utc_now_iso() -> str:
+    return dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+
+
+def paths_overlap(path_a: str, path_b: str) -> bool:
+    norm_a = normalize_rel_path(path_a.rstrip("/"))
+    norm_b = normalize_rel_path(path_b.rstrip("/"))
+    return path_matches_prefix(norm_a, norm_b) or path_matches_prefix(norm_b, norm_a)
+
+
+def detect_parallel_collisions(packets: list[dict[str, Any]]) -> list[str]:
+    """Detect overlapping owned_paths, owned_modules, or owned_behaviors across concurrent writer packets."""
+    writers = [p for p in packets if "WRITE_OWNED" in p.get("allowed_operations", [])]
+    collisions: list[str] = []
+    for i in range(len(writers)):
+        for j in range(i + 1, len(writers)):
+            a, b = writers[i], writers[j]
+            for pa in a.get("owned_paths", []):
+                for pb in b.get("owned_paths", []):
+                    if paths_overlap(pa, pb):
+                        collisions.append(f"Path collision between {a['mission_id']} ({pa}) and {b['mission_id']} ({pb})")
+            mods_a = set(a.get("owned_modules", []))
+            mods_b = set(b.get("owned_modules", []))
+            shared_mods = sorted(mods_a & mods_b)
+            if shared_mods:
+                collisions.append(f"Module collision between {a['mission_id']} and {b['mission_id']}: {shared_mods}")
+            beh_a = set(a.get("owned_behaviors", []))
+            beh_b = set(b.get("owned_behaviors", []))
+            shared_beh = sorted(beh_a & beh_b)
+            if shared_beh:
+                collisions.append(f"Behavior collision between {a['mission_id']} and {b['mission_id']}: {shared_beh}")
+    return collisions
+
+
+def build_topological_waves(missions: list[dict[str, Any]]) -> list[list[str]]:
+    """Validate acyclic DAG and group mission IDs into parallel execution waves."""
+    by_id: dict[str, dict[str, Any]] = {}
+    for m in missions:
+        mid = m.get("mission_id") or m.get("id")
+        if not mid:
+            raise SchedulerError("Mission entry missing mission_id/id.")
+        if mid in by_id:
+            raise SchedulerError(f"Duplicate mission ID in DAG: {mid}")
+        by_id[mid] = m
+
+    in_degree: dict[str, int] = {mid: 0 for mid in by_id}
+    dependents: dict[str, list[str]] = {mid: [] for mid in by_id}
+
+    for mid, m in by_id.items():
+        for dep in m.get("depends_on", []):
+            if dep not in by_id:
+                raise SchedulerError(f"Mission {mid} depends on unknown mission {dep}")
+            if dep == mid:
+                raise SchedulerError(f"Mission {mid} has a self-dependency cycle")
+            in_degree[mid] += 1
+            dependents[dep].append(mid)
+
+    waves: list[list[str]] = []
+    ready = sorted(mid for mid, deg in in_degree.items() if deg == 0)
+    visited = 0
+
+    while ready:
+        waves.append(ready)
+        next_ready: list[str] = []
+        for mid in ready:
+            visited += 1
+            for child in dependents[mid]:
+                in_degree[child] -= 1
+                if in_degree[child] == 0:
+                    next_ready.append(child)
+        ready = sorted(next_ready)
+
+    if visited != len(by_id):
+        unresolved = sorted(mid for mid, deg in in_degree.items() if deg > 0)
+        raise SchedulerError(f"Cycle detected in mission DAG involving: {unresolved}")
+
+    return waves
+
+
+def enforce_wave_budget(packets: list[dict[str, Any]]) -> None:
+    """Enforce max 3 parallel writers and max 3 parallel read-only reviewers per wave."""
+    writers = [p for p in packets if "WRITE_OWNED" in p.get("allowed_operations", [])]
+    reviewers = [p for p in packets if p.get("formal_role") == "Reviewer"]
+    if len(writers) > 3:
+        raise SchedulerError(f"Wave exceeds max_parallel_writers budget ({len(writers)} > 3)")
+    if len(reviewers) > 3:
+        raise SchedulerError(f"Wave exceeds max_parallel_reviewers budget ({len(reviewers)} > 3)")
+    collisions = detect_parallel_collisions(packets)
+    if collisions:
+        raise SchedulerError("Parallel ownership collision rejected: " + "; ".join(collisions))
+
+
+class FactoryJournal:
+    """Append-only SQLite WAL event stream with compare-and-set state version and idempotent dispatch."""
+
+    def __init__(self, db_path: Path) -> None:
+        self.db_path = db_path
+        self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        self._init_db()
+
+    def _connect(self) -> sqlite3.Connection:
+        conn = sqlite3.connect(self.db_path, timeout=15.0, isolation_level=None)
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA journal_mode=WAL;")
+        conn.execute("PRAGMA foreign_keys=ON;")
+        conn.execute("PRAGMA synchronous=NORMAL;")
+        return conn
+
+    def _init_db(self) -> None:
+        conn = self._connect()
+        try:
+            conn.execute("BEGIN IMMEDIATE;")
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS missions (
+                    mission_id TEXT PRIMARY KEY,
+                    run_id TEXT NOT NULL,
+                    state TEXT NOT NULL,
+                    state_version INTEGER NOT NULL,
+                    base_sha TEXT NOT NULL,
+                    candidate_sha TEXT NOT NULL,
+                    repair_cycles INTEGER NOT NULL DEFAULT 0,
+                    identical_retries INTEGER NOT NULL DEFAULT 0,
+                    last_failure_sig TEXT NOT NULL DEFAULT '',
+                    packet_json TEXT NOT NULL,
+                    updated_at_utc TEXT NOT NULL
+                );
+                """
+            )
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS journal_events (
+                    seq INTEGER PRIMARY KEY AUTOINCREMENT,
+                    event_id TEXT NOT NULL UNIQUE,
+                    mission_id TEXT NOT NULL,
+                    run_id TEXT NOT NULL,
+                    stage TEXT NOT NULL,
+                    event_type TEXT NOT NULL,
+                    state_version INTEGER NOT NULL,
+                    payload_json TEXT NOT NULL,
+                    payload_sha256 TEXT NOT NULL,
+                    prev_event_sha256 TEXT NOT NULL,
+                    created_at_utc TEXT NOT NULL
+                );
+                """
+            )
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS dispatches (
+                    dispatch_key TEXT PRIMARY KEY,
+                    mission_id TEXT NOT NULL,
+                    worker_id TEXT NOT NULL,
+                    context_id TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    result_json TEXT NOT NULL,
+                    created_at_utc TEXT NOT NULL
+                );
+                """
+            )
+            conn.execute("COMMIT;")
+        except Exception:
+            conn.execute("ROLLBACK;")
+            raise
+        finally:
+            conn.close()
+
+    def register_mission(self, packet: dict[str, Any]) -> dict[str, Any]:
+        verify_mission_packet(packet)
+        mid = packet["mission_id"]
+        run_id = packet["run_id"]
+        base_sha = packet["base_sha"]
+        now = utc_now_iso()
+        conn = self._connect()
+        try:
+            conn.execute("BEGIN IMMEDIATE;")
+            existing = conn.execute("SELECT * FROM missions WHERE mission_id = ?", (mid,)).fetchone()
+            if existing is not None:
+                conn.execute("ROLLBACK;")
+                return dict(existing)
+
+            conn.execute(
+                """
+                INSERT INTO missions (
+                    mission_id, run_id, state, state_version, base_sha, candidate_sha,
+                    repair_cycles, identical_retries, last_failure_sig, packet_json, updated_at_utc
+                ) VALUES (?, ?, 'PLANNED', 1, ?, ?, 0, 0, '', ?, ?)
+                """,
+                (mid, run_id, base_sha, base_sha, json.dumps(packet, sort_keys=True), now),
+            )
+            self._append_event_in_tx(
+                conn,
+                mission_id=mid,
+                run_id=run_id,
+                stage="INTAKE",
+                event_type="MISSION_REGISTERED",
+                state_version=1,
+                payload={"state": "PLANNED", "base_sha": base_sha},
+            )
+            conn.execute("COMMIT;")
+            return self.get_mission(mid)
+        except Exception:
+            if conn.in_transaction:
+                conn.execute("ROLLBACK;")
+            raise
+        finally:
+            conn.close()
+
+    def _append_event_in_tx(
+        self,
+        conn: sqlite3.Connection,
+        *,
+        mission_id: str,
+        run_id: str,
+        stage: str,
+        event_type: str,
+        state_version: int,
+        payload: dict[str, Any],
+    ) -> dict[str, Any]:
+        last_row = conn.execute("SELECT payload_sha256, prev_event_sha256, seq FROM journal_events ORDER BY seq DESC LIMIT 1").fetchone()
+        if last_row is None:
+            prev_hash = GENESIS_EVENT_HASH
+        else:
+            chain_material = f"{last_row['seq']}:{last_row['prev_event_sha256']}:{last_row['payload_sha256']}".encode("utf-8")
+            prev_hash = hashlib.sha256(chain_material).hexdigest()
+
+        payload_json = json.dumps(payload, sort_keys=True)
+        payload_sha256 = hashlib.sha256(payload_json.encode("utf-8")).hexdigest()
+        event_id = f"evt-{uuid.uuid4().hex[:16]}"
+        now = utc_now_iso()
+
+        cur = conn.execute(
+            """
+            INSERT INTO journal_events (
+                event_id, mission_id, run_id, stage, event_type, state_version,
+                payload_json, payload_sha256, prev_event_sha256, created_at_utc
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (event_id, mission_id, run_id, stage, event_type, state_version, payload_json, payload_sha256, prev_hash, now),
+        )
+        event_obj = {
+            "schema_version": 1,
+            "seq": cur.lastrowid,
+            "event_id": event_id,
+            "mission_id": mission_id,
+            "run_id": run_id,
+            "stage": stage,
+            "event_type": event_type,
+            "state_version": state_version,
+            "payload": payload,
+            "payload_sha256": payload_sha256,
+            "prev_event_sha256": prev_hash,
+            "created_at_utc": now,
+        }
+        validate_contract(event_obj, "journal-event.schema.json")
+        return event_obj
+
+    def transition_state(
+        self,
+        mission_id: str,
+        next_state: str,
+        *,
+        expected_version: int,
+        actor_role: str,
+        is_author: bool = False,
+        candidate_sha: str | None = None,
+        stage: str = "LIFECYCLE",
+        details: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        conn = self._connect()
+        try:
+            conn.execute("BEGIN IMMEDIATE;")
+            row = conn.execute("SELECT * FROM missions WHERE mission_id = ?", (mission_id,)).fetchone()
+            if row is None:
+                raise SchedulerError(f"Unknown mission_id: {mission_id}")
+            if row["state_version"] != expected_version:
+                raise SchedulerError(
+                    f"Compare-and-set version conflict for {mission_id}: expected {expected_version}, found {row['state_version']}"
+                )
+
+            current_state = row["state"]
+            validate_lifecycle_transition(current_state, next_state, actor_role=actor_role, is_author=is_author)
+            new_version = expected_version + 1
+            new_sha = candidate_sha or row["candidate_sha"]
+            now = utc_now_iso()
+
+            cur = conn.execute(
+                """
+                UPDATE missions
+                SET state = ?, state_version = ?, candidate_sha = ?, updated_at_utc = ?
+                WHERE mission_id = ? AND state_version = ?
+                """,
+                (next_state, new_version, new_sha, now, mission_id, expected_version),
+            )
+            if cur.rowcount != 1:
+                raise SchedulerError(f"CAS update failed for {mission_id}")
+
+            payload = {
+                "from_state": current_state,
+                "to_state": next_state,
+                "actor_role": actor_role,
+                "candidate_sha": new_sha,
+                **(details or {}),
+            }
+            self._append_event_in_tx(
+                conn,
+                mission_id=mission_id,
+                run_id=row["run_id"],
+                stage=stage,
+                event_type="STATE_TRANSITION",
+                state_version=new_version,
+                payload=payload,
+            )
+            conn.execute("COMMIT;")
+            return self.get_mission(mission_id)
+        except Exception:
+            if conn.in_transaction:
+                conn.execute("ROLLBACK;")
+            raise
+        finally:
+            conn.close()
+
+    def record_idempotent_dispatch(
+        self,
+        dispatch_key: str,
+        mission_id: str,
+        worker_id: str,
+        context_id: str,
+        result: dict[str, Any],
+    ) -> tuple[bool, dict[str, Any]]:
+        """Record or return an existing idempotent worker dispatch result. Returns (was_cached, result)."""
+        conn = self._connect()
+        try:
+            conn.execute("BEGIN IMMEDIATE;")
+            existing = conn.execute("SELECT * FROM dispatches WHERE dispatch_key = ?", (dispatch_key,)).fetchone()
+            if existing is not None:
+                conn.execute("ROLLBACK;")
+                return True, json.loads(existing["result_json"])
+
+            now = utc_now_iso()
+            conn.execute(
+                """
+                INSERT INTO dispatches (dispatch_key, mission_id, worker_id, context_id, status, result_json, created_at_utc)
+                VALUES (?, ?, ?, ?, 'COMPLETED', ?, ?)
+                """,
+                (dispatch_key, mission_id, worker_id, context_id, json.dumps(result, sort_keys=True), now),
+            )
+            m = conn.execute("SELECT * FROM missions WHERE mission_id = ?", (mission_id,)).fetchone()
+            if m is not None:
+                self._append_event_in_tx(
+                    conn,
+                    mission_id=mission_id,
+                    run_id=m["run_id"],
+                    stage="DISPATCH",
+                    event_type="WORKER_DISPATCHED",
+                    state_version=m["state_version"],
+                    payload={"dispatch_key": dispatch_key, "worker_id": worker_id, "context_id": context_id},
+                )
+            conn.execute("COMMIT;")
+            return False, result
+        except Exception:
+            if conn.in_transaction:
+                conn.execute("ROLLBACK;")
+            raise
+        finally:
+            conn.close()
+
+    def get_mission(self, mission_id: str) -> dict[str, Any]:
+        conn = self._connect()
+        try:
+            row = conn.execute("SELECT * FROM missions WHERE mission_id = ?", (mission_id,)).fetchone()
+            if row is None:
+                raise SchedulerError(f"Mission not found in journal: {mission_id}")
+            data = dict(row)
+            data["packet"] = json.loads(data["packet_json"])
+            return data
+        finally:
+            conn.close()
+
+    def list_events(self, mission_id: str | None = None) -> list[dict[str, Any]]:
+        conn = self._connect()
+        try:
+            if mission_id:
+                rows = conn.execute("SELECT * FROM journal_events WHERE mission_id = ? ORDER BY seq ASC", (mission_id,)).fetchall()
+            else:
+                rows = conn.execute("SELECT * FROM journal_events ORDER BY seq ASC").fetchall()
+            out = []
+            for r in rows:
+                d = dict(r)
+                d["payload"] = json.loads(d.pop("payload_json"))
+                out.append(d)
+            return out
+        finally:
+            conn.close()
+
+    def verify_hash_chain(self) -> bool:
+        """Verify tamper-evidence of the entire journal_events hash chain."""
+        events = self.list_events()
+        prev_hash = GENESIS_EVENT_HASH
+        for ev in events:
+            if ev["prev_event_sha256"] != prev_hash:
+                return False
+            payload_json = json.dumps(ev["payload"], sort_keys=True)
+            if hashlib.sha256(payload_json.encode("utf-8")).hexdigest() != ev["payload_sha256"]:
+                return False
+            chain_material = f"{ev['seq']}:{ev['prev_event_sha256']}:{ev['payload_sha256']}".encode("utf-8")
+            prev_hash = hashlib.sha256(chain_material).hexdigest()
+        return True

@@ -1,0 +1,21 @@
+{
+  "name": "kirion-forge",
+  "displayName": "KIRION Forge Software Factory",
+  "description": "Governed autonomous software engineering factory for KIRION Forge: 10-persona Kirion fleet, C#/ASP.NET Core and PHP/Laravel specialization, deterministic orchestration, fresh-context Antigravity-Nox review, and verified Kirch-Nairu delivery.",
+  "version": "1.0.0-r1",
+  "author": {
+    "name": "Kirch Ivan Balite (Kirch-Nairu)",
+    "url": "https://github.com/Kirch-Nairu"
+  },
+  "homepage": "https://github.com/Kirch-Nairu/Operation-FORGE.kirion/tree/feat/antigravity-software-factory-r1/integrations/antigravity",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Kirch-Nairu/Operation-FORGE.kirion"
+  },
+  "logo": "assets/logo.svg",
+  "suggestedPrompts": [
+    "Verify current Forge mission authority, exact branch SHA, and active quality gates",
+    "Dispatch Antigravity-Jane and Antigravity-QA on a bounded C# or Laravel feature candidate",
+    "Run a fresh-context Antigravity-Nox adversarial review at the current frozen candidate SHA"
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "profile_id": "php_laravel",
+  "name": "PHP / Laravel / Eloquent First-Class Production Profile",
+  "stack_status": "FIRST_CLASS_PRODUCTION_ECOSYSTEM",
+  "verified_host_runtime": {
+    "php_version": "8.4.25",
+    "composer_version": "2.10.3",
+    "pdo_drivers": ["pdo_pgsql", "pdo_sqlite"]
+  },
+  "required_skills": [
+    "kirion-core",
+    "kirion-dispatch",
+    "kirion-php",
+    "kirion-laravel",
+    "kirion-eloquent",
+    "kirion-laravel-security",
+    "kirion-laravel-runtime"
+  ],
+  "invariants": [
+    "declare(strict_types=1) in domain, action, and service files",
+    "Object-level Policy/Gate and tenant_id isolation on all routes, actions, and jobs",
+    "Explicit mass-assignment allowlists ($fillable)",
+    "Exact integer minor-unit monetary calculations",
+    "Transactional row locking and after-commit idempotent queue jobs",
+    "Bound SQL parameters and escaped output"
+  ],
+  "validation_commands": [
+    ["php", "--version"],
+    ["composer", "--version"]
+  ]
+}

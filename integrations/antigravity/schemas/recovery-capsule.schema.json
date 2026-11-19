@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kirion-forge.local/integrations/antigravity/schemas/recovery-capsule.schema.json",
+  "title": "KIRION Forge Antigravity Recovery Sandbox Capsule",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "capsule_id",
+    "mission_id",
+    "run_id",
+    "base_sha",
+    "candidate_sha",
+    "lifecycle_state",
+    "state_version",
+    "interruption_point",
+    "active_leases",
+    "evidence_digests",
+    "delivery_key",
+    "delivery_reconciled",
+    "next_allowed_action",
+    "created_at_utc"
+  ],
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "capsule_id": { "type": "string", "minLength": 4 },
+    "mission_id": { "type": "string", "minLength": 2 },
+    "run_id": { "type": "string", "minLength": 3 },
+    "base_sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "candidate_sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "lifecycle_state": { "type": "string", "minLength": 2 },
+    "state_version": { "type": "integer", "minimum": 1 },
+    "interruption_point": { "type": "string", "minLength": 2 },
+    "active_leases": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "evidence_digests": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+    },
+    "delivery_key": { "type": ["string", "null"] },
+    "delivery_reconciled": { "type": "boolean" },
+    "next_allowed_action": { "type": "string", "minLength": 2 },
+    "created_at_utc": { "type": "string", "minLength": 10 }
+  }
+}

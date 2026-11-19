@@ -1,0 +1,290 @@
+"""F06 — Mission and authority contracts, JSON Schema validation, and lifecycle state machine."""
+from __future__ import annotations
+
+import json
+import re
+import subprocess
+from pathlib import Path
+from typing import Any
+
+from . import REPO_ROOT, SCHEMAS_ROOT
+
+SHA40_RE = re.compile(r"^[0-9a-f]{40}$")
+SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+MISSION_ID_RE = re.compile(r"^[A-Z0-9][A-Z0-9_-]{1,63}$")
+REPO_NAME_RE = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
+GATE_ID_RE = re.compile(r"^G(0[0-9]|1[0-5])$")
+
+CANONICAL_STATES = (
+    "PLANNED",
+    "AUTHORIZED",
+    "ACTIVE",
+    "READY",
+    "UNDER_REVIEW",
+    "ACCEPTED",
+    "REWORK",
+    "REJECTED",
+    "QUARANTINED",
+    "INTEGRATED",
+    "PROMOTED",
+    "OBSERVED",
+    "BLOCKED",
+)
+
+ALLOWED_TRANSITIONS: dict[str, set[str]] = {
+    "PLANNED": {"AUTHORIZED", "BLOCKED", "QUARANTINED"},
+    "AUTHORIZED": {"ACTIVE", "BLOCKED", "QUARANTINED"},
+    "ACTIVE": {"READY", "BLOCKED", "QUARANTINED"},
+    "READY": {"UNDER_REVIEW", "BLOCKED", "QUARANTINED"},
+    "UNDER_REVIEW": {"ACCEPTED", "REWORK", "REJECTED", "QUARANTINED", "BLOCKED"},
+    "REWORK": {"ACTIVE", "BLOCKED", "QUARANTINED"},
+    "ACCEPTED": {"INTEGRATED", "PROMOTED", "BLOCKED", "QUARANTINED"},
+    "INTEGRATED": {"PROMOTED", "REWORK", "BLOCKED", "QUARANTINED"},
+    "PROMOTED": {"OBSERVED", "BLOCKED", "QUARANTINED"},
+    "OBSERVED": set(),
+    "REJECTED": set(),
+    "QUARANTINED": set(),
+    "BLOCKED": {"AUTHORIZED", "ACTIVE", "QUARANTINED"},
+}
+
+VALID_PERSONAS = {
+    "Antigravity-Maintainer",
+    "Antigravity-Lucien",
+    "Antigravity-Jane",
+    "Antigravity-Nox",
+    "Antigravity-Argon",
+    "Antigravity-Iris",
+    "Antigravity-QA",
+    "Antigravity-Aegis",
+    "Antigravity-Integrator",
+    "Antigravity-Scribe",
+}
+
+VALID_FORMAL_ROLES = {"Maintainer", "Code Writer", "Integration Writer", "Reviewer"}
+VALID_RISK_CLASSES = {"RISK-0", "RISK-1", "RISK-2", "RISK-3", "RISK-4"}
+VALID_OPERATIONS = {
+    "READ",
+    "WRITE_OWNED",
+    "RUN_GATE",
+    "REVIEW_READONLY",
+    "INTEGRATE_BRANCH",
+    "DELIVER_DRAFT_PR",
+}
+
+
+class AuthorityError(ValueError):
+    """Raised when a mission packet, state transition, or git authority check fails."""
+
+
+def validate_against_schema(instance: Any, schema: dict[str, Any], path: str = "$") -> list[str]:
+    """Deterministic JSON Schema Draft 2020-12 structural and constraint validator using stdlib."""
+    errors: list[str] = []
+    expected_type = schema.get("type")
+    if expected_type is not None:
+        allowed_types = expected_type if isinstance(expected_type, list) else [expected_type]
+        type_ok = False
+        for t in allowed_types:
+            if t == "object" and isinstance(instance, dict):
+                type_ok = True
+            elif t == "array" and isinstance(instance, list):
+                type_ok = True
+            elif t == "string" and isinstance(instance, str):
+                type_ok = True
+            elif t == "integer" and isinstance(instance, int) and not isinstance(instance, bool):
+                type_ok = True
+            elif t == "boolean" and isinstance(instance, bool):
+                type_ok = True
+            elif t == "null" and instance is None:
+                type_ok = True
+        if not type_ok:
+            return [f"{path}: expected type {expected_type}, got {type(instance).__name__}"]
+
+    if "const" in schema and instance != schema["const"]:
+        errors.append(f"{path}: expected const {schema['const']!r}, got {instance!r}")
+
+    if "enum" in schema and instance not in schema["enum"]:
+        errors.append(f"{path}: value {instance!r} not in enum {schema['enum']}")
+
+    if isinstance(instance, str):
+        if "\x00" in instance:
+            errors.append(f"{path}: null byte forbidden in string")
+        min_len = schema.get("minLength")
+        if min_len is not None and len(instance) < min_len:
+            errors.append(f"{path}: string length {len(instance)} < minLength {min_len}")
+        pattern = schema.get("pattern")
+        if pattern is not None and not re.search(pattern, instance):
+            errors.append(f"{path}: string {instance!r} does not match pattern {pattern}")
+
+    elif isinstance(instance, int) and not isinstance(instance, bool):
+        minimum = schema.get("minimum")
+        maximum = schema.get("maximum")
+        if minimum is not None and instance < minimum:
+            errors.append(f"{path}: {instance} < minimum {minimum}")
+        if maximum is not None and instance > maximum:
+            errors.append(f"{path}: {instance} > maximum {maximum}")
+
+    elif isinstance(instance, list):
+        min_items = schema.get("minItems")
+        max_items = schema.get("maxItems")
+        if min_items is not None and len(instance) < min_items:
+            errors.append(f"{path}: array length {len(instance)} < minItems {min_items}")
+        if max_items is not None and len(instance) > max_items:
+            errors.append(f"{path}: array length {len(instance)} > maxItems {max_items}")
+        item_schema = schema.get("items")
+        if isinstance(item_schema, dict):
+            for idx, item in enumerate(instance):
+                errors.extend(validate_against_schema(item, item_schema, f"{path}[{idx}]"))
+
+    elif isinstance(instance, dict):
+        required = schema.get("required", [])
+        for req_key in required:
+            if req_key not in instance:
+                errors.append(f"{path}: missing required property {req_key!r}")
+        props = schema.get("properties", {})
+        add_props = schema.get("additionalProperties", True)
+        for key, val in instance.items():
+            if key in props:
+                errors.extend(validate_against_schema(val, props[key], f"{path}.{key}"))
+            elif add_props is False:
+                errors.append(f"{path}: unexpected additional property {key!r}")
+            elif isinstance(add_props, dict):
+                errors.extend(validate_against_schema(val, add_props, f"{path}.{key}"))
+
+    return errors
+
+
+def load_schema(schema_name: str) -> dict[str, Any]:
+    path = SCHEMAS_ROOT / schema_name
+    if not path.is_file():
+        raise AuthorityError(f"Missing schema file: {path}")
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def validate_contract(instance: Any, schema_filename: str) -> None:
+    schema = load_schema(schema_filename)
+    errors = validate_against_schema(instance, schema)
+    if errors:
+        raise AuthorityError(f"Schema validation failed for {schema_filename}: {'; '.join(errors)}")
+
+
+def verify_mission_packet(
+    packet: dict[str, Any],
+    *,
+    expected_repo: str | None = None,
+    observed_base_sha: str | None = None,
+    trusted_verifiers: set[str] | None = None,
+) -> dict[str, Any]:
+    """Fail-closed verification of a MissionPacket against schema, authority, and budget invariants."""
+    validate_contract(packet, "mission-packet.schema.json")
+
+    if packet.get("work_mode") == "PAUSED" and "WRITE_OWNED" in packet.get("allowed_operations", []):
+        raise AuthorityError("PAUSED work_mode forbids WRITE_OWNED mutations.")
+
+    branch = packet["permitted_branch"]
+    if branch in ("main", "master", "HEAD"):
+        raise AuthorityError(f"MissionPacket cannot authorize direct mutation on protected branch {branch!r}.")
+
+    for owned in packet["owned_paths"]:
+        norm = owned.replace("\\", "/").strip()
+        if norm in ("*", ".", "/", "") or ".." in norm.split("/"):
+            raise AuthorityError(f"Overbroad or traversal owned_path rejected: {owned!r}")
+
+    if expected_repo is not None and packet["repo_name"] != expected_repo:
+        raise AuthorityError(f"Repository mismatch: packet={packet['repo_name']!r} expected={expected_repo!r}")
+
+    if observed_base_sha is not None and packet["base_sha"] != observed_base_sha:
+        raise AuthorityError(f"Stale base_sha: packet={packet['base_sha']} observed={observed_base_sha}")
+
+    allowed_verifiers = trusted_verifiers or {"Engineer:Kirch-Ivan-Balite", "Maintainer:Kirch-Nairu"}
+    if packet["verifier"] not in allowed_verifiers:
+        raise AuthorityError(f"Untrusted authorization verifier: {packet['verifier']!r}")
+
+    if not packet["authorization_ref"].startswith(("https://github.com/", "ISSUE-", "PR-", "FORGE-AUTH-")):
+        raise AuthorityError(f"Invalid authorization_ref format: {packet['authorization_ref']!r}")
+
+    persona = packet["assigned_persona"]
+    role = packet["formal_role"]
+    if persona in ("Antigravity-Nox", "Antigravity-Aegis") and role != "Reviewer":
+        raise AuthorityError(f"{persona} must hold formal_role 'Reviewer', got {role!r}")
+    if role == "Reviewer" and any(op in packet["allowed_operations"] for op in ("WRITE_OWNED", "INTEGRATE_BRANCH", "DELIVER_DRAFT_PR")):
+        raise AuthorityError("Reviewer formal_role cannot be granted write, integration, or delivery operations.")
+
+    return packet
+
+
+def validate_lifecycle_transition(
+    current_state: str,
+    next_state: str,
+    *,
+    actor_role: str,
+    is_author: bool = False,
+) -> str:
+    """Enforce canonical Forge lifecycle state transitions and anti-self-promotion rules."""
+    if current_state not in CANONICAL_STATES:
+        raise AuthorityError(f"Unknown current lifecycle state: {current_state!r}")
+    if next_state not in CANONICAL_STATES:
+        raise AuthorityError(f"Unknown target lifecycle state: {next_state!r}")
+    if next_state not in ALLOWED_TRANSITIONS.get(current_state, set()):
+        raise AuthorityError(f"Illegal lifecycle transition: {current_state} -> {next_state}")
+
+    if next_state in ("ACCEPTED", "PROMOTED"):
+        if is_author:
+            raise AuthorityError(f"Core Law 3 violation: author cannot transition own candidate to {next_state}.")
+        if actor_role not in ("Acceptance Agent", "Engineer"):
+            raise AuthorityError(f"Transition to {next_state} requires Acceptance Agent or Engineer authority, got {actor_role!r}.")
+
+    if next_state == "INTEGRATED" and actor_role not in ("Integration Writer", "Maintainer"):
+        raise AuthorityError(f"Transition to INTEGRATED requires Integration Writer or Maintainer, got {actor_role!r}.")
+
+    return next_state
+
+
+def verify_git_authority(
+    repo_root: Path = REPO_ROOT,
+    *,
+    expected_head_sha: str | None = None,
+    expected_branch: str | None = None,
+) -> dict[str, Any]:
+    """Directly observe live Git HEAD SHA, branch, and working-tree cleanliness."""
+    head_p = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if head_p.returncode != 0:
+        raise AuthorityError(f"Failed to read git HEAD in {repo_root}: {head_p.stderr.strip()}")
+    head_sha = head_p.stdout.strip()
+    if not SHA40_RE.fullmatch(head_sha):
+        raise AuthorityError(f"Invalid 40-char git HEAD SHA observed: {head_sha!r}")
+
+    branch_p = subprocess.run(
+        ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    branch = branch_p.stdout.strip()
+
+    status_p = subprocess.run(
+        ["git", "status", "--porcelain"],
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    dirty = bool(status_p.stdout.strip())
+
+    if expected_head_sha is not None and head_sha != expected_head_sha:
+        raise AuthorityError(f"Git SHA drift detected: expected {expected_head_sha}, observed {head_sha}")
+    if expected_branch is not None and branch != expected_branch:
+        raise AuthorityError(f"Git branch mismatch: expected {expected_branch!r}, observed {branch!r}")
+
+    return {
+        "repo_root": str(repo_root),
+        "head_sha": head_sha,
+        "branch": branch,
+        "dirty": dirty,
+    }

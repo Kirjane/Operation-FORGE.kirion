@@ -1,0 +1,18 @@
+{
+  "name": "kirion-forge/php-procurement-inventory-benchmark",
+  "description": "Benchmark A — First-class PHP/Laravel-architecture modular monolith reference for procurement, partial receiving, inventory reconciliation, after-commit queues, and PDF receipts.",
+  "type": "project",
+  "license": "proprietary",
+  "require": {
+    "php": ">=8.4"
+  },
+  "autoload": {
+    "psr-4": {
+      "Kirion\\BenchmarkA\\": "src/"
+    }
+  },
+  "config": {
+    "optimize-autoloader": true,
+    "sort-packages": true
+  }
+}

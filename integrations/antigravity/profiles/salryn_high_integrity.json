@@ -1,0 +1,22 @@
+{
+  "profile_id": "salryn_high_integrity",
+  "name": "Salryn High-Integrity Financial, Inventory & Offline WAL Profile",
+  "stack_status": "HIGH_INTEGRITY_SPECIALIZATION",
+  "default_risk_floor": "RISK-3",
+  "required_skills": [
+    "kirion-core",
+    "kirion-dispatch",
+    "kirion-business-logic",
+    "kirion-concurrency",
+    "kirion-database",
+    "kirion-runtime"
+  ],
+  "invariants": [
+    "Immutable ledger reconciliation against persisted line items",
+    "Atomic stock movements, AP/AR settlements, reversals, and refunds",
+    "Repeat idempotency and concurrent request safety",
+    "Offline SQLite WAL locking and retained schema upgrade preservation",
+    "Preservation of client data and machine licensing (no destructive resets)",
+    "Financial policy ambiguity halts affected mutation immediately"
+  ]
+}

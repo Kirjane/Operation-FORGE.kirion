@@ -1,0 +1,29 @@
+{
+  "kirion-forge-safety-gate": {
+    "enabled": true,
+    "PreToolUse": [
+      {
+        "matcher": "run_command|write_file|edit_file",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python ./hooks/forge_guard.py",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "run_command",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python ./hooks/forge_guard.py --post",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

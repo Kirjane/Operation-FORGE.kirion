@@ -26,13 +26,19 @@ def fingerprint(value):
 
 class ScopedBroker:
     """Local executable broker proof. Remote actor/read/write methods are trusted inputs."""
-    def __init__(self,path,key,repo,repo_id,branch,enabled=False):
+    def __init__(self,path,key,repo,repo_id,branch,enabled=False,*,
+                 service_actor=None,require_service_actor=False):
         if not isinstance(key,bytes) or len(key)<32: raise Denied("AUDIT_KEY_REQUIRED")
         if type(repo_id)!=int or repo_id<1: raise Denied("REPO_ID_REQUIRED")
         if not isinstance(repo,str) or repo.count("/")!=1: raise Denied("REPO_REQUIRED")
         if not re.fullmatch(r"[A-Za-z0-9_-]+(?:[./][A-Za-z0-9_-]+)*",branch) or branch in ("main","master"):
             raise Denied("BRANCH_NOT_ALLOWLISTED")
         self.path=Path(path);self.path.parent.mkdir(parents=True,exist_ok=True)
+        if require_service_actor and (not isinstance(service_actor,tuple) or len(service_actor)!=2
+                or not isinstance(service_actor[0],str) or type(service_actor[1])!=int):
+            raise Denied("EXCLUSIVE_SERVICE_ACTOR_REQUIRED")
+        self.service_actor=service_actor or ("Kirion-Jane",335897759)
+        self.require_service_actor=require_service_actor
         self.key,self.repo,self.repo_id,self.branch,self.enabled=key,repo,repo_id,branch,enabled
         self.leases=LeaseManager(self.path.with_suffix(".lease.db"))
         self.journal=FactoryJournal(self.path.with_suffix(".forge.db"))
@@ -118,7 +124,9 @@ class ScopedBroker:
         if packet["assigned_persona"]!="Antigravity-Jane" or packet["formal_role"]!="Code Writer":
             raise Denied("OFF_ROLE_DENIED")
         who=actor()
-        if who.get("login")!="Kirion-Jane" or type(who.get("id"))!=int or who["id"]!=335897759:
+        if (who.get("login"),who.get("id"))!=self.service_actor or type(who.get("id"))!=int:
+            raise Denied("ACTOR_SUBSTITUTION")
+        if self.require_service_actor and who.get("type")!="Bot":
             raise Denied("ACTOR_SUBSTITUTION")
         rep=repository()
         if rep.get("repository_full_name")!=self.repo or type(rep.get("id"))!=int or rep["id"]!=self.repo_id or rep.get("permissions",{}).get("push") is not True:

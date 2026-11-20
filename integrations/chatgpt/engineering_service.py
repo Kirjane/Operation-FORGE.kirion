@@ -118,7 +118,8 @@ class GitSnapshot:
 class EngineeringContext:
     def __init__(self, forge: GitSnapshot, target: GitSnapshot, packet:dict,
                  *, candidate_sha: str, task: str, persona: str,
-                 gate_evidence: dict|None=None, public_diff: list|None=None):
+                 gate_evidence: dict|None=None, public_diff: list|None=None,
+                 author_context_id: str|None=None):
         if persona not in ROLES or packet["assigned_persona"]!=persona:
             raise Denied("PERSONA_PACKET_DRIFT")
         verify_mission_packet(packet, observed_base_sha=packet["base_sha"])
@@ -128,6 +129,7 @@ class EngineeringContext:
         self.task=task
         self.gate_evidence=gate_evidence
         self.diff=public_diff or []
+        self.author_context_id=author_context_id
         self.doc_paths=FIXED_GOVERNANCE+(ROLES[persona][0],)
         selected=packet["selected_skills"]
         if selected["skill_source_sha"]!=forge.sha:
@@ -161,6 +163,7 @@ class EngineeringContext:
             body["frozen_candidate_sha"]=self.sha
             body["verified_host_gates"]=self.gate_evidence
             body["inspected_diff"]=self.diff
+            body["author_context_id"]=self.author_context_id
         return body
     def tools(self):
         return [
@@ -449,7 +452,8 @@ class EngineeringPilotService:
         return rec
     def run(self,*,writer_packet,reviewer_packet,source_sha,source_tree,source_paths,
             task,nonce_prefix,repo_id):
-        if self.live and (not self.exclusive or not self.dispatch.runner.provider.is_live):
+        if self.live and (not self.exclusive or not self.dispatch.runner.provider.is_live
+                          or not getattr(self.broker,"require_service_actor",False)):
             raise Denied("EXCLUSIVE_CREDENTIAL_OR_MODEL_AUTHORIZATION_REQUIRED")
         if not isinstance(task,str) or not 1<=len(task)<=16000 or not re.fullmatch(r"[a-z0-9-]{8,40}",nonce_prefix):
             raise Denied("TASK_OR_NONCE_INVALID")
@@ -509,7 +513,8 @@ class EngineeringPilotService:
             review_nonce=nonce_prefix+"-nox-"+str(cycle).zfill(3)
             reader=EngineeringContext(self.forge_snapshot(reviewer,"Antigravity-Nox"),
                 candidate,reviewer,candidate_sha=candidate_sha,task=task,persona="Antigravity-Nox",
-                gate_evidence=evidence,public_diff=[{"path":x["path"],
+                gate_evidence=evidence,author_context_id=rec["context_id"],
+                public_diff=[{"path":x["path"],
                   "old_sha256":x["expected_sha256"],
                   "new_sha256":hashlib.sha256(x["new_text"].encode()).hexdigest()} for x in edits])
             reviewrec=self.launch_role(reviewer,reader,review_nonce,repo_id,candidate_sha,

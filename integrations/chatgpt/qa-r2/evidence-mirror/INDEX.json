@@ -1,0 +1,408 @@
+{
+  "schema_version": 1,
+  "mission": "FORGE-CHATGPT-HOST-AUTONOMY-QUALIFICATION-R4",
+  "repo": "Kirjane/Operation-FORGE.kirion",
+  "canonical_source": "0e8765de6e0e87ea9b4503714f08fa650e1a79c6",
+  "final_candidate": "cdab7514a967b086e7b684e9baca9e4fd08a0b78",
+  "final_candidate_tree": "64a40e5786384c524d5ab89baca4c1a06eae7317",
+  "final_qa_commit": "e31f02d659bc4013effb4e963d778e507445dc57",
+  "final_zip_sha256": "515dd40ea95e3712dfc15ad39e41eade1e92a089c0df0378b37daf349bff3f69",
+  "mirror_branch": "qa/chatgpt-port-evidence-r4",
+  "mirror_commit_before_index": "9f9188880ca2c627b0a7f791e9df511527ff9aa3",
+  "mirrored_files": [
+    {
+      "path": "integrations/chatgpt/qa-r2/evidence-mirror/44814331926/r2-before-package-failure.log",
+      "git_blob_sha1": "055fd8f5ef3b22c899974d027933919c6183e9a6",
+      "size_bytes": 31723,
+      "mode": "100644"
+    },
+    {
+      "path": "integrations/chatgpt/qa-r2/evidence-mirror/44818517252/r3-package-success.log",
+      "git_blob_sha1": "0ef97c509ba310f54703e2a2933a4aa31e06934d",
+      "size_bytes": 35169,
+      "mode": "100644"
+    },
+    {
+      "path": "integrations/chatgpt/qa-r2/evidence-mirror/44821827600/r4-host-test-before-failure.log",
+      "git_blob_sha1": "31c68f7ee815fcf1000f86d760de1a7674c224c2",
+      "size_bytes": 69264,
+      "mode": "100644"
+    },
+    {
+      "path": "integrations/chatgpt/qa-r2/evidence-mirror/44822221579/r4-repair1-39pass.log",
+      "git_blob_sha1": "60a8becd6a8243aaed0a7cf93673568ec8ba64ab",
+      "size_bytes": 41783,
+      "mode": "100644"
+    },
+    {
+      "path": "integrations/chatgpt/qa-r2/evidence-mirror/44822469448/r4-tamper-red-41tests.log",
+      "git_blob_sha1": "acd227aa9d7c640d2ccc0c561a04d7650ef73f02",
+      "size_bytes": 43631,
+      "mode": "100644"
+    },
+    {
+      "path": "integrations/chatgpt/qa-r2/evidence-mirror/44822939273/A.log",
+      "git_blob_sha1": "dc4ba45def5fcd3e0807c54a5dc28c6faa3f682c",
+      "size_bytes": 80126,
+      "mode": "100644"
+    },
+    {
+      "path": "integrations/chatgpt/qa-r2/evidence-mirror/44822939273/B.log",
+      "git_blob_sha1": "be9bbed63ec479b1055697a5b813d46768c18b49",
+      "size_bytes": 30149,
+      "mode": "100644"
+    },
+    {
+      "path": "integrations/chatgpt/qa-r2/evidence-mirror/44822939273/C.log",
+      "git_blob_sha1": "d4a719027504934c705762c7d50156ae3b400b24",
+      "size_bytes": 21684,
+      "mode": "100644"
+    },
+    {
+      "path": "integrations/chatgpt/qa-r2/evidence-mirror/44822939273/D.log",
+      "git_blob_sha1": "3eddf123d8efaf7516683761f28d6b8f40f82908",
+      "size_bytes": 21809,
+      "mode": "100644"
+    },
+    {
+      "path": "integrations/chatgpt/qa-r2/evidence-mirror/44822939273/E.log",
+      "git_blob_sha1": "1a75bb1e69ead87c7712e32d613b4dacbb7d9ca0",
+      "size_bytes": 21833,
+      "mode": "100644"
+    },
+    {
+      "path": "integrations/chatgpt/qa-r2/evidence-mirror/44822939273/core.log",
+      "git_blob_sha1": "1b967ddab36fa079ac745a24b25e1c67b7bc7406",
+      "size_bytes": 26438,
+      "mode": "100644"
+    },
+    {
+      "path": "integrations/chatgpt/qa-r2/evidence-mirror/44822939273/r4-repair2-43pass.log",
+      "git_blob_sha1": "6e02724786279722ab7ccb470868e781ea5750dc",
+      "size_bytes": 42499,
+      "mode": "100644"
+    }
+  ],
+  "run_artifacts": [
+    {
+      "run_id": 44814331926,
+      "conclusion": "failure",
+      "qa_sha": "5f766e4e5f9f5562c7af5935c8d062b1e78bf54b",
+      "source_candidate_sha": "279e8f42e740b252763272c38afc81b0fbce1617",
+      "artifacts": [
+        {
+          "id": 14669460595,
+          "name": "forge-r2-D-1",
+          "artifact_zip_sha256": "sha256:8d414d3bdcd85f63802bb31449880108dd6fc4a0add129cf7daf6b68c60b5d2a",
+          "expires_at": "2026-12-20T20:46:56Z"
+        },
+        {
+          "id": 14669190790,
+          "name": "forge-r2-core-1",
+          "artifact_zip_sha256": "sha256:c9bfb4fd89eee011d3c78ca38eff4edf8ea6f9b37b150beb5fea5fd38c7c1840",
+          "expires_at": "2026-12-20T20:46:22Z"
+        },
+        {
+          "id": 14669110957,
+          "name": "forge-r2-B-1",
+          "artifact_zip_sha256": "sha256:4dd0c1ffe57ccc3d10ea8aa68297683c0bfbff7bcd74bb7d900b2c6055c93db1",
+          "expires_at": "2026-12-20T20:47:10Z"
+        },
+        {
+          "id": 14669040909,
+          "name": "forge-r2-A-1",
+          "artifact_zip_sha256": "sha256:41af79003106fa4cdb0d794f4f9bbc1f5211caf9d8a95d459754319f06915750",
+          "expires_at": "2026-12-20T20:46:26Z"
+        },
+        {
+          "id": 14669011071,
+          "name": "forge-r2-adapter-package-1",
+          "artifact_zip_sha256": "sha256:fdc794c39b5a6a9d9991585da03a6f1e8186105865ee87c955d50dfd9577e187",
+          "expires_at": "2026-12-20T20:46:20Z"
+        },
+        {
+          "id": 14668044030,
+          "name": "forge-r2-E-1",
+          "artifact_zip_sha256": "sha256:2cccfa0857627eb16e0ca283b3c739a3a2a65972578f8eff1838d4669d2c6870",
+          "expires_at": "2026-12-20T20:47:16Z"
+        },
+        {
+          "id": 14667568409,
+          "name": "forge-r2-C-1",
+          "artifact_zip_sha256": "sha256:1ff04c4cefc4db9b2c1e8f28f8494b89d24305d9d72b2b5460cc26ee538005fa",
+          "expires_at": "2026-12-20T20:46:40Z"
+        }
+      ],
+      "url": "https://github.com/Kirjane/Operation-FORGE.kirion/actions/runs/44814331926"
+    },
+    {
+      "run_id": 44818517252,
+      "conclusion": "success",
+      "qa_sha": "e9883ba6f45aca9691d7ae7e0855ce3d6d895b7e",
+      "source_candidate_sha": "79399ec37da4d45715bb4a66916d694b1797274f",
+      "artifacts": [
+        {
+          "id": 14671595709,
+          "name": "forge-r2-E-1",
+          "artifact_zip_sha256": "sha256:cbe0dc90f47faf1f8fe03bcda2c20ecb9de14410c45e2892c689ac2f95ed9f9f",
+          "expires_at": "2026-12-20T21:15:18Z"
+        },
+        {
+          "id": 14670377706,
+          "name": "forge-r2-C-1",
+          "artifact_zip_sha256": "sha256:a3e71e14fbe36e7b6b9967b1c8949f1e8dc25b3a3e26177ca192dc9eff670856",
+          "expires_at": "2026-12-20T21:14:45Z"
+        },
+        {
+          "id": 14670307742,
+          "name": "forge-r2-A-1",
+          "artifact_zip_sha256": "sha256:ef64640366feff1073547aa678f1877e22fdcb4deb01d0e41f8fc1428bc90c4b",
+          "expires_at": "2026-12-20T21:14:31Z"
+        },
+        {
+          "id": 14670073643,
+          "name": "forge-r2-core-1",
+          "artifact_zip_sha256": "sha256:a236ba489c2ec3465a2cd9769804793fb20c4c3f1c2aae2d9de6f209f11dff3d",
+          "expires_at": "2026-12-20T21:14:28Z"
+        },
+        {
+          "id": 14669913801,
+          "name": "forge-r2-adapter-package-1",
+          "artifact_zip_sha256": "sha256:fc88d847e634abb9ce9a75ec3999bf28c4e84ac9df70aeaf1753d3841f4f7e9c",
+          "expires_at": "2026-12-20T21:14:41Z"
+        },
+        {
+          "id": 14669639351,
+          "name": "forge-r2-D-1",
+          "artifact_zip_sha256": "sha256:d3a3b7a1dde38974b0f8813b17c53d12f890bb145ce11dbe66c8d49a99c29096",
+          "expires_at": "2026-12-20T21:14:59Z"
+        },
+        {
+          "id": 14669624208,
+          "name": "forge-r2-B-1",
+          "artifact_zip_sha256": "sha256:221bb6926425ed89db4f0956311f7c39d658a171c0b03c960717072608250152",
+          "expires_at": "2026-12-20T21:15:06Z"
+        }
+      ],
+      "url": "https://github.com/Kirjane/Operation-FORGE.kirion/actions/runs/44818517252"
+    },
+    {
+      "run_id": 44821827600,
+      "conclusion": "failure",
+      "qa_sha": "42e3b842b2998d61b4596201f18e9e0bcf81891a",
+      "source_candidate_sha": "03ae31e98ec72765cf60ca71ffff381507595dec",
+      "artifacts": [
+        {
+          "id": 14672297633,
+          "name": "forge-r4-E-1",
+          "artifact_zip_sha256": "sha256:2568a4f79f76ace0811b8ccdbcfd38b52498ba659db52c614dc8e136b66e8b93",
+          "expires_at": "2026-12-20T21:37:32Z"
+        },
+        {
+          "id": 14672032939,
+          "name": "forge-r4-core-1",
+          "artifact_zip_sha256": "sha256:41a7891372817861787f59cdf7d1dff1b219a2535b7c9053289ca28a1c62ce73",
+          "expires_at": "2026-12-20T21:36:47Z"
+        },
+        {
+          "id": 14671818194,
+          "name": "forge-r4-D-1",
+          "artifact_zip_sha256": "sha256:30b0033d7203fdf68c986bf3488fcc97c8327b90a77192ca3d85c3dbdbc4035b",
+          "expires_at": "2026-12-20T21:37:13Z"
+        },
+        {
+          "id": 14671744590,
+          "name": "forge-r4-B-1",
+          "artifact_zip_sha256": "sha256:4ff4df00a71d8b4c6b3c4fd71d6cfbcc2e5642f46030b5a2d54cae6ccd2c869f",
+          "expires_at": "2026-12-20T21:37:23Z"
+        },
+        {
+          "id": 14671062816,
+          "name": "forge-r4-A-1",
+          "artifact_zip_sha256": "sha256:242f9d725f14d99262e998f96d63f74040dd8c206a3f6bbdb671895ffc3e5f0a",
+          "expires_at": "2026-12-20T21:36:47Z"
+        },
+        {
+          "id": 14671037998,
+          "name": "forge-r4-adapter-package-1",
+          "artifact_zip_sha256": "sha256:1a1e719da7aff2c6e287c50defadd141fc8e1d5417d8897d42c0074146283cf1",
+          "expires_at": "2026-12-20T21:36:54Z"
+        },
+        {
+          "id": 14670723157,
+          "name": "forge-r4-C-1",
+          "artifact_zip_sha256": "sha256:fb355119fda6832fe625f7901cff318d4db931228387b55176655c33c72579cb",
+          "expires_at": "2026-12-20T21:37:01Z"
+        }
+      ],
+      "url": "https://github.com/Kirjane/Operation-FORGE.kirion/actions/runs/44821827600"
+    },
+    {
+      "run_id": 44822221579,
+      "conclusion": "success",
+      "qa_sha": "d9459a642200ecc11e8db555c299093974b0ec9d",
+      "source_candidate_sha": "7607602c23ee1a5dbce291c58827b8405022fa49",
+      "artifacts": [
+        {
+          "id": 14673010162,
+          "name": "forge-r4-A-1",
+          "artifact_zip_sha256": "sha256:d9884d8df85d84b30c7998f4b6d614dc0f56cd151cf703ba1662ab74dbd0db52",
+          "expires_at": "2026-12-20T21:39:30Z"
+        },
+        {
+          "id": 14672975096,
+          "name": "forge-r4-C-1",
+          "artifact_zip_sha256": "sha256:24fad88b036baee64a6a63d8280b926919cde98a759613c376388e530adaef97",
+          "expires_at": "2026-12-20T21:39:42Z"
+        },
+        {
+          "id": 14672526808,
+          "name": "forge-r4-core-1",
+          "artifact_zip_sha256": "sha256:100bd46e9b60d4cdd3eb16f19d71620bd6003373ae768a1f6405cce8bf21c48b",
+          "expires_at": "2026-12-20T21:39:25Z"
+        },
+        {
+          "id": 14672193335,
+          "name": "forge-r4-B-1",
+          "artifact_zip_sha256": "sha256:c6fb7115644ee0afebd134d694b5dc2dfd7a8d46b8148ca292e2d1bd11505e5c",
+          "expires_at": "2026-12-20T21:40:17Z"
+        },
+        {
+          "id": 14671694880,
+          "name": "forge-r4-E-1",
+          "artifact_zip_sha256": "sha256:899068d7267607a6e9843a70c9e3a0fc486973dfeabea8665044c9b48252673d",
+          "expires_at": "2026-12-20T21:40:06Z"
+        },
+        {
+          "id": 14671654638,
+          "name": "forge-r4-D-1",
+          "artifact_zip_sha256": "sha256:456c84fea5ed1a03529894ab9d5b8442f671bfc976f6d4fba8784c8a2c948f82",
+          "expires_at": "2026-12-20T21:39:54Z"
+        },
+        {
+          "id": 14670593654,
+          "name": "forge-r4-adapter-package-1",
+          "artifact_zip_sha256": "sha256:be2ae39a4c760c72c9d5232d4ffc68607008401fc54f825c96f6877adbad53fd",
+          "expires_at": "2026-12-20T21:39:26Z"
+        }
+      ],
+      "url": "https://github.com/Kirjane/Operation-FORGE.kirion/actions/runs/44822221579"
+    },
+    {
+      "run_id": 44822469448,
+      "conclusion": "failure",
+      "qa_sha": "18096de7f4ee5ac51edfd9f30dfd7cbbf114126d",
+      "source_candidate_sha": "f4d71636f56bc9f620b713caba9196773c3dfb08",
+      "artifacts": [
+        {
+          "id": 14672935394,
+          "name": "forge-r4-core-1",
+          "artifact_zip_sha256": "sha256:7bdac746e023f831e4f883a9162794aee45a66dcfa7deb1ed738610690137c4a",
+          "expires_at": "2026-12-20T21:41:08Z"
+        },
+        {
+          "id": 14672920440,
+          "name": "forge-r4-adapter-package-1",
+          "artifact_zip_sha256": "sha256:852d50c9ef49e3448efd2eb1aaac627936b75849d68d0de71b0a12bfba9ad926",
+          "expires_at": "2026-12-20T21:41:13Z"
+        },
+        {
+          "id": 14672890606,
+          "name": "forge-r4-A-1",
+          "artifact_zip_sha256": "sha256:770ad84c297226d75b0137259cb2e1105bddf35b122e91eba7b0f22fe539cc1b",
+          "expires_at": "2026-12-20T21:41:16Z"
+        },
+        {
+          "id": 14672865695,
+          "name": "forge-r4-B-1",
+          "artifact_zip_sha256": "sha256:1704142fa8ebcfd4ce745afa1c1dec46cdc36028b7253170bfef19e3947239e1",
+          "expires_at": "2026-12-20T21:41:41Z"
+        },
+        {
+          "id": 14672632122,
+          "name": "forge-r4-D-1",
+          "artifact_zip_sha256": "sha256:044805182edb514f29b4261c9855a6be07a2592e974640259d5018773e3fc55e",
+          "expires_at": "2026-12-20T21:41:49Z"
+        },
+        {
+          "id": 14672303481,
+          "name": "forge-r4-C-1",
+          "artifact_zip_sha256": "sha256:dddf447df48cb902a65078cec2e905a19d8beff5973220e22d3977949d0076e6",
+          "expires_at": "2026-12-20T21:41:35Z"
+        },
+        {
+          "id": 14671008632,
+          "name": "forge-r4-E-1",
+          "artifact_zip_sha256": "sha256:dbcb0d40e1140f62fb4feea33e0ce53db49edb33430e9c5163c7be5bb1014cad",
+          "expires_at": "2026-12-20T21:41:57Z"
+        }
+      ],
+      "url": "https://github.com/Kirjane/Operation-FORGE.kirion/actions/runs/44822469448"
+    },
+    {
+      "run_id": 44822939273,
+      "conclusion": "success",
+      "qa_sha": "e31f02d659bc4013effb4e963d778e507445dc57",
+      "source_candidate_sha": "cdab7514a967b086e7b684e9baca9e4fd08a0b78",
+      "artifacts": [
+        {
+          "id": 14672975899,
+          "name": "forge-r4-core-1",
+          "artifact_zip_sha256": "sha256:6bc362823d0bb1f7254516d8b5ca59904b6a19f38df0a95987d88ac01ca74da6",
+          "expires_at": "2026-12-20T21:44:32Z"
+        },
+        {
+          "id": 14672417796,
+          "name": "forge-r4-B-1",
+          "artifact_zip_sha256": "sha256:69b82b04586ec2346ff2521c06ebe42ab106aae491bd9587eb55ab92ea54f7ec",
+          "expires_at": "2026-12-20T21:44:56Z"
+        },
+        {
+          "id": 14671779682,
+          "name": "forge-r4-A-1",
+          "artifact_zip_sha256": "sha256:23eea72ee10013fcf0a74e6dc4be8eef6e436a54f6d9a845e7ccc12d73ea2b39",
+          "expires_at": "2026-12-20T21:44:26Z"
+        },
+        {
+          "id": 14671754829,
+          "name": "forge-r4-E-1",
+          "artifact_zip_sha256": "sha256:b27f5147a78317c1f0aa5b03dcc51b0d1cd830684cfcfb3e3616955e718bc097",
+          "expires_at": "2026-12-20T21:45:16Z"
+        },
+        {
+          "id": 14670813992,
+          "name": "forge-r4-D-1",
+          "artifact_zip_sha256": "sha256:0677bc73bf14d59ebc0c8a15697168ac652667055c1257c76a56cfdb7b1937d9",
+          "expires_at": "2026-12-20T21:45:02Z"
+        },
+        {
+          "id": 14670783977,
+          "name": "forge-r4-C-1",
+          "artifact_zip_sha256": "sha256:3ac728d06fc20701e2de99be9508b2bade21efb75e86010320a4997f7bef7b91",
+          "expires_at": "2026-12-20T21:44:44Z"
+        },
+        {
+          "id": 14670643963,
+          "name": "forge-r4-adapter-package-1",
+          "artifact_zip_sha256": "sha256:707f37000b6102482b777a35baad0038877a2a07424028fc954c07c32ac54ee4",
+          "expires_at": "2026-12-20T21:44:25Z"
+        }
+      ],
+      "url": "https://github.com/Kirjane/Operation-FORGE.kirion/actions/runs/44822939273"
+    }
+  ],
+  "privacy": "GitHub Actions credentialless QA logs scanned and redacted for token/email patterns prior to versioning. No client/customer fixture data, secrets or real provider sessions used.",
+  "retention": "Original Actions artifacts expire 2026-12-20 UTC; Git mirrors are content-addressed Git blobs in a separate private repo branch; mirrored logs remain under branch custody (but not an independent backup).",
+  "recovery": "Retrieve per-log git blob by path/blob SHA from mirror branch; verify Git blob; retrieve exact archived runner artifact while retained and compare its sha256 digest above; regenerate final uninstalled plugin via repository source at final_candidate and R4 QA release-root with package.py. For independent disaster recovery, mirror content into a separately authorized archival destination before branch/repository loss.",
+  "gates": {
+    "comparative": "core and A-E all PASS on reference and candidate",
+    "host_adversarial": "43/43 MOCK/CONTRACT PASS",
+    "node": "31/31",
+    "bridge": "6/6",
+    "package": "14/14",
+    "isolated_model": "BLOCKED",
+    "native_plugin_activation": "NOT_RUN",
+    "host_interception": "BLOCKED",
+    "promotion": "HOLD"
+  }
+}

@@ -7,8 +7,8 @@ OUT=pathlib.Path(sys.argv[2]).resolve()
 OUT.mkdir(parents=True,exist_ok=False)
 BASE="0e8765de6e0e87ea9b4503714f08fa650e1a79c6"
 BT="80eaa7a4f879871e5df533203b8b60b563f8b782"
-HEAD="a6ad0512dd0592a0464e6502629f178fc6c6d231"
-HT="8d89d0e0ce35c875a4ebec471ff6bb2a6d61d007"
+HEAD="9143b246f8d7c2793b6dbcac436e596a32fb0f4f"
+HT="e7b030f76c6e11faf77ba0777ee9539538ec01a1"
 ENV={k:os.environ[k] for k in ("PATH","HOME","LANG","LC_ALL","DOTNET_ROOT","DOTNET_ROOT_X64","DOTNET_MULTILEVEL_LOOKUP","PHP_INI_SCAN_DIR","COMPOSER_HOME","LD_LIBRARY_PATH","TMPDIR","TMP","TEMP","NUGET_PACKAGES") if k in os.environ}
 ENV.update(PYTHONDONTWRITEBYTECODE="1",DOTNET_CLI_TELEMETRY_OPTOUT="1",DOTNET_NOLOGO="1",GIT_TERMINAL_PROMPT="0",CI="true")
 records=[]
@@ -70,6 +70,7 @@ def main():
                 status.append(run("node-adapter",["node","integrations/chatgpt/connector_adapter.test.mjs"],dest))
                 status.append(run("python-bridge",[sys.executable,str(QA/"test_bridge.py")],dest))
                 status.append(run("r4-host-adversarial",[sys.executable,"-m","unittest","integrations.chatgpt.test_host_autonomy","-v"],dest))
+                status.append(run("r5-engineering-service",[sys.executable,"-m","unittest","integrations.chatgpt.test_engineering_service","-v"],dest,timeout=600))
                 for i in (1,2):
                     status.append(run(f"package-build-{i}",[sys.executable,"integrations/chatgpt/package.py","--repo",str(dest),"--candidate",HEAD,"--release-root",str(QA/"release-root"),"--out",str(OUT/f"candidate-{i}.zip")],dest))
                 status.append(run("package-audit",[sys.executable,str(QA/"audit_package.py"),str(OUT),str(QA/"legacy-inventory.json"),HEAD],dest))

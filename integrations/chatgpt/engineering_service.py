@@ -10,6 +10,8 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+from decimal import Decimal, InvalidOperation
+import threading
 import os
 import pathlib
 import re
@@ -192,9 +194,16 @@ class EngineeringContext:
 class OpenAIEngineeringProvider:
     """Actual Responses function-call transport. Paid network explicitly OFF by default."""
     is_live=True
-    def __init__(self,*,model=None,api_key=None,authorized=False,request=None):
+    def __init__(self,*,model=None,api_key=None,authorized=False,request=None,
+                 input_usd_per_million=None,output_usd_per_million=None,hard_budget_usd=None):
         self.model,self.api_key,self.authorized=model,api_key,authorized
         self.request=request or urllib.request.urlopen
+        self.rate_input=input_usd_per_million
+        self.rate_output=output_usd_per_million
+        self.hard_budget=hard_budget_usd
+        self.reserved=Decimal("0")
+        self.estimated_spent=Decimal("0")
+        self.lock=threading.Lock()
     def step(self,messages,tools,*,max_output_tokens,deadline_seconds):
         if not self.authorized or not self.model or not self.api_key:
             raise Denied("PAID_MODEL_API_NOT_AUTHORIZED")
@@ -205,6 +214,24 @@ class OpenAIEngineeringProvider:
         if any(key in body for key in ("previous_response_id","conversation","background")):
             raise Denied("PROVIDER_CONTEXT_REUSE")
         data=encoded(body)
+        if any(v is None for v in (self.rate_input,self.rate_output,self.hard_budget)):
+            raise Denied("HARD_COST_AND_PRICING_AUTHORIZATION_REQUIRED")
+        try:
+            rate_i=Decimal(str(self.rate_input))
+            rate_o=Decimal(str(self.rate_output))
+            ceiling=Decimal(str(self.hard_budget))
+        except (InvalidOperation,ValueError) as exc:
+            raise Denied("COST_POLICY_INVALID") from exc
+        if min(rate_i,rate_o,ceiling)<0 or ceiling==0 or not all(x.is_finite() for x in (rate_i,rate_o,ceiling)):
+            raise Denied("COST_POLICY_INVALID")
+        # Upper bound on token count from encoded UTF-8 bytes plus protocol
+        # overhead, never trusting model-supplied usage as a preflight quote.
+        bound_input=len(encoded(messages))+len(encoded(tools))+4096
+        quote=(Decimal(bound_input)*rate_i+Decimal(max_output_tokens)*rate_o)/Decimal(1000000)
+        with self.lock:
+            if self.reserved+quote>ceiling:
+                raise Denied("HARD_PROVIDER_SPEND_CEILING_EXCEEDED")
+            self.reserved+=quote
         req=urllib.request.Request("https://api.openai.com/v1/responses",
                  data=data,headers={"Authorization":"Bearer "+self.api_key,
                                    "Content-Type":"application/json"},method="POST")
@@ -214,6 +241,16 @@ class OpenAIEngineeringProvider:
             raise Denied("PROVIDER_CONTEXT_ID_UNVERIFIED")
         if out.get("status")!="completed" or not isinstance(out.get("output"),list):
             raise Denied("PROVIDER_INCOMPLETE")
+        usage=out.get("usage")
+        if not isinstance(usage,dict) or any(type(usage.get(k)) is not int or usage[k]<0 for k in ("input_tokens","output_tokens")):
+            raise Denied("PROVIDER_USAGE_UNVERIFIED")
+        measured=(Decimal(usage["input_tokens"])*rate_i+Decimal(usage["output_tokens"])*rate_o)/Decimal(1000000)
+        if measured>quote:
+            raise Denied("PROVIDER_BILLED_TOKENS_EXCEED_SAFE_RESERVATION")
+        with self.lock:
+            self.estimated_spent+=measured
+        out["_forge_estimated_cost_usd"]=str(measured)
+        out["_forge_reserved_upper_usd"]=str(quote)
         return out
 
 
@@ -235,7 +272,7 @@ class ModelToolRunner:
         messages=[{"role":"developer","content":instruction},
                   {"role":"user","content":json.dumps(request,sort_keys=True)}]
         initial=fingerprint(messages)
-        used=0;calls=0;seen=set();first=None;last=None
+        used=0;input_used=0;dollars=Decimal("0");reserved=Decimal("0");calls=0;seen=set();first=None;last=None
         start=time.monotonic()
         for round_number in range(self.max_rounds):
             remaining=int(deadline-(time.monotonic()-start))
@@ -252,6 +289,12 @@ class ModelToolRunner:
             n=usage.get("output_tokens",0)
             if type(n)!=int or n<0:raise Denied("UNTRUSTED_TOKEN_ACCOUNTING")
             used+=n
+            input_used+=usage.get("input_tokens",0) if type(usage.get("input_tokens",0)) is int else 0
+            if getattr(self.provider,"is_live",False):
+                if "_forge_estimated_cost_usd" not in output or "_forge_reserved_upper_usd" not in output:
+                    raise Denied("PROVIDER_COST_NOT_TRUSTWORTHY")
+                dollars+=Decimal(output["_forge_estimated_cost_usd"])
+                reserved+=Decimal(output["_forge_reserved_upper_usd"])
             if used>=self.max_total_output_tokens:raise Denied("MODEL_TOKEN_BUDGET_EXCEEDED")
             tool_calls=[x for x in output["output"] if x.get("type")=="function_call"]
             others=[x for x in output["output"] if x.get("type") not in ("function_call","message","reasoning")]
@@ -284,7 +327,9 @@ class ModelToolRunner:
             return {"result":parsed,"context_id":first,"last_response_id":last,
                     "initial_prompt_sha256":initial,"model_output_sha256":fingerprint(parsed),
                     "provider_live":bool(getattr(self.provider,"is_live",False)),
-                    "token_usage":{"output_tokens":used,"cost_usd":None},
+                    "token_usage":{"input_tokens":input_used,"output_tokens":used,"cost_usd":None,
+                                   "estimated_usd":str(dollars) if getattr(self.provider,"is_live",False) else None,
+                                   "reserved_upper_usd":str(reserved) if getattr(self.provider,"is_live",False) else None},
                     "tool_evidence":list(context.accessed),"rounds":round_number+1}
         raise Denied("MODEL_TOOL_LOOP_EXHAUSTED")
 

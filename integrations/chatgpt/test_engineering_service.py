@@ -412,12 +412,14 @@ class ResponseTransportTests(unittest.TestCase):
         class Http:
             def __enter__(self):return self
             def __exit__(self,*a):pass
-            def read(self,n):return json.dumps({"id":"resp_example_12345678","status":"completed","output":[]}).encode()
+            def read(self,n):return json.dumps({"id":"resp_example_12345678","status":"completed","output":[],
+                                               "usage":{"input_tokens":40,"output_tokens":3}}).encode()
         def callback(req,timeout):
             captured.append((req.full_url,json.loads(req.data),timeout,req.get_method()))
             return Http()
         provider=OpenAIEngineeringProvider(model="test-no-paid",api_key="fake-test",
-                         authorized=True,request=callback)
+                         authorized=True,request=callback,input_usd_per_million="1",
+                         output_usd_per_million="1",hard_budget_usd="2")
         provider.step([{"role":"user","content":"disposable synthetic"}],[],
                       max_output_tokens=4096,deadline_seconds=15)
         url,body,timeout,method=captured[0]
@@ -427,6 +429,27 @@ class ResponseTransportTests(unittest.TestCase):
         self.assertNotIn("previous_response_id",body)
         self.assertNotIn("conversation",body)
         self.assertEqual(method,"POST")
+    def test_paid_api_never_called_without_monetary_ceiling(self):
+        called=[]
+        def unexpected(*args,**kw):
+            called.append(True)
+            raise AssertionError("network should not be reached")
+        p=OpenAIEngineeringProvider(model="test",api_key="fake",
+                                    authorized=True,request=unexpected)
+        with self.assertRaisesRegex(Denied,"HARD_COST_AND_PRICING_AUTHORIZATION_REQUIRED"):
+            p.step([{"role":"user","content":"test"}],[],max_output_tokens=4096,deadline_seconds=20)
+        self.assertFalse(called)
+    def test_cost_quote_fails_before_api_when_budget_too_small(self):
+        called=[]
+        def unexpected(*args,**kw):
+            called.append(True)
+            raise AssertionError("network should not be reached")
+        p=OpenAIEngineeringProvider(model="test",api_key="fake",authorized=True,
+            request=unexpected,input_usd_per_million="200",
+            output_usd_per_million="200",hard_budget_usd="0.001")
+        with self.assertRaisesRegex(Denied,"HARD_PROVIDER_SPEND_CEILING_EXCEEDED"):
+            p.step([{"role":"user","content":"test"}],[],max_output_tokens=4096,deadline_seconds=20)
+        self.assertFalse(called)
     def test_no_budget_overspend(self):
         with self.assertRaisesRegex(Denied,"TOKEN_BUDGET_OUT_OF_BOUNDS"):
             OpenAIEngineeringProvider(model="test",api_key="fake",authorized=True).step([],[],max_output_tokens=900000,deadline_seconds=10)

@@ -1,0 +1,623 @@
+﻿2026-11-20T22:06:03.7503150Z Current runner version: '2.338.2'
+2026-11-20T22:06:03.7569938Z ##[group]Runner Image Provisioner
+2026-11-20T22:06:03.7571340Z Hosted Compute Agent
+2026-11-20T22:06:03.7572607Z Version: 20261111.635
+2026-11-20T22:06:03.7573782Z Commit: b8a594ea514ff44cadb5342986c68b1eac6e22ed
+2026-11-20T22:06:03.7595863Z Build Date: 2026-11-11T01:49:01Z
+2026-11-20T22:06:03.7597152Z Worker ID: {34280ce6-2198-476a-b528-f5bcdab3280c}
+2026-11-20T22:06:03.7598442Z Region: westus2
+2026-11-20T22:06:03.7599662Z Cloud: Azure
+2026-11-20T22:06:03.7600698Z ##[endgroup]
+2026-11-20T22:06:03.7603433Z ##[group]Operating System
+2026-11-20T22:06:03.7604983Z Ubuntu
+2026-11-20T22:06:03.7605907Z 24.04.5
+2026-11-20T22:06:03.7606868Z LTS
+2026-11-20T22:06:03.7607808Z ##[endgroup]
+2026-11-20T22:06:03.7608924Z ##[group]Runner Image
+2026-11-20T22:06:03.7609990Z Image: ubuntu-24.04
+2026-11-20T22:06:03.7610942Z Version: 20261116.376.1
+2026-11-20T22:06:03.7613826Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20261116.376/images/ubuntu/Ubuntu2404-Readme.md
+2026-11-20T22:06:03.7637305Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20261116.376
+2026-11-20T22:06:03.7639200Z ##[endgroup]
+2026-11-20T22:06:03.7641440Z ##[group]GITHUB_TOKEN Permissions
+2026-11-20T22:06:03.7645071Z Contents: read
+2026-11-20T22:06:03.7646147Z Metadata: read
+2026-11-20T22:06:03.7647246Z ##[endgroup]
+2026-11-20T22:06:03.7651309Z Secret source: Actions
+2026-11-20T22:06:03.7653279Z Cache mode: write
+2026-11-20T22:06:03.7675261Z Prepare workflow directory
+2026-11-20T22:06:03.8337553Z Prepare all required actions
+2026-11-20T22:06:03.8415973Z Getting action download info
+2026-11-20T22:06:04.2118001Z Download action repository 'actions/checkout@11d5960a326750d5838078e36cf38b85af677262' (SHA:11d5960a326750d5838078e36cf38b85af677262)
+2026-11-20T22:06:04.3567734Z Download action repository 'actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065' (SHA:a26af69be951a213d495a4c3e4e4022e16d87065)
+2026-11-20T22:06:04.4476300Z Download action repository 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+2026-11-20T22:06:04.6924378Z Complete job name: adapter-package
+2026-11-20T22:06:04.7879662Z ##[group]Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+2026-11-20T22:06:04.7880867Z with:
+2026-11-20T22:06:04.7881437Z   ref: e5f84ac6b6c6bac416b8f58b81fdc7e021db985c
+2026-11-20T22:06:04.7882095Z   fetch-depth: 0
+2026-11-20T22:06:04.7882604Z   persist-credentials: false
+2026-11-20T22:06:04.7883222Z   repository: Kirjane/Operation-FORGE.kirion
+2026-11-20T22:06:04.7887957Z   token: ***
+2026-11-20T22:06:04.7888464Z   ssh-strict: true
+2026-11-20T22:06:04.7888960Z   ssh-user: git
+2026-11-20T22:06:04.7889426Z   clean: true
+2026-11-20T22:06:04.7889919Z   sparse-checkout-cone-mode: true
+2026-11-20T22:06:04.7890493Z   fetch-tags: false
+2026-11-20T22:06:04.7891050Z   show-progress: true
+2026-11-20T22:06:04.7891564Z   lfs: false
+2026-11-20T22:06:04.7892046Z   submodules: false
+2026-11-20T22:06:04.7892575Z   set-safe-directory: true
+2026-11-20T22:06:04.7893145Z   allow-unsafe-pr-checkout: false
+2026-11-20T22:06:04.7894187Z env:
+2026-11-20T22:06:04.7894776Z   PYTHONDONTWRITEBYTECODE: 1
+2026-11-20T22:06:04.7895406Z ##[endgroup]
+2026-11-20T22:06:05.1472871Z Syncing repository: Kirjane/Operation-FORGE.kirion
+2026-11-20T22:06:05.1477797Z ##[group]Getting Git version info
+2026-11-20T22:06:05.1480730Z Working directory is '/home/runner/work/Operation-FORGE.kirion/Operation-FORGE.kirion'
+2026-11-20T22:06:05.1485639Z [command]/usr/bin/git version
+2026-11-20T22:06:05.1747263Z git version 2.56.1
+2026-11-20T22:06:05.1811429Z ##[endgroup]
+2026-11-20T22:06:05.1823637Z Temporarily overriding HOME='/home/runner/work/_temp/37ba2152-8e3c-4a82-9328-6ee337973075' before making global git config changes
+2026-11-20T22:06:05.1829834Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-20T22:06:05.1844989Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Operation-FORGE.kirion/Operation-FORGE.kirion
+2026-11-20T22:06:05.2023045Z Deleting the contents of '/home/runner/work/Operation-FORGE.kirion/Operation-FORGE.kirion'
+2026-11-20T22:06:05.2028799Z ##[group]Initializing the repository
+2026-11-20T22:06:05.2035739Z [command]/usr/bin/git init /home/runner/work/Operation-FORGE.kirion/Operation-FORGE.kirion
+2026-11-20T22:06:05.2139955Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-11-20T22:06:05.2144792Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-11-20T22:06:05.2150166Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-11-20T22:06:05.2153349Z hint: call:
+2026-11-20T22:06:05.2155703Z hint:
+2026-11-20T22:06:05.2157805Z hint: 	git config --global init.defaultBranch <name>
+2026-11-20T22:06:05.2160586Z hint:
+2026-11-20T22:06:05.2162820Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-11-20T22:06:05.2167116Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-11-20T22:06:05.2171968Z hint:
+2026-11-20T22:06:05.2176572Z hint: 	git branch -m <name>
+2026-11-20T22:06:05.2178798Z hint:
+2026-11-20T22:06:05.2181889Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-11-20T22:06:05.2189228Z Initialized empty Git repository in /home/runner/work/Operation-FORGE.kirion/Operation-FORGE.kirion/.git/
+2026-11-20T22:06:05.2219151Z [command]/usr/bin/git remote add origin https://github.com/Kirjane/Operation-FORGE.kirion
+2026-11-20T22:06:05.2401301Z ##[endgroup]
+2026-11-20T22:06:05.2404718Z ##[group]Disabling automatic garbage collection
+2026-11-20T22:06:05.2447350Z [command]/usr/bin/git config --local gc.auto 0
+2026-11-20T22:06:05.2518269Z ##[endgroup]
+2026-11-20T22:06:05.2546501Z ##[group]Setting up auth
+2026-11-20T22:06:05.2549852Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-20T22:06:05.2561354Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-20T22:06:05.3026132Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-20T22:06:05.3081827Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-20T22:06:05.3517119Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-20T22:06:05.3526772Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-20T22:06:05.3766266Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-11-20T22:06:05.3840955Z ##[endgroup]
+2026-11-20T22:06:05.3843273Z ##[group]Fetching the repository
+2026-11-20T22:06:05.3857745Z [command]/usr/bin/git -c protocol.version=2 fetch --prune --no-recurse-submodules origin +refs/heads/*:refs/remotes/origin/* +refs/tags/*:refs/tags/*
+2026-11-20T22:06:05.9803204Z From https://github.com/Kirjane/Operation-FORGE.kirion
+2026-11-20T22:06:05.9806580Z  * [new branch]      KIRCH-FORGE-ENTITY-EVOLUTION-TEST-2 -> origin/KIRCH-FORGE-ENTITY-EVOLUTION-TEST-2
+2026-11-20T22:06:05.9810190Z  * [new branch]      KIRCH-FORGE-ENTITY-EVOLUTION-TEST-3 -> origin/KIRCH-FORGE-ENTITY-EVOLUTION-TEST-3
+2026-11-20T22:06:05.9813544Z  * [new branch]      eval/fci-m02-behavioral-pilot-r0 -> origin/eval/fci-m02-behavioral-pilot-r0
+2026-11-20T22:06:05.9817111Z  * [new branch]      feat/antigravity-software-factory-r1 -> origin/feat/antigravity-software-factory-r1
+2026-11-20T22:06:05.9820600Z  * [new branch]      feat/chatgpt-software-factory-port-r1 -> origin/feat/chatgpt-software-factory-port-r1
+2026-11-20T22:06:05.9825317Z  * [new branch]      feat/fci-m02-provenance-and-memory-r1 -> origin/feat/fci-m02-provenance-and-memory-r1
+2026-11-20T22:06:05.9830334Z  * [new branch]      feat/forge-obsidian-vault-r2 -> origin/feat/forge-obsidian-vault-r2
+2026-11-20T22:06:05.9833681Z  * [new branch]      main       -> origin/main
+2026-11-20T22:06:05.9837780Z  * [new branch]      policy/kirjane-csharp-backend-standard-r1 -> origin/policy/kirjane-csharp-backend-standard-r1
+2026-11-20T22:06:05.9843262Z  * [new branch]      proposal/fci-m01-context-completeness-r1 -> origin/proposal/fci-m01-context-completeness-r1
+2026-11-20T22:06:05.9849151Z  * [new branch]      proposal/kirion-skill-arsenal-multihost-v0-2 -> origin/proposal/kirion-skill-arsenal-multihost-v0-2
+2026-11-20T22:06:05.9854578Z  * [new branch]      qa/chatgpt-port-evidence-r4 -> origin/qa/chatgpt-port-evidence-r4
+2026-11-20T22:06:05.9858931Z  * [new branch]      qa/chatgpt-port-qualification-r2 -> origin/qa/chatgpt-port-qualification-r2
+2026-11-20T22:06:05.9866774Z [command]/usr/bin/git rev-parse --verify --quiet e5f84ac6b6c6bac416b8f58b81fdc7e021db985c^{object}
+2026-11-20T22:06:05.9870210Z e5f84ac6b6c6bac416b8f58b81fdc7e021db985c
+2026-11-20T22:06:05.9875382Z ##[endgroup]
+2026-11-20T22:06:05.9878128Z ##[group]Determining the checkout info
+2026-11-20T22:06:05.9881054Z ##[endgroup]
+2026-11-20T22:06:05.9882767Z [command]/usr/bin/git sparse-checkout disable
+2026-11-20T22:06:06.0051662Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-11-20T22:06:06.0060633Z ##[group]Checking out the ref
+2026-11-20T22:06:06.0066485Z [command]/usr/bin/git checkout --progress --force e5f84ac6b6c6bac416b8f58b81fdc7e021db985c
+2026-11-20T22:06:06.0740348Z Note: switching to 'e5f84ac6b6c6bac416b8f58b81fdc7e021db985c'.
+2026-11-20T22:06:06.0762024Z 
+2026-11-20T22:06:06.0763852Z You are in 'detached HEAD' state. You can look around, make experimental
+2026-11-20T22:06:06.0768008Z changes and commit them, and you can discard any commits you make in this
+2026-11-20T22:06:06.0773952Z state without impacting any branches by switching back to a branch.
+2026-11-20T22:06:06.0776844Z 
+2026-11-20T22:06:06.0778417Z If you want to create a new branch to retain commits you create, you may
+2026-11-20T22:06:06.0784973Z do so (now or later) by using -c with the switch command. Example:
+2026-11-20T22:06:06.0787298Z 
+2026-11-20T22:06:06.0788186Z   git switch -c <new-branch-name>
+2026-11-20T22:06:06.0789642Z 
+2026-11-20T22:06:06.0790512Z Or undo this operation with:
+2026-11-20T22:06:06.0791787Z 
+2026-11-20T22:06:06.0792576Z   git switch -
+2026-11-20T22:06:06.0793569Z 
+2026-11-20T22:06:06.0795518Z Turn off this advice by setting config variable advice.detachedHead to false
+2026-11-20T22:06:06.0818342Z 
+2026-11-20T22:06:06.0837142Z HEAD is now at e5f84ac ci(qa): qualify one-call R5 engineering service and hidden-oracle pipeline against canonical benchmarks
+2026-11-20T22:06:06.0873371Z ##[endgroup]
+2026-11-20T22:06:06.0889146Z [command]/usr/bin/git log -1 --format=%H
+2026-11-20T22:06:06.0931288Z e5f84ac6b6c6bac416b8f58b81fdc7e021db985c
+2026-11-20T22:06:06.0944450Z ##[group]Removing auth
+2026-11-20T22:06:06.0979665Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-20T22:06:06.1068689Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-20T22:06:06.1487168Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-20T22:06:06.1525899Z http.https://github.com/.extraheader
+2026-11-20T22:06:06.1566800Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-11-20T22:06:06.1629994Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-20T22:06:06.2009781Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-20T22:06:06.2069295Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-20T22:06:06.2361482Z ##[endgroup]
+2026-11-20T22:06:06.2870272Z ##[group]Run actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+2026-11-20T22:06:06.2872052Z with:
+2026-11-20T22:06:06.2872921Z   python-version: 3.13
+2026-11-20T22:06:06.2873921Z   check-latest: false
+2026-11-20T22:06:06.2885477Z   token: ***
+2026-11-20T22:06:06.2886434Z   update-environment: true
+2026-11-20T22:06:06.2887512Z   allow-prereleases: false
+2026-11-20T22:06:06.2888568Z   freethreaded: false
+2026-11-20T22:06:06.2889523Z env:
+2026-11-20T22:06:06.2890401Z   PYTHONDONTWRITEBYTECODE: 1
+2026-11-20T22:06:06.2891446Z ##[endgroup]
+2026-11-20T22:06:06.4557754Z ##[group]Installed versions
+2026-11-20T22:06:06.4706546Z (node:2652) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-20T22:06:06.4713545Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-20T22:06:06.4725388Z Successfully set up CPython (3.13.18)
+2026-11-20T22:06:06.4754226Z ##[endgroup]
+2026-11-20T22:06:06.5107672Z ##[group]Run python integrations/chatgpt/qa-r2/compare.py adapter "$RUNNER_TEMP/forge-evidence"
+2026-11-20T22:06:06.5112122Z [36;1mpython integrations/chatgpt/qa-r2/compare.py adapter "$RUNNER_TEMP/forge-evidence"[0m
+2026-11-20T22:06:06.5168121Z shell: /usr/bin/bash -e {0}
+2026-11-20T22:06:06.5169862Z env:
+2026-11-20T22:06:06.5171309Z   PYTHONDONTWRITEBYTECODE: 1
+2026-11-20T22:06:06.5173427Z   pythonLocation: /opt/hostedtoolcache/Python/3.13.18/x64
+2026-11-20T22:06:06.5176528Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.13.18/x64/lib/pkgconfig
+2026-11-20T22:06:06.5179396Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.13.18/x64
+2026-11-20T22:06:06.5181945Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.13.18/x64
+2026-11-20T22:06:06.5184777Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.13.18/x64
+2026-11-20T22:06:06.5187425Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.13.18/x64/lib
+2026-11-20T22:06:06.5189705Z ##[endgroup]
+2026-11-20T22:06:06.6422790Z python-version exit 0 sha256 12162c47c88cf7ca169474b404c0d8bf22203099f01452797ab5d96e71a148aa
+2026-11-20T22:06:06.6426572Z Python 3.13.18
+2026-11-20T22:06:06.6427904Z 
+2026-11-20T22:06:06.7187687Z node-version exit 0 sha256 17e666b140e321b57eec7d7066da9f774ad2457620dc275d6386b5224ab416ac
+2026-11-20T22:06:06.7191757Z v22.23.5
+2026-11-20T22:06:06.7193112Z 
+2026-11-20T22:06:06.7213913Z Preparing worktree (detached HEAD 9143b24)
+2026-11-20T22:06:06.7985480Z HEAD is now at 9143b24 test(chatgpt): make bad patch non-empty and validate keyword-only provider budget
+2026-11-20T22:06:07.0163793Z node-adapter exit 0 sha256 585110c44f1fbf4f6865de7c8dcb0b3d64c8942b2a2d36fae7fab0087a7af39c
+2026-11-20T22:06:07.0166822Z [
+2026-11-20T22:06:07.0174702Z   {
+2026-11-20T22:06:07.0176068Z     "name": "identity_match",
+2026-11-20T22:06:07.0177191Z     "expected": "ALLOW",
+2026-11-20T22:06:07.0205005Z     "observed": "ALLOW",
+2026-11-20T22:06:07.0206222Z     "pass": true
+2026-11-20T22:06:07.0207567Z   },
+2026-11-20T22:06:07.0208604Z   {
+2026-11-20T22:06:07.0209995Z     "name": "wrong_id",
+2026-11-20T22:06:07.0211062Z     "expected": "ACTOR_MISMATCH",
+2026-11-20T22:06:07.0212623Z     "observed": "ACTOR_MISMATCH",
+2026-11-20T22:06:07.0213752Z     "pass": true
+2026-11-20T22:06:07.0215449Z   },
+2026-11-20T22:06:07.0216526Z   {
+2026-11-20T22:06:07.0217850Z     "name": "wrong_login",
+2026-11-20T22:06:07.0218920Z     "expected": "ACTOR_MISMATCH",
+2026-11-20T22:06:07.0220391Z     "observed": "ACTOR_MISMATCH",
+2026-11-20T22:06:07.0221516Z     "pass": true
+2026-11-20T22:06:07.0222742Z   },
+2026-11-20T22:06:07.0223491Z   {
+2026-11-20T22:06:07.0224869Z     "name": "unknown_actor",
+2026-11-20T22:06:07.0226026Z     "expected": "ACCOUNT_UNBOUND",
+2026-11-20T22:06:07.0227488Z     "observed": "ACCOUNT_UNBOUND",
+2026-11-20T22:06:07.0228586Z     "pass": true
+2026-11-20T22:06:07.0229941Z   },
+2026-11-20T22:06:07.0231321Z   {
+2026-11-20T22:06:07.0232685Z     "name": "unbound_actor",
+2026-11-20T22:06:07.0233886Z     "expected": "ACCOUNT_UNBOUND",
+2026-11-20T22:06:07.0236018Z     "observed": "ACCOUNT_UNBOUND",
+2026-11-20T22:06:07.0237288Z     "pass": true
+2026-11-20T22:06:07.0238647Z   },
+2026-11-20T22:06:07.0242309Z   {
+2026-11-20T22:06:07.0242731Z     "name": "suspended",
+2026-11-20T22:06:07.0243265Z     "expected": "403",
+2026-11-20T22:06:07.0243766Z     "observed": "403",
+2026-11-20T22:06:07.0244489Z     "pass": true
+2026-11-20T22:06:07.0244933Z   },
+2026-11-20T22:06:07.0245325Z   {
+2026-11-20T22:06:07.0245766Z     "name": "repo_denied",
+2026-11-20T22:06:07.0246355Z     "expected": "REPOSITORY_READ_DENIED",
+2026-11-20T22:06:07.0247035Z     "observed": "REPOSITORY_READ_DENIED",
+2026-11-20T22:06:07.0247673Z     "pass": true
+2026-11-20T22:06:07.0248163Z   },
+2026-11-20T22:06:07.0248600Z   {
+2026-11-20T22:06:07.0249078Z     "name": "wrong_repo",
+2026-11-20T22:06:07.0249657Z     "expected": "REPOSITORY_READ_DENIED",
+2026-11-20T22:06:07.0250371Z     "observed": "REPOSITORY_READ_DENIED",
+2026-11-20T22:06:07.0251011Z     "pass": true
+2026-11-20T22:06:07.0251492Z   },
+2026-11-20T22:06:07.0252305Z   {
+2026-11-20T22:06:07.0252802Z     "name": "write_denied",
+2026-11-20T22:06:07.0253381Z     "expected": "REPOSITORY_WRITE_DENIED",
+2026-11-20T22:06:07.0254271Z     "observed": "REPOSITORY_WRITE_DENIED",
+2026-11-20T22:06:07.0254901Z     "pass": true
+2026-11-20T22:06:07.0255324Z   },
+2026-11-20T22:06:07.0255704Z   {
+2026-11-20T22:06:07.0256126Z     "name": "write_string",
+2026-11-20T22:06:07.0256691Z     "expected": "REPOSITORY_WRITE_DENIED",
+2026-11-20T22:06:07.0257333Z     "observed": "REPOSITORY_WRITE_DENIED",
+2026-11-20T22:06:07.0257924Z     "pass": true
+2026-11-20T22:06:07.0258379Z   },
+2026-11-20T22:06:07.0258773Z   {
+2026-11-20T22:06:07.0259240Z     "name": "bad_permission_argument",
+2026-11-20T22:06:07.0259954Z     "expected": "INVALID_PERMISSION_REQUEST",
+2026-11-20T22:06:07.0260715Z     "observed": "INVALID_PERMISSION_REQUEST",
+2026-11-20T22:06:07.0261575Z     "pass": true
+2026-11-20T22:06:07.0262036Z   },
+2026-11-20T22:06:07.0262436Z   {
+2026-11-20T22:06:07.0262922Z     "name": "invalid_repo",
+2026-11-20T22:06:07.0263533Z     "expected": "INVALID_REPOSITORY",
+2026-11-20T22:06:07.0264434Z     "observed": "INVALID_REPOSITORY",
+2026-11-20T22:06:07.0265053Z     "pass": true
+2026-11-20T22:06:07.0265522Z   },
+2026-11-20T22:06:07.0265933Z   {
+2026-11-20T22:06:07.0266389Z     "name": "exact_pin",
+2026-11-20T22:06:07.0266927Z     "expected": "ALLOW",
+2026-11-20T22:06:07.0267471Z     "observed": "ALLOW",
+2026-11-20T22:06:07.0268031Z     "pass": true
+2026-11-20T22:06:07.0268489Z   },
+2026-11-20T22:06:07.0268923Z   {
+2026-11-20T22:06:07.0269368Z     "name": "head_drift",
+2026-11-20T22:06:07.0269972Z     "expected": "EXACT_HEAD_OR_TREE_DRIFT",
+2026-11-20T22:06:07.0270652Z     "observed": "EXACT_HEAD_OR_TREE_DRIFT",
+2026-11-20T22:06:07.0271262Z     "pass": true
+2026-11-20T22:06:07.0271717Z   },
+2026-11-20T22:06:07.0272116Z   {
+2026-11-20T22:06:07.0272603Z     "name": "tree_drift",
+2026-11-20T22:06:07.0273192Z     "expected": "EXACT_HEAD_OR_TREE_DRIFT",
+2026-11-20T22:06:07.0273910Z     "observed": "EXACT_HEAD_OR_TREE_DRIFT",
+2026-11-20T22:06:07.0274816Z     "pass": true
+2026-11-20T22:06:07.0275249Z   },
+2026-11-20T22:06:07.0275618Z   {
+2026-11-20T22:06:07.0276029Z     "name": "zero_sha",
+2026-11-20T22:06:07.0276573Z     "expected": "INVALID_OBJECT_ID",
+2026-11-20T22:06:07.0277203Z     "observed": "INVALID_OBJECT_ID",
+2026-11-20T22:06:07.0277825Z     "pass": true
+2026-11-20T22:06:07.0278299Z   },
+2026-11-20T22:06:07.0278729Z   {
+2026-11-20T22:06:07.0279186Z     "name": "ref_alias",
+2026-11-20T22:06:07.0279749Z     "expected": "INVALID_BRANCH",
+2026-11-20T22:06:07.0280326Z     "observed": "INVALID_BRANCH",
+2026-11-20T22:06:07.0280847Z     "pass": true
+2026-11-20T22:06:07.0281262Z   },
+2026-11-20T22:06:07.0281650Z   {
+2026-11-20T22:06:07.0282127Z     "name": "branch_mismatch",
+2026-11-20T22:06:07.0282770Z     "expected": "EXACT_HEAD_OR_TREE_DRIFT",
+2026-11-20T22:06:07.0283814Z     "observed": "EXACT_HEAD_OR_TREE_DRIFT",
+2026-11-20T22:06:07.0284673Z     "pass": true
+2026-11-20T22:06:07.0285131Z   },
+2026-11-20T22:06:07.0285545Z   {
+2026-11-20T22:06:07.0285957Z     "name": "no_fake_context",
+2026-11-20T22:06:07.0286468Z     "expected": "ALLOW",
+2026-11-20T22:06:07.0286968Z     "observed": "ALLOW",
+2026-11-20T22:06:07.0287450Z     "pass": true
+2026-11-20T22:06:07.0287879Z   },
+2026-11-20T22:06:07.0288261Z   {
+2026-11-20T22:06:07.0288706Z     "name": "delivery_unbound",
+2026-11-20T22:06:07.0289423Z     "expected": "CORE_BROKER_AND_DURABLE_HOST_BRIDGE_REQUIRED",
+2026-11-20T22:06:07.0290338Z     "observed": "CORE_BROKER_AND_DURABLE_HOST_BRIDGE_REQUIRED",
+2026-11-20T22:06:07.0291094Z     "pass": true
+2026-11-20T22:06:07.0291567Z   },
+2026-11-20T22:06:07.0291992Z   {
+2026-11-20T22:06:07.0292478Z     "name": "luci3n_fresh_identity",
+2026-11-20T22:06:07.0293100Z     "expected": "ALLOW",
+2026-11-20T22:06:07.0293634Z     "observed": "ALLOW",
+2026-11-20T22:06:07.0294435Z     "pass": true
+2026-11-20T22:06:07.0294901Z   },
+2026-11-20T22:06:07.0295305Z   {
+2026-11-20T22:06:07.0295796Z     "name": "legacy_suspended_denied",
+2026-11-20T22:06:07.0296813Z     "expected": "SUSPENDED_LEGACY_ACTOR",
+2026-11-20T22:06:07.0297570Z     "observed": "SUSPENDED_LEGACY_ACTOR",
+2026-11-20T22:06:07.0298222Z     "pass": true
+2026-11-20T22:06:07.0298707Z   },
+2026-11-20T22:06:07.0299129Z   {
+2026-11-20T22:06:07.0299603Z     "name": "nox_account_mismatch",
+2026-11-20T22:06:07.0300247Z     "expected": "ACTOR_MISMATCH",
+2026-11-20T22:06:07.0300873Z     "observed": "ACTOR_MISMATCH",
+2026-11-20T22:06:07.0301590Z     "pass": true
+2026-11-20T22:06:07.0302098Z   },
+2026-11-20T22:06:07.0302521Z   {
+2026-11-20T22:06:07.0302981Z     "name": "nox_cannot_write",
+2026-11-20T22:06:07.0303577Z     "expected": "ROLE_OPERATION_DENIED",
+2026-11-20T22:06:07.0304469Z     "observed": "ROLE_OPERATION_DENIED",
+2026-11-20T22:06:07.0305065Z     "pass": true
+2026-11-20T22:06:07.0305529Z   },
+2026-11-20T22:06:07.0305979Z   {
+2026-11-20T22:06:07.0306472Z     "name": "nox_cannot_approve",
+2026-11-20T22:06:07.0307150Z     "expected": "ROLE_OPERATION_DENIED",
+2026-11-20T22:06:07.0307845Z     "observed": "ROLE_OPERATION_DENIED",
+2026-11-20T22:06:07.0308428Z     "pass": true
+2026-11-20T22:06:07.0308848Z   },
+2026-11-20T22:06:07.0309234Z   {
+2026-11-20T22:06:07.0309676Z     "name": "nox_nonaccepting",
+2026-11-20T22:06:07.0310214Z     "expected": "ALLOW",
+2026-11-20T22:06:07.0310727Z     "observed": "ALLOW",
+2026-11-20T22:06:07.0311208Z     "pass": true
+2026-11-20T22:06:07.0311630Z   },
+2026-11-20T22:06:07.0312007Z   {
+2026-11-20T22:06:07.0312447Z     "name": "repo_id_drift",
+2026-11-20T22:06:07.0313079Z     "expected": "REPOSITORY_ID_OR_ACCESS_DRIFT",
+2026-11-20T22:06:07.0313791Z     "observed": "REPOSITORY_ID_OR_ACCESS_DRIFT",
+2026-11-20T22:06:07.0314669Z     "pass": true
+2026-11-20T22:06:07.0315123Z   },
+2026-11-20T22:06:07.0315545Z   {
+2026-11-20T22:06:07.0316010Z     "name": "writer_no_push",
+2026-11-20T22:06:07.0316674Z     "expected": "REPOSITORY_WRITE_DENIED",
+2026-11-20T22:06:07.0317382Z     "observed": "REPOSITORY_WRITE_DENIED",
+2026-11-20T22:06:07.0318063Z     "pass": true
+2026-11-20T22:06:07.0318567Z   },
+2026-11-20T22:06:07.0318989Z   {
+2026-11-20T22:06:07.0319488Z     "name": "writer_preflight_only",
+2026-11-20T22:06:07.0320140Z     "expected": "ALLOW",
+2026-11-20T22:06:07.0320701Z     "observed": "ALLOW",
+2026-11-20T22:06:07.0321242Z     "pass": true
+2026-11-20T22:06:07.0321724Z   },
+2026-11-20T22:06:07.0322143Z   {
+2026-11-20T22:06:07.0322605Z     "name": "branch_dotdot",
+2026-11-20T22:06:07.0323221Z     "expected": "INVALID_BRANCH",
+2026-11-20T22:06:07.0323882Z     "observed": "INVALID_BRANCH",
+2026-11-20T22:06:07.0324727Z     "pass": true
+2026-11-20T22:06:07.0325187Z   },
+2026-11-20T22:06:07.0325585Z   {
+2026-11-20T22:06:07.0326031Z     "name": "branch_full_ref",
+2026-11-20T22:06:07.0326634Z     "expected": "INVALID_BRANCH",
+2026-11-20T22:06:07.0327247Z     "observed": "INVALID_BRANCH",
+2026-11-20T22:06:07.0328218Z     "pass": true
+2026-11-20T22:06:07.0328696Z   }
+2026-11-20T22:06:07.0329090Z ]
+2026-11-20T22:06:07.0329326Z 
+2026-11-20T22:06:07.6058994Z python-bridge exit 0 sha256 47719173eb3581c712ca63b74bf8c5098362ef4099c5828bd91ff267c1040218
+2026-11-20T22:06:07.6085721Z test_bad_trust (__main__.HostBridge.test_bad_trust) ... ok
+2026-11-20T22:06:07.6087093Z test_cycle (__main__.HostBridge.test_cycle) ... ok
+2026-11-20T22:06:07.6088925Z test_journal_reopen_and_conflict (__main__.HostBridge.test_journal_reopen_and_conflict) ... ok
+2026-11-20T22:06:07.6090605Z test_plan_is_not_launch (__main__.HostBridge.test_plan_is_not_launch) ... ok
+2026-11-20T22:06:07.6092595Z test_repair_controller_is_canonical (__main__.HostBridge.test_repair_controller_is_canonical) ... ok
+2026-11-20T22:06:07.6094474Z test_repo_and_sha_drift (__main__.HostBridge.test_repo_and_sha_drift) ... ok
+2026-11-20T22:06:07.6095922Z 
+2026-11-20T22:06:07.6096697Z ----------------------------------------------------------------------
+2026-11-20T22:06:07.6098127Z Ran 6 tests in 0.028s
+2026-11-20T22:06:07.6098729Z 
+2026-11-20T22:06:07.6099515Z OK
+2026-11-20T22:06:07.6100080Z 
+2026-11-20T22:06:08.6259511Z r4-host-adversarial exit 0 sha256 bf6beddfdf37863947d2cdcdc8028ec1a61fcbfe820ab4c05f18767fc3af0337
+2026-11-20T22:06:08.6261363Z test_bad_actor_or_numeric_id (integrations.chatgpt.test_host_autonomy.BrokerTests.test_bad_actor_or_numeric_id) ... ok
+2026-11-20T22:06:08.6263636Z test_bad_write_receipt_is_unknown (integrations.chatgpt.test_host_autonomy.BrokerTests.test_bad_write_receipt_is_unknown) ... ok
+2026-11-20T22:06:08.6265803Z test_branch_head_drift (integrations.chatgpt.test_host_autonomy.BrokerTests.test_branch_head_drift) ... ok
+2026-11-20T22:06:08.6267631Z test_collision_after_interrupted_mutation (integrations.chatgpt.test_host_autonomy.BrokerTests.test_collision_after_interrupted_mutation) ... ok
+2026-11-20T22:06:08.6269591Z test_disabled_default_boundary (integrations.chatgpt.test_host_autonomy.BrokerTests.test_disabled_default_boundary) ... ok
+2026-11-20T22:06:08.6271317Z test_hmac_audit_forgery (integrations.chatgpt.test_host_autonomy.BrokerTests.test_hmac_audit_forgery) ... ok
+2026-11-20T22:06:08.6272891Z test_journal_forgery (integrations.chatgpt.test_host_autonomy.BrokerTests.test_journal_forgery) ... ok
+2026-11-20T22:06:08.6275063Z test_lost_network_without_positive_proof_stays_unknown (integrations.chatgpt.test_host_autonomy.BrokerTests.test_lost_network_without_positive_proof_stays_unknown) ... ok
+2026-11-20T22:06:08.6277429Z test_materialized_operation_row_forgery_denied (integrations.chatgpt.test_host_autonomy.BrokerTests.test_materialized_operation_row_forgery_denied) ... ok
+2026-11-20T22:06:08.6279819Z test_network_loss_after_remote_commit_recover_without_replay (integrations.chatgpt.test_host_autonomy.BrokerTests.test_network_loss_after_remote_commit_recover_without_replay) ... ok
+2026-11-20T22:06:08.6281995Z test_nonallowlisted_branch (integrations.chatgpt.test_host_autonomy.BrokerTests.test_nonallowlisted_branch) ... ok
+2026-11-20T22:06:08.6283800Z test_nonce_changed_payload_denied (integrations.chatgpt.test_host_autonomy.BrokerTests.test_nonce_changed_payload_denied) ... ok
+2026-11-20T22:06:08.6285887Z test_off_role_denial (integrations.chatgpt.test_host_autonomy.BrokerTests.test_off_role_denial) ... ok
+2026-11-20T22:06:08.6287665Z test_positive_write_and_idempotency (integrations.chatgpt.test_host_autonomy.BrokerTests.test_positive_write_and_idempotency) ... ok
+2026-11-20T22:06:08.6289659Z test_postwrite_wrong_tree_rejected (integrations.chatgpt.test_host_autonomy.BrokerTests.test_postwrite_wrong_tree_rejected) ... ok
+2026-11-20T22:06:08.6291635Z test_repo_immutable_id_drift (integrations.chatgpt.test_host_autonomy.BrokerTests.test_repo_immutable_id_drift) ... ok
+2026-11-20T22:06:08.6293448Z test_repository_permissions_denied (integrations.chatgpt.test_host_autonomy.BrokerTests.test_repository_permissions_denied) ... ok
+2026-11-20T22:06:08.6295584Z test_stale_pr_and_not_draft (integrations.chatgpt.test_host_autonomy.BrokerTests.test_stale_pr_and_not_draft) ... ok
+2026-11-20T22:06:08.6298450Z test_unauthorized_file_path (integrations.chatgpt.test_host_autonomy.BrokerTests.test_unauthorized_file_path) ... ok
+2026-11-20T22:06:08.6300359Z test_unsupported_cas_denied_without_retry (integrations.chatgpt.test_host_autonomy.BrokerTests.test_unsupported_cas_denied_without_retry) ... ok
+2026-11-20T22:06:08.6302338Z test_absent_service_fails_closed (integrations.chatgpt.test_host_autonomy.LauncherTests.test_absent_service_fails_closed) ... ok
+2026-11-20T22:06:08.6304356Z test_bounded_repair_controller (integrations.chatgpt.test_host_autonomy.LauncherTests.test_bounded_repair_controller) ... ok
+2026-11-20T22:06:08.6306265Z test_context_row_forgery_denied (integrations.chatgpt.test_host_autonomy.LauncherTests.test_context_row_forgery_denied) ... ok
+2026-11-20T22:06:08.6307993Z test_forged_signer (integrations.chatgpt.test_host_autonomy.LauncherTests.test_forged_signer) ... ok
+2026-11-20T22:06:08.6309792Z test_fresh_review_context_mock_only (integrations.chatgpt.test_host_autonomy.LauncherTests.test_fresh_review_context_mock_only) ... ok
+2026-11-20T22:06:08.6312163Z test_injected_model_output_cannot_approve (integrations.chatgpt.test_host_autonomy.LauncherTests.test_injected_model_output_cannot_approve) ... ok
+2026-11-20T22:06:08.6314414Z test_mock_attested_writer (integrations.chatgpt.test_host_autonomy.LauncherTests.test_mock_attested_writer) ... ok
+2026-11-20T22:06:08.6316185Z test_nonce_replay (integrations.chatgpt.test_host_autonomy.LauncherTests.test_nonce_replay) ... ok
+2026-11-20T22:06:08.6318069Z test_provider_timeout_is_unknown_not_retried (integrations.chatgpt.test_host_autonomy.LauncherTests.test_provider_timeout_is_unknown_not_retried) ... ok
+2026-11-20T22:06:08.6320167Z test_reader_requires_distinct_context (integrations.chatgpt.test_host_autonomy.LauncherTests.test_reader_requires_distinct_context) ... ok
+2026-11-20T22:06:08.6322523Z test_reconcile_model_timeout_from_signed_receipt (integrations.chatgpt.test_host_autonomy.LauncherTests.test_reconcile_model_timeout_from_signed_receipt) ... ok
+2026-11-20T22:06:08.6325139Z test_reconcile_rejects_changed_authority_packet (integrations.chatgpt.test_host_autonomy.LauncherTests.test_reconcile_rejects_changed_authority_packet) ... ok
+2026-11-20T22:06:08.6327389Z test_reconcile_rejects_forged_provider_reply (integrations.chatgpt.test_host_autonomy.LauncherTests.test_reconcile_rejects_forged_provider_reply) ... ok
+2026-11-20T22:06:08.6329436Z test_repo_actor_substitution (integrations.chatgpt.test_host_autonomy.LauncherTests.test_repo_actor_substitution) ... ok
+2026-11-20T22:06:08.6331323Z test_review_without_author_proof (integrations.chatgpt.test_host_autonomy.LauncherTests.test_review_without_author_proof) ... ok
+2026-11-20T22:06:08.6333765Z test_reviewer_recovery_requires_exact_original_author_context (integrations.chatgpt.test_host_autonomy.LauncherTests.test_reviewer_recovery_requires_exact_original_author_context) ... ok
+2026-11-20T22:06:08.6336369Z test_spoofed_context_metadata (integrations.chatgpt.test_host_autonomy.LauncherTests.test_spoofed_context_metadata) ... ok
+2026-11-20T22:06:08.6338279Z test_stale_evidence_rejected (integrations.chatgpt.test_host_autonomy.LauncherTests.test_stale_evidence_rejected) ... ok
+2026-11-20T22:06:08.6340318Z test_untrusted_result_cannot_override_signed_sha (integrations.chatgpt.test_host_autonomy.LauncherTests.test_untrusted_result_cannot_override_signed_sha) ... ok
+2026-11-20T22:06:08.6342480Z test_wrong_repository_metadata (integrations.chatgpt.test_host_autonomy.LauncherTests.test_wrong_repository_metadata) ... ok
+2026-11-20T22:06:08.6344865Z test_notion_malformed_session_url_denied (integrations.chatgpt.test_host_autonomy.ProviderTransportTests.test_notion_malformed_session_url_denied) ... ok
+2026-11-20T22:06:08.6347028Z test_notion_mock_session_contract (integrations.chatgpt.test_host_autonomy.ProviderTransportTests.test_notion_mock_session_contract) ... ok
+2026-11-20T22:06:08.6349189Z test_notion_requires_entitlement (integrations.chatgpt.test_host_autonomy.ProviderTransportTests.test_notion_requires_entitlement) ... ok
+2026-11-20T22:06:08.6351622Z test_openai_paid_default_denied (integrations.chatgpt.test_host_autonomy.ProviderTransportTests.test_openai_paid_default_denied) ... ok
+2026-11-20T22:06:08.6353894Z test_openai_provider_no_tool_authority (integrations.chatgpt.test_host_autonomy.ProviderTransportTests.test_openai_provider_no_tool_authority) ... ok
+2026-11-20T22:06:08.6356695Z test_openai_real_https_contract_mock_transport (integrations.chatgpt.test_host_autonomy.ProviderTransportTests.test_openai_real_https_contract_mock_transport) ... ok
+2026-11-20T22:06:08.6358288Z 
+2026-11-20T22:06:08.6358790Z ----------------------------------------------------------------------
+2026-11-20T22:06:08.6359684Z Ran 46 tests in 0.794s
+2026-11-20T22:06:08.6360205Z 
+2026-11-20T22:06:08.6360568Z OK
+2026-11-20T22:06:08.6360969Z 
+2026-11-20T22:06:15.1382732Z r5-engineering-service exit 0 sha256 62dc139081fb4b3cae8f020840820053a5dfc22637f2bc4e7a265a260439c1df
+2026-11-20T22:06:15.1385111Z test_bot_actor_cannot_be_human_even_if_same_id (integrations.chatgpt.test_engineering_service.PipelineTests.test_bot_actor_cannot_be_human_even_if_same_id) ... ok
+2026-11-20T22:06:15.1387405Z test_broker_disabled_denies_every_remote_commit (integrations.chatgpt.test_engineering_service.PipelineTests.test_broker_disabled_denies_every_remote_commit) ... ok
+2026-11-20T22:06:15.1389701Z test_budget_out_of_bounds (integrations.chatgpt.test_engineering_service.PipelineTests.test_budget_out_of_bounds) ... ok
+2026-11-20T22:06:15.1391676Z test_canonical_test_mutation_is_forbidden (integrations.chatgpt.test_engineering_service.PipelineTests.test_canonical_test_mutation_is_forbidden) ... ok
+2026-11-20T22:06:15.1393964Z test_complete_mock_writer_gate_broker_fresh_reviewer (integrations.chatgpt.test_engineering_service.PipelineTests.test_complete_mock_writer_gate_broker_fresh_reviewer) ... ok
+2026-11-20T22:06:15.1396604Z test_data_source_prompt_injection_not_command (integrations.chatgpt.test_engineering_service.PipelineTests.test_data_source_prompt_injection_not_command) ... ok
+2026-11-20T22:06:15.1398773Z test_duplicate_dispatch_nonce_denied (integrations.chatgpt.test_engineering_service.PipelineTests.test_duplicate_dispatch_nonce_denied) ... ok
+2026-11-20T22:06:15.1400709Z test_duplicate_response_rejected (integrations.chatgpt.test_engineering_service.PipelineTests.test_duplicate_response_rejected) ... ok
+2026-11-20T22:06:15.1402773Z test_exact_original_persona_and_skill_bytes (integrations.chatgpt.test_engineering_service.PipelineTests.test_exact_original_persona_and_skill_bytes) ... ok
+2026-11-20T22:06:15.1405678Z test_fake_independent_context_is_never_live_qualification (integrations.chatgpt.test_engineering_service.PipelineTests.test_fake_independent_context_is_never_live_qualification) ... ok
+2026-11-20T22:06:15.1408163Z test_hidden_oracle_even_if_operator_requests_it (integrations.chatgpt.test_engineering_service.PipelineTests.test_hidden_oracle_even_if_operator_requests_it) ... ok
+2026-11-20T22:06:15.1410429Z test_hidden_oracle_never_written_by_model (integrations.chatgpt.test_engineering_service.PipelineTests.test_hidden_oracle_never_written_by_model) ... ok
+2026-11-20T22:06:15.1412750Z test_live_requires_exclusive_service_and_actual_model (integrations.chatgpt.test_engineering_service.PipelineTests.test_live_requires_exclusive_service_and_actual_model) ... ok
+2026-11-20T22:06:15.1415272Z test_live_service_bot_actor_required (integrations.chatgpt.test_engineering_service.PipelineTests.test_live_service_bot_actor_required) ... ok
+2026-11-20T22:06:15.1417632Z test_model_broken_candidate_fails_fixed_oracle_and_stops (integrations.chatgpt.test_engineering_service.PipelineTests.test_model_broken_candidate_fails_fixed_oracle_and_stops) ... ok
+2026-11-20T22:06:15.1419954Z test_model_nonjson_cannot_be_committed (integrations.chatgpt.test_engineering_service.PipelineTests.test_model_nonjson_cannot_be_committed) ... ok
+2026-11-20T22:06:15.1422071Z test_model_result_bad_base_sha_denied (integrations.chatgpt.test_engineering_service.PipelineTests.test_model_result_bad_base_sha_denied) ... ok
+2026-11-20T22:06:15.1424903Z test_model_result_modifies_hidden_test_denied (integrations.chatgpt.test_engineering_service.PipelineTests.test_model_result_modifies_hidden_test_denied) ... ok
+2026-11-20T22:06:15.1427254Z test_model_result_path_traversal_denied (integrations.chatgpt.test_engineering_service.PipelineTests.test_model_result_path_traversal_denied) ... ok
+2026-11-20T22:06:15.1429401Z test_model_write_tool_prohibited (integrations.chatgpt.test_engineering_service.PipelineTests.test_model_write_tool_prohibited) ... ok
+2026-11-20T22:06:15.1431556Z test_oracle_command_shell_injection_denied (integrations.chatgpt.test_engineering_service.PipelineTests.test_oracle_command_shell_injection_denied) ... ok
+2026-11-20T22:06:15.1433727Z test_original_hidden_oracle_red (integrations.chatgpt.test_engineering_service.PipelineTests.test_original_hidden_oracle_red) ... ok
+2026-11-20T22:06:15.1436126Z test_provider_source_read_attested_digest (integrations.chatgpt.test_engineering_service.PipelineTests.test_provider_source_read_attested_digest) ... ok
+2026-11-20T22:06:15.1438720Z test_read_only_tool_does_not_expose_hidden_oracle (integrations.chatgpt.test_engineering_service.PipelineTests.test_read_only_tool_does_not_expose_hidden_oracle) ... ok
+2026-11-20T22:06:15.1441222Z test_remote_response_lost_after_commit_is_uncertain (integrations.chatgpt.test_engineering_service.PipelineTests.test_remote_response_lost_after_commit_is_uncertain) ... ok
+2026-11-20T22:06:15.1443667Z test_review_false_pass_rejected_on_open_p1 (integrations.chatgpt.test_engineering_service.PipelineTests.test_review_false_pass_rejected_on_open_p1) ... ok
+2026-11-20T22:06:15.1446248Z test_review_false_pass_rejected_when_gates_red (integrations.chatgpt.test_engineering_service.PipelineTests.test_review_false_pass_rejected_when_gates_red) ... ok
+2026-11-20T22:06:15.1448709Z test_reviewer_cannot_receive_writer_authoring_history (integrations.chatgpt.test_engineering_service.PipelineTests.test_reviewer_cannot_receive_writer_authoring_history) ... ok
+2026-11-20T22:06:15.1451101Z test_reviewer_false_persona_cannot_pass (integrations.chatgpt.test_engineering_service.PipelineTests.test_reviewer_false_persona_cannot_pass) ... ok
+2026-11-20T22:06:15.1453126Z test_scope_no_shell_tools (integrations.chatgpt.test_engineering_service.PipelineTests.test_scope_no_shell_tools) ... ok
+2026-11-20T22:06:15.1455423Z test_source_snapshot_rejects_stale_tree (integrations.chatgpt.test_engineering_service.PipelineTests.test_source_snapshot_rejects_stale_tree) ... ok
+2026-11-20T22:06:15.1457669Z test_source_snapshot_rejects_unavailable_blob (integrations.chatgpt.test_engineering_service.PipelineTests.test_source_snapshot_rejects_unavailable_blob) ... ok
+2026-11-20T22:06:15.1460020Z test_source_too_many_reads_exhausts_quota (integrations.chatgpt.test_engineering_service.PipelineTests.test_source_too_many_reads_exhausts_quota) ... ok
+2026-11-20T22:06:15.1462045Z test_stale_branch_rejected (integrations.chatgpt.test_engineering_service.PipelineTests.test_stale_branch_rejected) ... ok
+2026-11-20T22:06:15.1464395Z test_wrong_immutable_repository_id_rejected (integrations.chatgpt.test_engineering_service.PipelineTests.test_wrong_immutable_repository_id_rejected) ... ok
+2026-11-20T22:06:15.1466651Z test_wrong_writer_account_rejected (integrations.chatgpt.test_engineering_service.PipelineTests.test_wrong_writer_account_rejected) ... ok
+2026-11-20T22:06:15.1468644Z test_no_budget_overspend (integrations.chatgpt.test_engineering_service.ResponseTransportTests.test_no_budget_overspend) ... ok
+2026-11-20T22:06:15.1470607Z test_paid_calls_default_disabled (integrations.chatgpt.test_engineering_service.ResponseTransportTests.test_paid_calls_default_disabled) ... ok
+2026-11-20T22:06:15.1472953Z test_real_request_builder_strict_isolated_input (integrations.chatgpt.test_engineering_service.ResponseTransportTests.test_real_request_builder_strict_isolated_input) ... ok
+2026-11-20T22:06:15.1475146Z 
+2026-11-20T22:06:15.1475580Z ----------------------------------------------------------------------
+2026-11-20T22:06:15.1476610Z Ran 39 tests in 6.286s
+2026-11-20T22:06:15.1477005Z 
+2026-11-20T22:06:15.1477286Z OK
+2026-11-20T22:06:15.1477638Z 
+2026-11-20T22:06:18.0130113Z package-build-1 exit 0 sha256 1db2ba7cab46523870f842ff9b3c9c1d0bf20f687c6c9589cab339aebc4bb64f
+2026-11-20T22:06:18.0165489Z 788050172392cf7305b7634e20b476ee5ba57e53e665834299536bb47fc83f32 /home/runner/work/_temp/forge-evidence/candidate-1.zip
+2026-11-20T22:06:18.0166690Z 
+2026-11-20T22:06:20.9122612Z package-build-2 exit 0 sha256 b87143daf79cfc402113e94c5e22d052f2ff0ae9904087e255cea2ece6434b5b
+2026-11-20T22:06:20.9139510Z 788050172392cf7305b7634e20b476ee5ba57e53e665834299536bb47fc83f32 /home/runner/work/_temp/forge-evidence/candidate-2.zip
+2026-11-20T22:06:20.9155173Z 
+2026-11-20T22:06:21.1147836Z package-audit exit 0 sha256 cbddb9d009e4e21105307d97bce12f002322d6dd1e7acdb16753a581f4a58c5f
+2026-11-20T22:06:21.1155070Z [
+2026-11-20T22:06:21.1164954Z   {
+2026-11-20T22:06:21.1165551Z     "test": "reproducible",
+2026-11-20T22:06:21.1166207Z     "pass": true,
+2026-11-20T22:06:21.1169752Z     "detail": "788050172392cf7305b7634e20b476ee5ba57e53e665834299536bb47fc83f32"
+2026-11-20T22:06:21.1170627Z   },
+2026-11-20T22:06:21.1171726Z   {
+2026-11-20T22:06:21.1172397Z     "test": "archive safe unique paths",
+2026-11-20T22:06:21.1173102Z     "pass": true,
+2026-11-20T22:06:21.1173688Z     "detail": null
+2026-11-20T22:06:21.1174584Z   },
+2026-11-20T22:06:21.1175103Z   {
+2026-11-20T22:06:21.1175611Z     "test": "zip CRC",
+2026-11-20T22:06:21.1176191Z     "pass": true,
+2026-11-20T22:06:21.1176948Z     "detail": null
+2026-11-20T22:06:21.1187464Z   },
+2026-11-20T22:06:21.1188025Z   {
+2026-11-20T22:06:21.1188764Z     "test": "exact inventory and candidate pin",
+2026-11-20T22:06:21.1189502Z     "pass": true,
+2026-11-20T22:06:21.1190012Z     "detail": {
+2026-11-20T22:06:21.1190533Z       "canonical": 1489,
+2026-11-20T22:06:21.1191098Z       "port": 24
+2026-11-20T22:06:21.1193759Z     }
+2026-11-20T22:06:21.1194553Z   },
+2026-11-20T22:06:21.1195007Z   {
+2026-11-20T22:06:21.1196200Z     "test": "all git blobs, modes and manifest hashes match",
+2026-11-20T22:06:21.1197145Z     "pass": true,
+2026-11-20T22:06:21.1197732Z     "detail": []
+2026-11-20T22:06:21.1198289Z   },
+2026-11-20T22:06:21.1198811Z   {
+2026-11-20T22:06:21.1199414Z     "test": "native projections exactly canonical",
+2026-11-20T22:06:21.1200158Z     "pass": true,
+2026-11-20T22:06:21.1200701Z     "detail": []
+2026-11-20T22:06:21.1201203Z   },
+2026-11-20T22:06:21.1201689Z   {
+2026-11-20T22:06:21.1202193Z     "test": "legacy routes",
+2026-11-20T22:06:21.1202811Z     "pass": true,
+2026-11-20T22:06:21.1203370Z     "detail": []
+2026-11-20T22:06:21.1203909Z   },
+2026-11-20T22:06:21.1204752Z   {
+2026-11-20T22:06:21.1205403Z     "test": "all 10 persona and legacy alias targets resolve",
+2026-11-20T22:06:21.1206189Z     "pass": true,
+2026-11-20T22:06:21.1206748Z     "detail": []
+2026-11-20T22:06:21.1207272Z   },
+2026-11-20T22:06:21.1207774Z   {
+2026-11-20T22:06:21.1208331Z     "test": "collision precedence",
+2026-11-20T22:06:21.1208976Z     "pass": true,
+2026-11-20T22:06:21.1209536Z     "detail": null
+2026-11-20T22:06:21.1210082Z   },
+2026-11-20T22:06:21.1210579Z   {
+2026-11-20T22:06:21.1211109Z     "test": "native skill names",
+2026-11-20T22:06:21.1211718Z     "pass": true,
+2026-11-20T22:06:21.1212238Z     "detail": {
+2026-11-20T22:06:21.1212753Z       "count": 60,
+2026-11-20T22:06:21.1213290Z       "mismatch": []
+2026-11-20T22:06:21.1213854Z     }
+2026-11-20T22:06:21.1214688Z   },
+2026-11-20T22:06:21.1215171Z   {
+2026-11-20T22:06:21.1215689Z     "test": "manifest version and identity",
+2026-11-20T22:06:21.1216314Z     "pass": true,
+2026-11-20T22:06:21.1216806Z     "detail": null
+2026-11-20T22:06:21.1217283Z   },
+2026-11-20T22:06:21.1217722Z   {
+2026-11-20T22:06:21.1218204Z     "test": "no unmapped archive files",
+2026-11-20T22:06:21.1218802Z     "pass": true,
+2026-11-20T22:06:21.1219284Z     "detail": []
+2026-11-20T22:06:21.1219763Z   },
+2026-11-20T22:06:21.1220670Z   {
+2026-11-20T22:06:21.1223146Z     "test": "negative control tampering changes git blob",
+2026-11-20T22:06:21.1224209Z     "pass": true,
+2026-11-20T22:06:21.1224833Z     "detail": null
+2026-11-20T22:06:21.1225389Z   },
+2026-11-20T22:06:21.1225847Z   {
+2026-11-20T22:06:21.1226384Z     "test": "negative duplicate/traversal controls",
+2026-11-20T22:06:21.1227064Z     "pass": true,
+2026-11-20T22:06:21.1227561Z     "detail": null
+2026-11-20T22:06:21.1228040Z   }
+2026-11-20T22:06:21.1228481Z ]
+2026-11-20T22:06:21.1228803Z 
+2026-11-20T22:06:21.1928203Z ##[group]Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+2026-11-20T22:06:21.1928644Z with:
+2026-11-20T22:06:21.1928863Z   name: forge-r4-adapter-package-1
+2026-11-20T22:06:21.1929174Z   path: /home/runner/work/_temp/forge-evidence/
+2026-11-20T22:06:21.1929488Z   if-no-files-found: error
+2026-11-20T22:06:21.1929724Z   retention-days: 30
+2026-11-20T22:06:21.1929940Z   compression-level: 6
+2026-11-20T22:06:21.1930154Z   overwrite: false
+2026-11-20T22:06:21.1930384Z   include-hidden-files: false
+2026-11-20T22:06:21.1930613Z env:
+2026-11-20T22:06:21.1930813Z   PYTHONDONTWRITEBYTECODE: 1
+2026-11-20T22:06:21.1931121Z   pythonLocation: /opt/hostedtoolcache/Python/3.13.18/x64
+2026-11-20T22:06:21.1931555Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.13.18/x64/lib/pkgconfig
+2026-11-20T22:06:21.1931984Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.13.18/x64
+2026-11-20T22:06:21.1932385Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.13.18/x64
+2026-11-20T22:06:21.1954490Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.13.18/x64
+2026-11-20T22:06:21.1955243Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.13.18/x64/lib
+2026-11-20T22:06:21.1955773Z ##[endgroup]
+2026-11-20T22:06:21.3925576Z (node:6776) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-20T22:06:21.3927745Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-20T22:06:21.4415821Z With the provided path, there will be 16 files uploaded
+2026-11-20T22:06:21.4444796Z Artifact name is valid!
+2026-11-20T22:06:21.4457154Z Root directory input is valid!
+2026-11-20T22:06:21.8323446Z Beginning upload of artifact content to blob storage
+2026-11-20T22:06:22.0192431Z (node:6776) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-11-20T22:06:22.8270598Z Uploaded bytes 2698791
+2026-11-20T22:06:22.9079001Z Finished uploading artifact content to blob storage!
+2026-11-20T22:06:22.9080627Z SHA256 digest of uploaded artifact zip is c5b8e7f878c362f2efc45d236a5938c69630d517bd327827bbaf80007a64990d
+2026-11-20T22:06:22.9081830Z Finalizing artifact upload
+2026-11-20T22:06:23.3183611Z Artifact forge-r4-adapter-package-1.zip successfully finalized. Artifact ID 14673004839
+2026-11-20T22:06:23.3186013Z Artifact forge-r4-adapter-package-1 has been successfully uploaded! Final size is 2698791 bytes. Artifact ID is 14673004839
+2026-11-20T22:06:23.3198074Z Artifact download URL: https://github.com/Kirjane/Operation-FORGE.kirion/actions/runs/44826049789/artifacts/14673004839
+2026-11-20T22:06:23.3430548Z Post job cleanup.
+2026-11-20T22:06:23.4806940Z (node:6788) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-20T22:06:23.4808738Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-20T22:06:23.5135546Z Post job cleanup.
+2026-11-20T22:06:23.6465161Z [command]/usr/bin/git version
+2026-11-20T22:06:23.6695194Z git version 2.56.1
+2026-11-20T22:06:23.6835834Z Temporarily overriding HOME='/home/runner/work/_temp/f3194be2-f636-4925-b9db-23f87a272a41' before making global git config changes
+2026-11-20T22:06:23.6847479Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-20T22:06:23.6900830Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Operation-FORGE.kirion/Operation-FORGE.kirion
+2026-11-20T22:06:23.6948095Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-20T22:06:23.7015706Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-20T22:06:23.7794239Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-20T22:06:23.7966131Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-20T22:06:23.8730711Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-20T22:06:23.8805636Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-20T22:06:23.9278286Z Cleaning up orphan processes
+2026-11-20T22:06:23.9652929Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@11d5960a326750d5838078e36cf38b85af677262, actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065, actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

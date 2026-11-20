@@ -1,0 +1,79 @@
+{
+  "legacy_skills": [
+    "forge-activate",
+    "forge-deliver",
+    "forge-fleet",
+    "forge-identity",
+    "forge-plan",
+    "forge-qualify",
+    "forge-recover",
+    "forge-review",
+    "forge-verify",
+    "kirion-aegis",
+    "kirion-argon",
+    "kirion-integrator",
+    "kirion-iris",
+    "kirion-jane",
+    "kirion-lucien",
+    "kirion-maintainer",
+    "kirion-nox",
+    "kirion-qa",
+    "kirion-scribe"
+  ],
+  "aliases": {
+    "forge-activate": [
+      "BOOTSTRAP_CHATGPT.md",
+      "arsenal/CHATGPT_BOOTSTRAP.md"
+    ],
+    "forge-deliver": [
+      ".agents/skills/kirion-worker/SKILL.md",
+      "git/"
+    ],
+    "forge-fleet": [
+      ".agents/skills/kirion-dispatch/SKILL.md",
+      ".agents/skills/kirion-session-host/SKILL.md"
+    ],
+    "forge-identity": [
+      "arsenal/adapters/chatgpt/WORKER_IDENTITIES.md",
+      ".forge/AUTHORITY.md"
+    ],
+    "forge-plan": [
+      "arsenal/PROJECT_STATES.md",
+      ".agents/skills/kirion-architecture/SKILL.md"
+    ],
+    "forge-qualify": [
+      "integrations/antigravity/QUALIFICATION_REPORT.md",
+      "testing/"
+    ],
+    "forge-recover": [
+      "sandbox/capsule.md",
+      ".agents/skills/kirion-debug/SKILL.md"
+    ],
+    "forge-review": [
+      ".agents/skills/kirion-review/SKILL.md"
+    ],
+    "forge-verify": [
+      ".agents/skills/kirion-evidence/SKILL.md",
+      ".agents/skills/kirion-qa/SKILL.md"
+    ]
+  },
+  "personas": {
+    "aegis": "integrations/antigravity/plugins/kirion-forge/agents/antigravity-aegis.md",
+    "argon": "integrations/antigravity/plugins/kirion-forge/agents/antigravity-argon.md",
+    "integrator": "integrations/antigravity/plugins/kirion-forge/agents/antigravity-integrator.md",
+    "iris": "integrations/antigravity/plugins/kirion-forge/agents/antigravity-iris.md",
+    "jane": "integrations/antigravity/plugins/kirion-forge/agents/antigravity-jane.md",
+    "lucien": "integrations/antigravity/plugins/kirion-forge/agents/antigravity-lucien.md",
+    "maintainer": "integrations/antigravity/plugins/kirion-forge/agents/antigravity-maintainer.md",
+    "nox": "integrations/antigravity/plugins/kirion-forge/agents/antigravity-nox.md",
+    "qa": "integrations/antigravity/plugins/kirion-forge/agents/antigravity-qa.md",
+    "scribe": "integrations/antigravity/plugins/kirion-forge/agents/antigravity-scribe.md"
+  },
+  "collisions": {
+    "kirion-integrator": "forge-persona-integrator",
+    "kirion-qa": "forge-persona-qa"
+  },
+  "precedence": "Canonical engineering skill bytes win name collisions. Explicit persona activation selects forge-persona-<name>; legacy noncollision names route to the same canonical persona. No acceptance or native launch authority granted by aliases.",
+  "baseline_release": "pluginrel_6b00a5a14fd08191a3862a52ac2591d0",
+  "baseline_version": "0.2.0"
+}

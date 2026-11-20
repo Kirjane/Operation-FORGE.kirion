@@ -1,0 +1,1 @@
+Repair cycle 1/5. Before-run 44821827600 preserved (6/6 original comparative PASS, R4 38/39 test FAIL harness invocation). R4 source 7607602c23ee1a5dbce291c58827b8405022fa49 tree f598ef70a63aa23b06bfec2e6245ead7b2f46ed6; no upstream changes. After-run runs original core + A-E and R4 adapter tests, archive and manifest against exact Git inventory; expected no host live activation.

@@ -1,11 +1,11 @@
-name: ChatGPT Forge R2 qualification (isolated QA only)
+name: ChatGPT Forge R4 qualification (isolated QA only)
 on:
   push:
     branches: [qa/chatgpt-port-qualification-r2]
 permissions:
   contents: read
 concurrency:
-  group: forge-chatgpt-qa-r2
+  group: forge-chatgpt-qa-r4
   cancel-in-progress: false
 env:
   PYTHONDONTWRITEBYTECODE: '1'
@@ -47,7 +47,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: forge-r2-${{ matrix.suite }}-${{ github.run_attempt }}
+          name: forge-r4-${{ matrix.suite }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/forge-evidence/
           if-no-files-found: error
           retention-days: 30
@@ -69,7 +69,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: forge-r2-adapter-package-${{ github.run_attempt }}
+          name: forge-r4-adapter-package-${{ github.run_attempt }}
           path: ${{ runner.temp }}/forge-evidence/
           if-no-files-found: error
           retention-days: 30

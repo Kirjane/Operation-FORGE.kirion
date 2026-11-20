@@ -1,5 +1,5 @@
 """Qualification scaffolding only; run original assertions on exact commits."""
-import hashlib,json,os,pathlib,subprocess,sys,tempfile,time
+import hashlib,json,os,pathlib,subprocess,sys,tempfile,time,shutil,shlex,re
 ROOT=pathlib.Path(__file__).resolve().parents[3]
 QA=pathlib.Path(__file__).resolve().parent
 SUITE=sys.argv[1]
@@ -54,6 +54,16 @@ def main():
     status=[]
     with tempfile.TemporaryDirectory(prefix="forge-r2-") as temp:
         parent=pathlib.Path(temp)
+        if SUITE=="B":
+            sdks=subprocess.check_output(["dotnet","--list-sdks"],env=ENV,text=True)
+            versions=re.findall(r"(?m)^(10\.0\.\d+) ",sdks)
+            if not versions: raise RuntimeError("Required .NET 10 SDK unavailable")
+            selected=max(versions,key=lambda v:tuple(map(int,v.split("."))))
+            (parent/"global.json").write_text(json.dumps({"sdk":{"version":selected,"rollForward":"disable"}}))
+            status.append(run("dotnet-sdk-list",["dotnet","--list-sdks"],parent))
+            status.append(run("dotnet-selected",["dotnet","--version"],parent))
+            if subprocess.check_output(["dotnet","--version"],cwd=parent,env=ENV,text=True).strip()!=selected:
+                raise RuntimeError("Wrong .NET SDK selected")
         for name,sha,tree in ([("candidate",HEAD,HT)] if SUITE=="adapter" else [("baseline",BASE,BT),("candidate",HEAD,HT)]):
             dest=checkout(parent,name,sha,tree)
             if SUITE=="adapter":
@@ -66,8 +76,24 @@ def main():
                 if SUITE=="A":
                     bench=dest/"integrations/antigravity/benchmarks/php_procurement_inventory"
                     status.append(run(name+"-composer",["composer","install","--no-interaction","--prefer-dist","--no-plugins","--no-scripts"],bench))
+                    # Preserve original Windows-style ext layout failure and adapt only runner filesystem.
+                    original_path=ENV["PATH"]
+                    php=pathlib.Path(shutil.which("php",path=original_path)).resolve()
+                    ext=pathlib.Path(subprocess.check_output([str(php),"-r",'echo ini_get("extension_dir");'],env=ENV,text=True).strip()).resolve(strict=True)
+                    run(name+"-original-php-layout",[str(php),"-d",f"extension_dir={php.parent/'ext'}","-d","extension=pdo_sqlite","-d","extension=sqlite3",str(bench/"tests/run_tests.php")],bench)
+                    bin_dir=parent/(name+"-php"); bin_dir.mkdir()
+                    (bin_dir/"ext").symlink_to(ext,target_is_directory=True)
+                    wrapper=bin_dir/"php"
+                    wrapper.write_text("#!/bin/sh\nexec "+shlex.quote(str(php))+' "$@"\n')
+                    wrapper.chmod(0o755)
+                    ENV["PATH"]=str(bin_dir)+os.pathsep+original_path
+                    args=[str(wrapper),"-d",f"extension_dir={bin_dir/'ext'}","-d","extension=pdo_sqlite","-d","extension=sqlite3","-r",'if (!in_array("sqlite", PDO::getAvailableDrivers(), true) || !class_exists("SQLite3")) exit(42); echo "PDO SQLite and SQLite3 ready";']
+                    status.append(run(name+"-php-layout-probe",args,bench))
+                if SUITE=="B":
+                    status.append(run(name+"-dotnet-selected",["dotnet","--version"],dest))
                 target="integrations.antigravity.tests.test_factory_core" if SUITE=="core" else "integrations.antigravity.tests.test_qualification_benchmarks.QualificationBenchmarksTests."+methods[SUITE]
                 status.append(run(name+"-"+SUITE,[sys.executable,"-m","unittest",target,"-v"],dest))
+                if SUITE=="A": ENV["PATH"]=original_path
             after(dest,name)
             subprocess.run(["git","worktree","remove","--force",str(dest)],cwd=ROOT,env=ENV,check=True)
     return int(any(status))

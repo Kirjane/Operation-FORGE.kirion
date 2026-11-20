@@ -568,7 +568,11 @@ class EngineeringPilotService:
 
     def run(self,*,writer_packet,reviewer_packet,source_sha,source_tree,source_paths,
             task,nonce_prefix,repo_id):
-        if self.live and (not self.exclusive or not self.dispatch.runner.provider.is_live
+        provider=self.dispatch.runner.provider
+        if self.live and (not self.exclusive or type(provider) is not OpenAIEngineeringProvider
+                          or not provider.authorized or not provider.api_key or not provider.model
+                          or any(v is None for v in (provider.rate_input,provider.rate_output,
+                                                     provider.hard_budget))
                           or not getattr(self.broker,"require_service_actor",False)
                           or self.dispatch.vault_path is None):
             raise Denied("EXCLUSIVE_CREDENTIAL_OR_MODEL_AUTHORIZATION_REQUIRED")

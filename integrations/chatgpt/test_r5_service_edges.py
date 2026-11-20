@@ -33,6 +33,14 @@ class R5ServiceEdges(R5Fixture):
                                    (b"authorization",auth if auth is not None else b"Bearer "+KEY)]},
                        receive,send))
         return events[0]["status"],json.loads(events[1]["body"])
+    def test_fake_model_cannot_enable_live_service_by_self_claiming(self):
+        self.model.is_live=True
+        self.service.live=True
+        self.service.exclusive=True
+        self.broker.require_service_actor=True
+        with self.assertRaisesRegex(Denied,"EXCLUSIVE_CREDENTIAL_OR_MODEL_AUTHORIZATION_REQUIRED"):
+            self.runpilot()
+        self.assertEqual(self.remote.cas_count,0)
     def test_single_request_runs_both_personas_and_broker(self):
         status,result=self.call_http(enabled=True)
         self.assertEqual(status,200)

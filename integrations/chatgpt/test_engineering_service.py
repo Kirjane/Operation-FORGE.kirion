@@ -283,7 +283,7 @@ class PipelineTests(R5Fixture):
         self.assertEqual(self.remote.cas_count,0)
     def test_duplicate_dispatch_nonce_denied(self):
         self.runpilot()
-        with self.assertRaisesRegex(Denied,"CONTEXT_NONCE_REPLAY"):self.runpilot()
+        with self.assertRaisesRegex(Denied,"DURABLE_DISPATCH_NONCE_REPLAY"):self.runpilot()
         self.assertEqual(self.remote.cas_count,1)
     def test_remote_response_lost_after_commit_is_uncertain(self):
         self.remote.fail_after_remote_commit=True

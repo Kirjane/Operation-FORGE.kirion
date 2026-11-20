@@ -1,0 +1,372 @@
+﻿2026-11-20T22:15:51.9941240Z Current runner version: '2.338.2'
+2026-11-20T22:15:51.9967976Z ##[group]Runner Image Provisioner
+2026-11-20T22:15:51.9968990Z Hosted Compute Agent
+2026-11-20T22:15:51.9969760Z Version: 20261111.635
+2026-11-20T22:15:51.9970529Z Commit: b8a594ea514ff44cadb5342986c68b1eac6e22ed
+2026-11-20T22:15:51.9971484Z Build Date: 2026-11-11T01:49:01Z
+2026-11-20T22:15:51.9972342Z Worker ID: {c0fc430a-9d2c-4e16-b8a8-8aa44fb9d327}
+2026-11-20T22:15:51.9973204Z Region: eastus2
+2026-11-20T22:15:51.9974292Z Cloud: Azure
+2026-11-20T22:15:51.9974950Z ##[endgroup]
+2026-11-20T22:15:51.9976771Z ##[group]Operating System
+2026-11-20T22:15:51.9977837Z Ubuntu
+2026-11-20T22:15:51.9978435Z 24.04.5
+2026-11-20T22:15:51.9979133Z LTS
+2026-11-20T22:15:51.9979763Z ##[endgroup]
+2026-11-20T22:15:51.9980490Z ##[group]Runner Image
+2026-11-20T22:15:51.9981216Z Image: ubuntu-24.04
+2026-11-20T22:15:51.9982483Z Version: 20261116.376.1
+2026-11-20T22:15:51.9984155Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20261116.376/images/ubuntu/Ubuntu2404-Readme.md
+2026-11-20T22:15:51.9986232Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20261116.376
+2026-11-20T22:15:51.9987604Z ##[endgroup]
+2026-11-20T22:15:51.9989038Z ##[group]GITHUB_TOKEN Permissions
+2026-11-20T22:15:51.9991541Z Contents: read
+2026-11-20T22:15:51.9992350Z Metadata: read
+2026-11-20T22:15:51.9993037Z ##[endgroup]
+2026-11-20T22:15:51.9995560Z Secret source: Actions
+2026-11-20T22:15:51.9996653Z Cache mode: write
+2026-11-20T22:15:51.9997890Z Prepare workflow directory
+2026-11-20T22:15:52.0851755Z Prepare all required actions
+2026-11-20T22:15:52.0907679Z Getting action download info
+2026-11-20T22:15:52.2951451Z Download action repository 'actions/checkout@11d5960a326750d5838078e36cf38b85af677262' (SHA:11d5960a326750d5838078e36cf38b85af677262)
+2026-11-20T22:15:53.3346172Z Download action repository 'actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065' (SHA:a26af69be951a213d495a4c3e4e4022e16d87065)
+2026-11-20T22:15:53.6160770Z Download action repository 'shivammathur/setup-php@bf6b4fbd49ca58e4608c9c89fba0b8d90bd2a39f' (SHA:bf6b4fbd49ca58e4608c9c89fba0b8d90bd2a39f)
+2026-11-20T22:15:53.8097848Z Download action repository 'actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1' (SHA:26b0ec14cb23fa6904739307f278c14f94c95bf1)
+2026-11-20T22:15:54.0916823Z Download action repository 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+2026-11-20T22:15:54.4699611Z Complete job name: Compare B (same runner)
+2026-11-20T22:15:54.5354799Z ##[group]Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+2026-11-20T22:15:54.5355386Z with:
+2026-11-20T22:15:54.5355627Z   ref: 3d06d67275e1f2241188e37f54e0a30ea5526fc6
+2026-11-20T22:15:54.5355898Z   fetch-depth: 0
+2026-11-20T22:15:54.5356135Z   persist-credentials: false
+2026-11-20T22:15:54.5356409Z   repository: Kirjane/Operation-FORGE.kirion
+2026-11-20T22:15:54.5359153Z   token: ***
+2026-11-20T22:15:54.5359372Z   ssh-strict: true
+2026-11-20T22:15:54.5359605Z   ssh-user: git
+2026-11-20T22:15:54.5359815Z   clean: true
+2026-11-20T22:15:54.5360044Z   sparse-checkout-cone-mode: true
+2026-11-20T22:15:54.5360297Z   fetch-tags: false
+2026-11-20T22:15:54.5360519Z   show-progress: true
+2026-11-20T22:15:54.5360729Z   lfs: false
+2026-11-20T22:15:54.5360943Z   submodules: false
+2026-11-20T22:15:54.5361156Z   set-safe-directory: true
+2026-11-20T22:15:54.5361403Z   allow-unsafe-pr-checkout: false
+2026-11-20T22:15:54.5361853Z env:
+2026-11-20T22:15:54.5362097Z   PYTHONDONTWRITEBYTECODE: 1
+2026-11-20T22:15:54.5362347Z ##[endgroup]
+2026-11-20T22:15:57.6908269Z Syncing repository: Kirjane/Operation-FORGE.kirion
+2026-11-20T22:15:57.6909958Z ##[group]Getting Git version info
+2026-11-20T22:15:57.6910606Z Working directory is '/home/runner/work/Operation-FORGE.kirion/Operation-FORGE.kirion'
+2026-11-20T22:15:57.6916125Z [command]/usr/bin/git version
+2026-11-20T22:15:57.8608617Z git version 2.56.1
+2026-11-20T22:15:57.8620883Z ##[endgroup]
+2026-11-20T22:15:57.8636595Z Temporarily overriding HOME='/home/runner/work/_temp/8734e836-adc0-436f-b604-d583de97f371' before making global git config changes
+2026-11-20T22:15:57.8638192Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-20T22:15:57.8648053Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Operation-FORGE.kirion/Operation-FORGE.kirion
+2026-11-20T22:15:57.8882585Z Deleting the contents of '/home/runner/work/Operation-FORGE.kirion/Operation-FORGE.kirion'
+2026-11-20T22:15:57.8886900Z ##[group]Initializing the repository
+2026-11-20T22:15:57.8892108Z [command]/usr/bin/git init /home/runner/work/Operation-FORGE.kirion/Operation-FORGE.kirion
+2026-11-20T22:15:57.9510140Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-11-20T22:15:57.9511059Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-11-20T22:15:57.9511890Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-11-20T22:15:57.9512459Z hint: call:
+2026-11-20T22:15:57.9512680Z hint:
+2026-11-20T22:15:57.9513020Z hint: 	git config --global init.defaultBranch <name>
+2026-11-20T22:15:57.9513402Z hint:
+2026-11-20T22:15:57.9513775Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-11-20T22:15:57.9514391Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-11-20T22:15:57.9514851Z hint:
+2026-11-20T22:15:57.9515085Z hint: 	git branch -m <name>
+2026-11-20T22:15:57.9515326Z hint:
+2026-11-20T22:15:57.9515603Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-11-20T22:15:57.9674763Z Initialized empty Git repository in /home/runner/work/Operation-FORGE.kirion/Operation-FORGE.kirion/.git/
+2026-11-20T22:15:57.9677582Z [command]/usr/bin/git remote add origin https://github.com/Kirjane/Operation-FORGE.kirion
+2026-11-20T22:15:57.9973646Z ##[endgroup]
+2026-11-20T22:15:57.9974009Z ##[group]Disabling automatic garbage collection
+2026-11-20T22:15:57.9974372Z [command]/usr/bin/git config --local gc.auto 0
+2026-11-20T22:15:58.0116908Z ##[endgroup]
+2026-11-20T22:15:58.0128292Z ##[group]Setting up auth
+2026-11-20T22:15:58.0129148Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-20T22:15:58.0130963Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-20T22:15:58.2522353Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-20T22:15:58.2548376Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-20T22:15:58.2770266Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-20T22:15:58.2815046Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-20T22:15:58.3030981Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-11-20T22:15:58.3080495Z ##[endgroup]
+2026-11-20T22:15:58.3081666Z ##[group]Fetching the repository
+2026-11-20T22:15:58.3092769Z [command]/usr/bin/git -c protocol.version=2 fetch --prune --no-recurse-submodules origin +refs/heads/*:refs/remotes/origin/* +refs/tags/*:refs/tags/*
+2026-11-20T22:15:58.9008400Z From https://github.com/Kirjane/Operation-FORGE.kirion
+2026-11-20T22:15:58.9010022Z  * [new branch]      KIRCH-FORGE-ENTITY-EVOLUTION-TEST-2 -> origin/KIRCH-FORGE-ENTITY-EVOLUTION-TEST-2
+2026-11-20T22:15:58.9011220Z  * [new branch]      KIRCH-FORGE-ENTITY-EVOLUTION-TEST-3 -> origin/KIRCH-FORGE-ENTITY-EVOLUTION-TEST-3
+2026-11-20T22:15:58.9012657Z  * [new branch]      eval/fci-m02-behavioral-pilot-r0 -> origin/eval/fci-m02-behavioral-pilot-r0
+2026-11-20T22:15:58.9014428Z  * [new branch]      feat/antigravity-software-factory-r1 -> origin/feat/antigravity-software-factory-r1
+2026-11-20T22:15:58.9015826Z  * [new branch]      feat/chatgpt-software-factory-port-r1 -> origin/feat/chatgpt-software-factory-port-r1
+2026-11-20T22:15:58.9017124Z  * [new branch]      feat/fci-m02-provenance-and-memory-r1 -> origin/feat/fci-m02-provenance-and-memory-r1
+2026-11-20T22:15:58.9018146Z  * [new branch]      feat/forge-obsidian-vault-r2 -> origin/feat/forge-obsidian-vault-r2
+2026-11-20T22:15:58.9018888Z  * [new branch]      main       -> origin/main
+2026-11-20T22:15:58.9019867Z  * [new branch]      policy/kirjane-csharp-backend-standard-r1 -> origin/policy/kirjane-csharp-backend-standard-r1
+2026-11-20T22:15:58.9021050Z  * [new branch]      proposal/fci-m01-context-completeness-r1 -> origin/proposal/fci-m01-context-completeness-r1
+2026-11-20T22:15:58.9022356Z  * [new branch]      proposal/kirion-skill-arsenal-multihost-v0-2 -> origin/proposal/kirion-skill-arsenal-multihost-v0-2
+2026-11-20T22:15:58.9023485Z  * [new branch]      qa/chatgpt-port-evidence-r4 -> origin/qa/chatgpt-port-evidence-r4
+2026-11-20T22:15:58.9024434Z  * [new branch]      qa/chatgpt-port-qualification-r2 -> origin/qa/chatgpt-port-qualification-r2
+2026-11-20T22:15:58.9026306Z [command]/usr/bin/git rev-parse --verify --quiet 3d06d67275e1f2241188e37f54e0a30ea5526fc6^{object}
+2026-11-20T22:15:58.9050406Z 3d06d67275e1f2241188e37f54e0a30ea5526fc6
+2026-11-20T22:15:58.9059128Z ##[endgroup]
+2026-11-20T22:15:58.9059833Z ##[group]Determining the checkout info
+2026-11-20T22:15:58.9060566Z ##[endgroup]
+2026-11-20T22:15:58.9061126Z [command]/usr/bin/git sparse-checkout disable
+2026-11-20T22:15:58.9394143Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-11-20T22:15:58.9435038Z ##[group]Checking out the ref
+2026-11-20T22:15:58.9448359Z [command]/usr/bin/git checkout --progress --force 3d06d67275e1f2241188e37f54e0a30ea5526fc6
+2026-11-20T22:15:58.9984320Z Note: switching to '3d06d67275e1f2241188e37f54e0a30ea5526fc6'.
+2026-11-20T22:15:58.9984911Z 
+2026-11-20T22:15:58.9985317Z You are in 'detached HEAD' state. You can look around, make experimental
+2026-11-20T22:15:58.9986168Z changes and commit them, and you can discard any commits you make in this
+2026-11-20T22:15:58.9986948Z state without impacting any branches by switching back to a branch.
+2026-11-20T22:15:58.9987526Z 
+2026-11-20T22:15:58.9987768Z If you want to create a new branch to retain commits you create, you may
+2026-11-20T22:15:58.9988582Z do so (now or later) by using -c with the switch command. Example:
+2026-11-20T22:15:58.9988896Z 
+2026-11-20T22:15:58.9989034Z   git switch -c <new-branch-name>
+2026-11-20T22:15:58.9989244Z 
+2026-11-20T22:15:58.9989374Z Or undo this operation with:
+2026-11-20T22:15:58.9989576Z 
+2026-11-20T22:15:58.9989675Z   git switch -
+2026-11-20T22:15:58.9989831Z 
+2026-11-20T22:15:58.9990248Z Turn off this advice by setting config variable advice.detachedHead to false
+2026-11-20T22:15:58.9990852Z 
+2026-11-20T22:15:58.9991177Z HEAD is now at 3d06d67 ci(qa): exact R5 stronger nonce replay and verified live provider retest
+2026-11-20T22:15:59.0042451Z ##[endgroup]
+2026-11-20T22:15:59.0126775Z [command]/usr/bin/git log -1 --format=%H
+2026-11-20T22:15:59.0161676Z 3d06d67275e1f2241188e37f54e0a30ea5526fc6
+2026-11-20T22:15:59.0188208Z ##[group]Removing auth
+2026-11-20T22:15:59.0188880Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-20T22:15:59.0215023Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-20T22:15:59.0423011Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-20T22:15:59.0457796Z http.https://github.com/.extraheader
+2026-11-20T22:15:59.0461657Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-11-20T22:15:59.0500191Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-20T22:15:59.0708701Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-20T22:15:59.0743670Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-20T22:15:59.0954444Z ##[endgroup]
+2026-11-20T22:15:59.1219628Z ##[group]Run actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+2026-11-20T22:15:59.1219969Z with:
+2026-11-20T22:15:59.1220140Z   python-version: 3.13
+2026-11-20T22:15:59.1220331Z   check-latest: false
+2026-11-20T22:15:59.1222595Z   token: ***
+2026-11-20T22:15:59.1222772Z   update-environment: true
+2026-11-20T22:15:59.1222992Z   allow-prereleases: false
+2026-11-20T22:15:59.1223179Z   freethreaded: false
+2026-11-20T22:15:59.1223352Z env:
+2026-11-20T22:15:59.1223522Z   PYTHONDONTWRITEBYTECODE: 1
+2026-11-20T22:15:59.1223750Z ##[endgroup]
+2026-11-20T22:15:59.2523284Z ##[group]Installed versions
+2026-11-20T22:15:59.3584776Z (node:2109) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-20T22:15:59.3585816Z Successfully set up CPython (3.13.18)
+2026-11-20T22:15:59.3586512Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-20T22:15:59.3587652Z ##[endgroup]
+2026-11-20T22:15:59.3813823Z ##[group]Run actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1
+2026-11-20T22:15:59.3814371Z with:
+2026-11-20T22:15:59.3814619Z   dotnet-version: 10.0.x
+2026-11-20T22:15:59.3814917Z   cache: false
+2026-11-20T22:15:59.3815159Z env:
+2026-11-20T22:15:59.3815415Z   PYTHONDONTWRITEBYTECODE: 1
+2026-11-20T22:15:59.3815823Z   pythonLocation: /opt/hostedtoolcache/Python/3.13.18/x64
+2026-11-20T22:15:59.3816344Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.13.18/x64/lib/pkgconfig
+2026-11-20T22:15:59.3816880Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.13.18/x64
+2026-11-20T22:15:59.3817658Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.13.18/x64
+2026-11-20T22:15:59.3818186Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.13.18/x64
+2026-11-20T22:15:59.3818696Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.13.18/x64/lib
+2026-11-20T22:15:59.3819133Z ##[endgroup]
+2026-11-20T22:15:59.5672958Z [command]/home/runner/work/_actions/actions/setup-dotnet/26b0ec14cb23fa6904739307f278c14f94c95bf1/externals/install-dotnet.sh --skip-non-versioned-files --runtime dotnet --channel LTS
+2026-11-20T22:15:59.9442594Z dotnet-install: .NET Core Runtime with version '10.0.15' is already installed.
+2026-11-20T22:15:59.9465143Z [command]/home/runner/work/_actions/actions/setup-dotnet/26b0ec14cb23fa6904739307f278c14f94c95bf1/externals/install-dotnet.sh --skip-non-versioned-files --channel 10.0
+2026-11-20T22:16:00.2884115Z dotnet-install: .NET Core SDK with version '10.0.404' is already installed.
+2026-11-20T22:16:00.3036562Z ##[group]Run python integrations/chatgpt/qa-r2/compare.py "$SUITE" "$RUNNER_TEMP/forge-evidence"
+2026-11-20T22:16:00.3037440Z [36;1mpython integrations/chatgpt/qa-r2/compare.py "$SUITE" "$RUNNER_TEMP/forge-evidence"[0m
+2026-11-20T22:16:00.3307286Z shell: /usr/bin/bash -e {0}
+2026-11-20T22:16:00.3307498Z env:
+2026-11-20T22:16:00.3307669Z   PYTHONDONTWRITEBYTECODE: 1
+2026-11-20T22:16:00.3307931Z   pythonLocation: /opt/hostedtoolcache/Python/3.13.18/x64
+2026-11-20T22:16:00.3308280Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.13.18/x64/lib/pkgconfig
+2026-11-20T22:16:00.3308622Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.13.18/x64
+2026-11-20T22:16:00.3308918Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.13.18/x64
+2026-11-20T22:16:00.3309211Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.13.18/x64
+2026-11-20T22:16:00.3309505Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.13.18/x64/lib
+2026-11-20T22:16:00.3309768Z   DOTNET_ROOT: /usr/share/dotnet
+2026-11-20T22:16:00.3310025Z   SUITE: B
+2026-11-20T22:16:00.3310368Z ##[endgroup]
+2026-11-20T22:16:01.4928346Z python-version exit 0 sha256 12162c47c88cf7ca169474b404c0d8bf22203099f01452797ab5d96e71a148aa
+2026-11-20T22:16:01.4929783Z Python 3.13.18
+2026-11-20T22:16:01.4930149Z 
+2026-11-20T22:16:04.0805608Z dotnet-info exit 0 sha256 6b8ece0ef2523bab6265ec0855d9f09eb437c7e7a28a0ac8d3f33aae10c379e4
+2026-11-20T22:16:04.0806303Z .NET SDK:
+2026-11-20T22:16:04.0811028Z  Version:           11.0.100
+2026-11-20T22:16:04.0811659Z  Commit:            297acf930f
+2026-11-20T22:16:04.0812262Z  Workload version:  11.0.100-manifests.08e30c08
+2026-11-20T22:16:04.0815028Z  MSBuild version:   18.12.2-1.26529.118+297acf930
+2026-11-20T22:16:04.0816816Z 
+2026-11-20T22:16:04.0817312Z Runtime Environment:
+2026-11-20T22:16:04.0817886Z  OS Name:     ubuntu
+2026-11-20T22:16:04.0818392Z  OS Version:  24.04
+2026-11-20T22:16:04.0818853Z  OS Platform: Linux
+2026-11-20T22:16:04.0830811Z  RID:         linux-x64
+2026-11-20T22:16:04.0831398Z  Base Path:   /usr/share/dotnet/sdk/11.0.100
+2026-11-20T22:16:04.0831843Z 
+2026-11-20T22:16:04.0832140Z .NET workloads installed:
+2026-11-20T22:16:04.0832649Z There are no installed workloads to display.
+2026-11-20T22:16:04.0833316Z Configured to use workload sets when installing new manifests.
+2026-11-20T22:16:04.0834141Z No workload sets are installed. Run "dotnet workload restore" to install a workload set.
+2026-11-20T22:16:04.0834717Z 
+2026-11-20T22:16:04.0834955Z Host:
+2026-11-20T22:16:04.0835442Z   Version:      11.0.0
+2026-11-20T22:16:04.0836020Z   Architecture: x64
+2026-11-20T22:16:04.0857466Z   Commit:       297acf930f
+2026-11-20T22:16:04.0877466Z 
+2026-11-20T22:16:04.0884879Z .NET SDKs installed:
+2026-11-20T22:16:04.0885327Z   8.0.134 [/usr/share/dotnet/sdk]
+2026-11-20T22:16:04.0885823Z   8.0.206 [/usr/share/dotnet/sdk]
+2026-11-20T22:16:04.0886169Z   8.0.319 [/usr/share/dotnet/sdk]
+2026-11-20T22:16:04.0886640Z   8.0.428 [/usr/share/dotnet/sdk]
+2026-11-20T22:16:04.0887873Z   9.0.124 [/usr/share/dotnet/sdk]
+2026-11-20T22:16:04.0888173Z   9.0.205 [/usr/share/dotnet/sdk]
+2026-11-20T22:16:04.0888402Z   9.0.321 [/usr/share/dotnet/sdk]
+2026-11-20T22:16:04.0888626Z   10.0.115 [/usr/share/dotnet/sdk]
+2026-11-20T22:16:04.0888839Z   10.0.204 [/usr/share/dotnet/sdk]
+2026-11-20T22:16:04.0889187Z   10.0.303 [/usr/share/dotnet/sdk]
+2026-11-20T22:16:04.0889513Z   10.0.404 [/usr/share/dotnet/sdk]
+2026-11-20T22:16:04.0889845Z   11.0.100 [/usr/share/dotnet/sdk]
+2026-11-20T22:16:04.0890043Z 
+2026-11-20T22:16:04.0890179Z .NET runtimes installed:
+2026-11-20T22:16:04.0890755Z   Microsoft.AspNetCore.App 8.0.6 [/usr/share/dotnet/shared/Microsoft.AspNetCore.App]
+2026-11-20T22:16:04.0891589Z   Microsoft.AspNetCore.App 8.0.22 [/usr/share/dotnet/shared/Microsoft.AspNetCore.App]
+2026-11-20T22:16:04.0892364Z   Microsoft.AspNetCore.App 8.0.34 [/usr/share/dotnet/shared/Microsoft.AspNetCore.App]
+2026-11-20T22:16:04.0893138Z   Microsoft.AspNetCore.App 9.0.6 [/usr/share/dotnet/shared/Microsoft.AspNetCore.App]
+2026-11-20T22:16:04.0894172Z   Microsoft.AspNetCore.App 9.0.23 [/usr/share/dotnet/shared/Microsoft.AspNetCore.App]
+2026-11-20T22:16:04.0894745Z   Microsoft.AspNetCore.App 10.0.8 [/usr/share/dotnet/shared/Microsoft.AspNetCore.App]
+2026-11-20T22:16:04.0895214Z   Microsoft.AspNetCore.App 10.0.11 [/usr/share/dotnet/shared/Microsoft.AspNetCore.App]
+2026-11-20T22:16:04.0895698Z   Microsoft.AspNetCore.App 10.0.15 [/usr/share/dotnet/shared/Microsoft.AspNetCore.App]
+2026-11-20T22:16:04.0896173Z   Microsoft.AspNetCore.App 11.0.0 [/usr/share/dotnet/shared/Microsoft.AspNetCore.App]
+2026-11-20T22:16:04.0896627Z   Microsoft.NETCore.App 8.0.6 [/usr/share/dotnet/shared/Microsoft.NETCore.App]
+2026-11-20T22:16:04.0897285Z   Microsoft.NETCore.App 8.0.22 [/usr/share/dotnet/shared/Microsoft.NETCore.App]
+2026-11-20T22:16:04.0897989Z   Microsoft.NETCore.App 8.0.34 [/usr/share/dotnet/shared/Microsoft.NETCore.App]
+2026-11-20T22:16:04.0898463Z   Microsoft.NETCore.App 9.0.6 [/usr/share/dotnet/shared/Microsoft.NETCore.App]
+2026-11-20T22:16:04.0898898Z   Microsoft.NETCore.App 9.0.23 [/usr/share/dotnet/shared/Microsoft.NETCore.App]
+2026-11-20T22:16:04.0899749Z   Microsoft.NETCore.App 10.0.8 [/usr/share/dotnet/shared/Microsoft.NETCore.App]
+2026-11-20T22:16:04.0900184Z   Microsoft.NETCore.App 10.0.11 [/usr/share/dotnet/shared/Microsoft.NETCore.App]
+2026-11-20T22:16:04.0900615Z   Microsoft.NETCore.App 10.0.15 [/usr/share/dotnet/shared/Microsoft.NETCore.App]
+2026-11-20T22:16:04.0901040Z   Microsoft.NETCore.App 11.0.0 [/usr/share/dotnet/shared/Microsoft.NETCore.App]
+2026-11-20T22:16:04.0901303Z 
+2026-11-20T22:16:04.0901397Z Other architectures found:
+2026-11-20T22:16:04.0901588Z   None
+2026-11-20T22:16:04.0901676Z 
+2026-11-20T22:16:04.0901770Z Environment variables:
+2026-11-20T22:16:04.0901999Z   DOTNET_CLI_TELEMETRY_OPTOUT              [1]
+2026-11-20T22:16:04.0902264Z   DOTNET_MULTILEVEL_LOOKUP                 [0]
+2026-11-20T22:16:04.0902509Z   DOTNET_NOLOGO                            [1]
+2026-11-20T22:16:04.0902787Z   DOTNET_ROOT                              [/usr/share/dotnet]
+2026-11-20T22:16:04.0902978Z 
+2026-11-20T22:16:04.0903064Z global.json file:
+2026-11-20T22:16:04.0903223Z   Not found
+2026-11-20T22:16:04.0903315Z 
+2026-11-20T22:16:04.0903375Z Learn more:
+2026-11-20T22:16:04.0903559Z   https://aka.ms/dotnet/info
+2026-11-20T22:16:04.0903690Z 
+2026-11-20T22:16:04.0903758Z Download .NET:
+2026-11-20T22:16:04.0903943Z   https://aka.ms/dotnet/download
+2026-11-20T22:16:04.0904143Z 
+2026-11-20T22:16:04.0904403Z dotnet-sdk-list exit 0 sha256 d283097e6bbf07d3c319b53ea2bd2057944c97801f551b37df40ce2a13e87239
+2026-11-20T22:16:04.0904783Z 8.0.134 [/usr/share/dotnet/sdk]
+2026-11-20T22:16:04.0904990Z 8.0.206 [/usr/share/dotnet/sdk]
+2026-11-20T22:16:04.0905185Z 8.0.319 [/usr/share/dotnet/sdk]
+2026-11-20T22:16:04.0905393Z 8.0.428 [/usr/share/dotnet/sdk]
+2026-11-20T22:16:04.0905589Z 9.0.124 [/usr/share/dotnet/sdk]
+2026-11-20T22:16:04.0905783Z 9.0.205 [/usr/share/dotnet/sdk]
+2026-11-20T22:16:04.0905977Z 9.0.321 [/usr/share/dotnet/sdk]
+2026-11-20T22:16:04.0906180Z 10.0.115 [/usr/share/dotnet/sdk]
+2026-11-20T22:16:04.0906391Z 10.0.204 [/usr/share/dotnet/sdk]
+2026-11-20T22:16:04.0906599Z 10.0.303 [/usr/share/dotnet/sdk]
+2026-11-20T22:16:04.0906801Z 10.0.404 [/usr/share/dotnet/sdk]
+2026-11-20T22:16:04.0907148Z 11.0.100 [/usr/share/dotnet/sdk]
+2026-11-20T22:16:04.0907324Z 
+2026-11-20T22:16:08.1543312Z dotnet-selected exit 0 sha256 c479e77cb703fe4dac97ec3e3ebbeb4968c95c716d53abad60b516b6866ca49d
+2026-11-20T22:16:08.1558057Z 10.0.404
+2026-11-20T22:16:08.1561788Z 
+2026-11-20T22:16:08.2674234Z Preparing worktree (detached HEAD 0e8765d)
+2026-11-20T22:16:08.3896484Z HEAD is now at 0e8765d fix(factory): resolve Antigravity-Nox Cycle 5 findings NOX-R5-001..015 (Repair Cycle 5/5) (refs #13)
+2026-11-20T22:16:08.5925062Z baseline-dotnet-selected exit 0 sha256 c479e77cb703fe4dac97ec3e3ebbeb4968c95c716d53abad60b516b6866ca49d
+2026-11-20T22:16:08.5938016Z 10.0.404
+2026-11-20T22:16:08.5941749Z 
+2026-11-20T22:16:31.9308587Z baseline-B exit 0 sha256 03e45e2d23db13aee4e75350d6dda94cd38d6acd32f70f9c65eb04d2a6c61d9a
+2026-11-20T22:16:31.9310899Z test_benchmark_b_csharp_aspnet_transaction_engine (integrations.antigravity.tests.test_qualification_benchmarks.QualificationBenchmarksTests.test_benchmark_b_csharp_aspnet_transaction_engine) ... ok
+2026-11-20T22:16:31.9312194Z 
+2026-11-20T22:16:31.9313219Z ----------------------------------------------------------------------
+2026-11-20T22:16:31.9313863Z Ran 1 test in 21.896s
+2026-11-20T22:16:31.9314094Z 
+2026-11-20T22:16:31.9329624Z OK
+2026-11-20T22:16:31.9329931Z 
+2026-11-20T22:16:31.9910068Z Preparing worktree (detached HEAD 2a5adf6)
+2026-11-20T22:16:32.0459514Z HEAD is now at 2a5adf6 fix(chatgpt): enforce concrete live provider and exact durable nonce replay failure
+2026-11-20T22:16:32.1783679Z candidate-dotnet-selected exit 0 sha256 c479e77cb703fe4dac97ec3e3ebbeb4968c95c716d53abad60b516b6866ca49d
+2026-11-20T22:16:32.1784600Z 10.0.404
+2026-11-20T22:16:32.1785121Z 
+2026-11-20T22:16:37.0019151Z candidate-B exit 0 sha256 42ebbd545bd0d510c5e877b99c1f7a13ddcb25767bc0b379808b5f11eb307fc6
+2026-11-20T22:16:37.0028620Z test_benchmark_b_csharp_aspnet_transaction_engine (integrations.antigravity.tests.test_qualification_benchmarks.QualificationBenchmarksTests.test_benchmark_b_csharp_aspnet_transaction_engine) ... ok
+2026-11-20T22:16:37.0047415Z 
+2026-11-20T22:16:37.0067647Z ----------------------------------------------------------------------
+2026-11-20T22:16:37.0068138Z Ran 1 test in 4.665s
+2026-11-20T22:16:37.0068316Z 
+2026-11-20T22:16:37.0068407Z OK
+2026-11-20T22:16:37.1052994Z 
+2026-11-20T22:16:37.1182173Z ##[group]Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+2026-11-20T22:16:37.1182718Z with:
+2026-11-20T22:16:37.1182963Z   name: forge-r4-B-1
+2026-11-20T22:16:37.1183300Z   path: /home/runner/work/_temp/forge-evidence/
+2026-11-20T22:16:37.1183697Z   if-no-files-found: error
+2026-11-20T22:16:37.1184000Z   retention-days: 30
+2026-11-20T22:16:37.1184273Z   compression-level: 6
+2026-11-20T22:16:37.1184554Z   overwrite: false
+2026-11-20T22:16:37.1184844Z   include-hidden-files: false
+2026-11-20T22:16:37.1185144Z env:
+2026-11-20T22:16:37.1185415Z   PYTHONDONTWRITEBYTECODE: 1
+2026-11-20T22:16:37.1185820Z   pythonLocation: /opt/hostedtoolcache/Python/3.13.18/x64
+2026-11-20T22:16:37.1186380Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.13.18/x64/lib/pkgconfig
+2026-11-20T22:16:37.1186927Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.13.18/x64
+2026-11-20T22:16:37.1187610Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.13.18/x64
+2026-11-20T22:16:37.1188144Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.13.18/x64
+2026-11-20T22:16:37.1188628Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.13.18/x64/lib
+2026-11-20T22:16:37.1189054Z   DOTNET_ROOT: /usr/share/dotnet
+2026-11-20T22:16:37.1189351Z ##[endgroup]
+2026-11-20T22:16:37.4367505Z (node:2618) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-20T22:16:37.4386804Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-20T22:16:37.4886539Z With the provided path, there will be 13 files uploaded
+2026-11-20T22:16:37.4907687Z Artifact name is valid!
+2026-11-20T22:16:37.4927756Z Root directory input is valid!
+2026-11-20T22:16:37.8927781Z Beginning upload of artifact content to blob storage
+2026-11-20T22:16:37.9589048Z (node:2618) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-11-20T22:16:38.0113567Z Uploaded bytes 4066
+2026-11-20T22:16:38.0324355Z Finished uploading artifact content to blob storage!
+2026-11-20T22:16:38.0345526Z SHA256 digest of uploaded artifact zip is d8461f64013a86458c549acdf09f71cef99aa46f51f9a59d2f3954f3d6036aa3
+2026-11-20T22:16:38.0346495Z Finalizing artifact upload
+2026-11-20T22:16:38.4065776Z Artifact forge-r4-B-1.zip successfully finalized. Artifact ID 14675151197
+2026-11-20T22:16:38.4066838Z Artifact forge-r4-B-1 has been successfully uploaded! Final size is 4066 bytes. Artifact ID is 14675151197
+2026-11-20T22:16:38.4068446Z Artifact download URL: https://github.com/Kirjane/Operation-FORGE.kirion/actions/runs/44827451748/artifacts/14675151197
+2026-11-20T22:16:38.4366683Z Post job cleanup.
+2026-11-20T22:16:38.6339039Z Post job cleanup.
+2026-11-20T22:16:38.9179179Z (node:2638) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-20T22:16:38.9198937Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-20T22:16:38.9559924Z Post job cleanup.
+2026-11-20T22:16:39.0927996Z [command]/usr/bin/git version
+2026-11-20T22:16:39.1027869Z git version 2.56.1
+2026-11-20T22:16:39.1168016Z Temporarily overriding HOME='/home/runner/work/_temp/8f711ae6-22d6-42fd-84e8-67dff33fcb45' before making global git config changes
+2026-11-20T22:16:39.1176815Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-20T22:16:39.1208005Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Operation-FORGE.kirion/Operation-FORGE.kirion
+2026-11-20T22:16:39.1257825Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-20T22:16:39.1339857Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-20T22:16:39.1984125Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-20T22:16:39.2118836Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-20T22:16:39.2503189Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-20T22:16:39.2569737Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-20T22:16:39.3154002Z Cleaning up orphan processes
+2026-11-20T22:16:39.3576190Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@11d5960a326750d5838078e36cf38b85af677262, actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065, actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

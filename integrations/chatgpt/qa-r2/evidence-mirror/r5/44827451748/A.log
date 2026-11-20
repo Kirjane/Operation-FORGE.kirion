@@ -1,0 +1,571 @@
+﻿2026-11-20T22:15:39.6866148Z Current runner version: '2.338.2'
+2026-11-20T22:15:39.6885536Z ##[group]Runner Image Provisioner
+2026-11-20T22:15:39.6886256Z Hosted Compute Agent
+2026-11-20T22:15:39.6886666Z Version: 20261111.635
+2026-11-20T22:15:39.6887174Z Commit: b8a594ea514ff44cadb5342986c68b1eac6e22ed
+2026-11-20T22:15:39.6887702Z Build Date: 2026-11-11T01:49:01Z
+2026-11-20T22:15:39.6888182Z Worker ID: {1aa1c883-a1d4-420d-929a-a1a9b5753acb}
+2026-11-20T22:15:39.6888691Z Region: us-west-2
+2026-11-20T22:15:39.6889072Z Cloud: AWS
+2026-11-20T22:15:39.6889431Z ##[endgroup]
+2026-11-20T22:15:39.6890334Z ##[group]Operating System
+2026-11-20T22:15:39.6890757Z Ubuntu
+2026-11-20T22:15:39.6891373Z 24.04.5
+2026-11-20T22:15:39.6891739Z LTS
+2026-11-20T22:15:39.6892119Z ##[endgroup]
+2026-11-20T22:15:39.6892536Z ##[group]Runner Image
+2026-11-20T22:15:39.6893255Z Image: ubuntu-24.04
+2026-11-20T22:15:39.6893659Z Version: 20261116.133.1
+2026-11-20T22:15:39.6894700Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20261116.133/images/ubuntu/Ubuntu2404-Readme.md
+2026-11-20T22:15:39.6895886Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20261116.133
+2026-11-20T22:15:39.6896555Z ##[endgroup]
+2026-11-20T22:15:39.6897327Z ##[group]GITHUB_TOKEN Permissions
+2026-11-20T22:15:39.6899027Z Contents: read
+2026-11-20T22:15:39.6899437Z Metadata: read
+2026-11-20T22:15:39.6899825Z ##[endgroup]
+2026-11-20T22:15:39.6901525Z Secret source: Actions
+2026-11-20T22:15:39.6902188Z Cache mode: write
+2026-11-20T22:15:39.6903003Z Prepare workflow directory
+2026-11-20T22:15:39.7201051Z Prepare all required actions
+2026-11-20T22:15:39.7253288Z Getting action download info
+2026-11-20T22:15:40.1673466Z Download action repository 'actions/checkout@11d5960a326750d5838078e36cf38b85af677262' (SHA:11d5960a326750d5838078e36cf38b85af677262)
+2026-11-20T22:15:42.1536977Z Download action repository 'actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065' (SHA:a26af69be951a213d495a4c3e4e4022e16d87065)
+2026-11-20T22:15:42.2963637Z Download action repository 'shivammathur/setup-php@bf6b4fbd49ca58e4608c9c89fba0b8d90bd2a39f' (SHA:bf6b4fbd49ca58e4608c9c89fba0b8d90bd2a39f)
+2026-11-20T22:15:42.5943447Z Download action repository 'actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1' (SHA:26b0ec14cb23fa6904739307f278c14f94c95bf1)
+2026-11-20T22:15:42.9278718Z Download action repository 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+2026-11-20T22:15:43.2314178Z Complete job name: Compare A (same runner)
+2026-11-20T22:15:43.3026110Z ##[group]Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+2026-11-20T22:15:43.3027449Z with:
+2026-11-20T22:15:43.3028230Z   ref: 3d06d67275e1f2241188e37f54e0a30ea5526fc6
+2026-11-20T22:15:43.3029134Z   fetch-depth: 0
+2026-11-20T22:15:43.3029882Z   persist-credentials: false
+2026-11-20T22:15:43.3030743Z   repository: Kirjane/Operation-FORGE.kirion
+2026-11-20T22:15:43.3037007Z   token: ***
+2026-11-20T22:15:43.3037751Z   ssh-strict: true
+2026-11-20T22:15:43.3038471Z   ssh-user: git
+2026-11-20T22:15:43.3039159Z   clean: true
+2026-11-20T22:15:43.3039891Z   sparse-checkout-cone-mode: true
+2026-11-20T22:15:43.3040793Z   fetch-tags: false
+2026-11-20T22:15:43.3041525Z   show-progress: true
+2026-11-20T22:15:43.3042215Z   lfs: false
+2026-11-20T22:15:43.3043012Z   submodules: false
+2026-11-20T22:15:43.3043774Z   set-safe-directory: true
+2026-11-20T22:15:43.3044601Z   allow-unsafe-pr-checkout: false
+2026-11-20T22:15:43.3045716Z env:
+2026-11-20T22:15:43.3046460Z   PYTHONDONTWRITEBYTECODE: 1
+2026-11-20T22:15:43.3047261Z ##[endgroup]
+2026-11-20T22:15:46.6131600Z Syncing repository: Kirjane/Operation-FORGE.kirion
+2026-11-20T22:15:46.6134183Z ##[group]Getting Git version info
+2026-11-20T22:15:46.6135469Z Working directory is '/home/runner/work/Operation-FORGE.kirion/Operation-FORGE.kirion'
+2026-11-20T22:15:46.6139819Z [command]/usr/bin/git version
+2026-11-20T22:15:46.9448004Z git version 2.56.1
+2026-11-20T22:15:46.9455158Z ##[endgroup]
+2026-11-20T22:15:46.9468719Z Temporarily overriding HOME='/home/runner/work/_temp/bd211c81-ad66-47fb-8368-5633705a27be' before making global git config changes
+2026-11-20T22:15:46.9470299Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-20T22:15:46.9474815Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Operation-FORGE.kirion/Operation-FORGE.kirion
+2026-11-20T22:15:46.9974372Z Deleting the contents of '/home/runner/work/Operation-FORGE.kirion/Operation-FORGE.kirion'
+2026-11-20T22:15:46.9988497Z ##[group]Initializing the repository
+2026-11-20T22:15:46.9989677Z [command]/usr/bin/git init /home/runner/work/Operation-FORGE.kirion/Operation-FORGE.kirion
+2026-11-20T22:15:47.0761661Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-11-20T22:15:47.0762307Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-11-20T22:15:47.0763204Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-11-20T22:15:47.0763776Z hint: call:
+2026-11-20T22:15:47.0764053Z hint:
+2026-11-20T22:15:47.0764388Z hint: 	git config --global init.defaultBranch <name>
+2026-11-20T22:15:47.0764693Z hint:
+2026-11-20T22:15:47.0765018Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-11-20T22:15:47.0765447Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-11-20T22:15:47.0765813Z hint:
+2026-11-20T22:15:47.0766109Z hint: 	git branch -m <name>
+2026-11-20T22:15:47.0766526Z hint:
+2026-11-20T22:15:47.0766959Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-11-20T22:15:47.0770518Z Initialized empty Git repository in /home/runner/work/Operation-FORGE.kirion/Operation-FORGE.kirion/.git/
+2026-11-20T22:15:47.0781145Z [command]/usr/bin/git remote add origin https://github.com/Kirjane/Operation-FORGE.kirion
+2026-11-20T22:15:47.0829078Z ##[endgroup]
+2026-11-20T22:15:47.0830498Z ##[group]Disabling automatic garbage collection
+2026-11-20T22:15:47.0832155Z [command]/usr/bin/git config --local gc.auto 0
+2026-11-20T22:15:47.0858190Z ##[endgroup]
+2026-11-20T22:15:47.0858947Z ##[group]Setting up auth
+2026-11-20T22:15:47.0864213Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-20T22:15:47.0891121Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-20T22:15:47.4003523Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-20T22:15:47.4031080Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-20T22:15:47.4176608Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-20T22:15:47.4213367Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-20T22:15:47.4353041Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-11-20T22:15:47.4379804Z ##[endgroup]
+2026-11-20T22:15:47.4380565Z ##[group]Fetching the repository
+2026-11-20T22:15:47.4393963Z [command]/usr/bin/git -c protocol.version=2 fetch --prune --no-recurse-submodules origin +refs/heads/*:refs/remotes/origin/* +refs/tags/*:refs/tags/*
+2026-11-20T22:15:48.3961347Z From https://github.com/Kirjane/Operation-FORGE.kirion
+2026-11-20T22:15:48.3962968Z  * [new branch]      KIRCH-FORGE-ENTITY-EVOLUTION-TEST-2 -> origin/KIRCH-FORGE-ENTITY-EVOLUTION-TEST-2
+2026-11-20T22:15:48.3963995Z  * [new branch]      KIRCH-FORGE-ENTITY-EVOLUTION-TEST-3 -> origin/KIRCH-FORGE-ENTITY-EVOLUTION-TEST-3
+2026-11-20T22:15:48.3964833Z  * [new branch]      eval/fci-m02-behavioral-pilot-r0 -> origin/eval/fci-m02-behavioral-pilot-r0
+2026-11-20T22:15:48.3965878Z  * [new branch]      feat/antigravity-software-factory-r1 -> origin/feat/antigravity-software-factory-r1
+2026-11-20T22:15:48.3966695Z  * [new branch]      feat/chatgpt-software-factory-port-r1 -> origin/feat/chatgpt-software-factory-port-r1
+2026-11-20T22:15:48.3967608Z  * [new branch]      feat/fci-m02-provenance-and-memory-r1 -> origin/feat/fci-m02-provenance-and-memory-r1
+2026-11-20T22:15:48.3968375Z  * [new branch]      feat/forge-obsidian-vault-r2 -> origin/feat/forge-obsidian-vault-r2
+2026-11-20T22:15:48.3968967Z  * [new branch]      main       -> origin/main
+2026-11-20T22:15:48.3969980Z  * [new branch]      policy/kirjane-csharp-backend-standard-r1 -> origin/policy/kirjane-csharp-backend-standard-r1
+2026-11-20T22:15:48.3971015Z  * [new branch]      proposal/fci-m01-context-completeness-r1 -> origin/proposal/fci-m01-context-completeness-r1
+2026-11-20T22:15:48.3971934Z  * [new branch]      proposal/kirion-skill-arsenal-multihost-v0-2 -> origin/proposal/kirion-skill-arsenal-multihost-v0-2
+2026-11-20T22:15:48.3973363Z  * [new branch]      qa/chatgpt-port-evidence-r4 -> origin/qa/chatgpt-port-evidence-r4
+2026-11-20T22:15:48.3974114Z  * [new branch]      qa/chatgpt-port-qualification-r2 -> origin/qa/chatgpt-port-qualification-r2
+2026-11-20T22:15:48.3977455Z [command]/usr/bin/git rev-parse --verify --quiet 3d06d67275e1f2241188e37f54e0a30ea5526fc6^{object}
+2026-11-20T22:15:48.4014080Z 3d06d67275e1f2241188e37f54e0a30ea5526fc6
+2026-11-20T22:15:48.4054053Z ##[endgroup]
+2026-11-20T22:15:48.4070030Z ##[group]Determining the checkout info
+2026-11-20T22:15:48.4073973Z ##[endgroup]
+2026-11-20T22:15:48.4074539Z [command]/usr/bin/git sparse-checkout disable
+2026-11-20T22:15:48.4115464Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-11-20T22:15:48.4208359Z ##[group]Checking out the ref
+2026-11-20T22:15:48.4209463Z [command]/usr/bin/git checkout --progress --force 3d06d67275e1f2241188e37f54e0a30ea5526fc6
+2026-11-20T22:15:48.4529063Z Note: switching to '3d06d67275e1f2241188e37f54e0a30ea5526fc6'.
+2026-11-20T22:15:48.4529767Z 
+2026-11-20T22:15:48.4530142Z You are in 'detached HEAD' state. You can look around, make experimental
+2026-11-20T22:15:48.4530720Z changes and commit them, and you can discard any commits you make in this
+2026-11-20T22:15:48.4532091Z state without impacting any branches by switching back to a branch.
+2026-11-20T22:15:48.4532814Z 
+2026-11-20T22:15:48.4533483Z If you want to create a new branch to retain commits you create, you may
+2026-11-20T22:15:48.4534391Z do so (now or later) by using -c with the switch command. Example:
+2026-11-20T22:15:48.4535032Z 
+2026-11-20T22:15:48.4535292Z   git switch -c <new-branch-name>
+2026-11-20T22:15:48.4535769Z 
+2026-11-20T22:15:48.4535984Z Or undo this operation with:
+2026-11-20T22:15:48.4536641Z 
+2026-11-20T22:15:48.4536898Z   git switch -
+2026-11-20T22:15:48.4537706Z 
+2026-11-20T22:15:48.4538141Z Turn off this advice by setting config variable advice.detachedHead to false
+2026-11-20T22:15:48.4538720Z 
+2026-11-20T22:15:48.4539186Z HEAD is now at 3d06d67 ci(qa): exact R5 stronger nonce replay and verified live provider retest
+2026-11-20T22:15:48.4541219Z ##[endgroup]
+2026-11-20T22:15:48.4574468Z [command]/usr/bin/git log -1 --format=%H
+2026-11-20T22:15:48.4597084Z 3d06d67275e1f2241188e37f54e0a30ea5526fc6
+2026-11-20T22:15:48.4601976Z ##[group]Removing auth
+2026-11-20T22:15:48.4605337Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-20T22:15:48.4628046Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-20T22:15:48.4774809Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-20T22:15:48.4795756Z http.https://github.com/.extraheader
+2026-11-20T22:15:48.4797866Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-11-20T22:15:48.4820148Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-20T22:15:48.4958562Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-20T22:15:48.4979147Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-20T22:15:48.5115112Z ##[endgroup]
+2026-11-20T22:15:48.5317328Z ##[group]Run actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+2026-11-20T22:15:48.5317762Z with:
+2026-11-20T22:15:48.5317974Z   python-version: 3.13
+2026-11-20T22:15:48.5318194Z   check-latest: false
+2026-11-20T22:15:48.5319954Z   token: ***
+2026-11-20T22:15:48.5320196Z   update-environment: true
+2026-11-20T22:15:48.5320459Z   allow-prereleases: false
+2026-11-20T22:15:48.5320684Z   freethreaded: false
+2026-11-20T22:15:48.5320884Z env:
+2026-11-20T22:15:48.5321196Z   PYTHONDONTWRITEBYTECODE: 1
+2026-11-20T22:15:48.5321457Z ##[endgroup]
+2026-11-20T22:15:48.6400002Z ##[group]Installed versions
+2026-11-20T22:15:48.8975310Z (node:2149) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-20T22:15:48.8976779Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-20T22:15:48.8977290Z Successfully set up CPython (3.13.18)
+2026-11-20T22:15:48.8978287Z ##[endgroup]
+2026-11-20T22:15:48.9135501Z ##[group]Run shivammathur/setup-php@bf6b4fbd49ca58e4608c9c89fba0b8d90bd2a39f
+2026-11-20T22:15:48.9136213Z with:
+2026-11-20T22:15:48.9136576Z   php-version: 8.4
+2026-11-20T22:15:48.9136867Z   extensions: pdo_sqlite, sqlite3
+2026-11-20T22:15:48.9137634Z   tools: composer:v2
+2026-11-20T22:15:48.9137934Z   coverage: none
+2026-11-20T22:15:48.9138291Z   ini-file: production
+2026-11-20T22:15:48.9141549Z   github-token: ***
+2026-11-20T22:15:48.9141843Z env:
+2026-11-20T22:15:48.9142202Z   PYTHONDONTWRITEBYTECODE: 1
+2026-11-20T22:15:48.9142887Z   pythonLocation: /opt/hostedtoolcache/Python/3.13.18/x64
+2026-11-20T22:15:48.9143480Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.13.18/x64/lib/pkgconfig
+2026-11-20T22:15:48.9144043Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.13.18/x64
+2026-11-20T22:15:48.9144540Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.13.18/x64
+2026-11-20T22:15:48.9145080Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.13.18/x64
+2026-11-20T22:15:48.9145774Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.13.18/x64/lib
+2026-11-20T22:15:48.9146218Z ##[endgroup]
+2026-11-20T22:15:49.0394529Z [command]/usr/bin/bash /home/runner/work/_actions/shivammathur/setup-php/bf6b4fbd49ca58e4608c9c89fba0b8d90bd2a39f/src/scripts/run.sh
+2026-11-20T22:15:49.0896871Z 
+2026-11-20T22:15:49.0954069Z [90;1m==> [0m[37;1mSetup PHP[0m
+2026-11-20T22:15:51.7473391Z [32;1m✓ [0m[34;1mPHP [0m[90;1mInstalled PHP 8.4.28[0m
+2026-11-20T22:15:51.7485174Z 
+2026-11-20T22:15:51.7486294Z [90;1m==> [0m[37;1mSetup Extensions[0m
+2026-11-20T22:15:51.7816370Z [32;1m✓ [0m[34;1mpdo_sqlite [0m[90;1mEnabled[0m
+2026-11-20T22:15:51.7844451Z [32;1m✓ [0m[34;1msqlite3 [0m[90;1mEnabled[0m
+2026-11-20T22:15:51.7845095Z 
+2026-11-20T22:15:51.7845493Z [90;1m==> [0m[37;1mSetup Tools[0m
+2026-11-20T22:15:52.0622446Z [32;1m✓ [0m[34;1mcomposer [0m[90;1mAdded composer 2.11.2[0m
+2026-11-20T22:15:52.0629220Z 
+2026-11-20T22:15:52.0629943Z [90;1m==> [0m[37;1mSetup Coverage[0m
+2026-11-20T22:15:52.2208583Z [32;1m✓ [0m[34;1mnone [0m[90;1mDisabled Xdebug and PCOV[0m
+2026-11-20T22:15:52.2209325Z 
+2026-11-20T22:15:52.2209860Z [90;1m==> [0m[37;1mSponsor setup-php[0m
+2026-11-20T22:15:52.2210618Z [32;1m✓ [0m[34;1msetup-php [0m[90;1mhttps://setup-php.com/sponsor[0m
+2026-11-20T22:15:52.2378664Z ##[group]Run python integrations/chatgpt/qa-r2/compare.py "$SUITE" "$RUNNER_TEMP/forge-evidence"
+2026-11-20T22:15:52.2379306Z [36;1mpython integrations/chatgpt/qa-r2/compare.py "$SUITE" "$RUNNER_TEMP/forge-evidence"[0m
+2026-11-20T22:15:52.3579301Z shell: /usr/bin/bash -e {0}
+2026-11-20T22:15:52.3579666Z env:
+2026-11-20T22:15:52.3579973Z   PYTHONDONTWRITEBYTECODE: 1
+2026-11-20T22:15:52.3580358Z   pythonLocation: /opt/hostedtoolcache/Python/3.13.18/x64
+2026-11-20T22:15:52.3580846Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.13.18/x64/lib/pkgconfig
+2026-11-20T22:15:52.3581287Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.13.18/x64
+2026-11-20T22:15:52.3581701Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.13.18/x64
+2026-11-20T22:15:52.3582086Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.13.18/x64
+2026-11-20T22:15:52.3582505Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.13.18/x64/lib
+2026-11-20T22:15:52.3583078Z   COMPOSER_PROCESS_TIMEOUT: 0
+2026-11-20T22:15:52.3583465Z   COMPOSER_NO_INTERACTION: 1
+2026-11-20T22:15:52.3583698Z   COMPOSER_NO_AUDIT: 1
+2026-11-20T22:15:52.3583942Z   SUITE: A
+2026-11-20T22:15:52.3584134Z ##[endgroup]
+2026-11-20T22:15:53.4943977Z python-version exit 0 sha256 12162c47c88cf7ca169474b404c0d8bf22203099f01452797ab5d96e71a148aa
+2026-11-20T22:15:53.4947991Z Python 3.13.18
+2026-11-20T22:15:53.4948295Z 
+2026-11-20T22:15:53.5324774Z php-version exit 0 sha256 38140c374711ae8afee4e5788a72e336300a67329f4a6e376687d15b18d34783
+2026-11-20T22:15:53.5343770Z PHP 8.4.28 (cli) (built: Nov 18 2026 09:09:44) (NTS)
+2026-11-20T22:15:53.5363604Z Copyright (c) The PHP Group
+2026-11-20T22:15:53.5364200Z Zend Engine v4.4.28, Copyright (c) Zend Technologies
+2026-11-20T22:15:53.5383653Z     with Zend OPcache v8.4.28, Copyright (c), by Zend Technologies
+2026-11-20T22:15:53.5407431Z 
+2026-11-20T22:15:53.5674668Z php-modules exit 0 sha256 ff49efd8e91514b9040458fc57dea23a51ce5ae4298cc1d0db1ea75c35d6e257
+2026-11-20T22:15:53.5675578Z [PHP Modules]
+2026-11-20T22:15:53.5681202Z amqp
+2026-11-20T22:15:53.5681784Z apcu
+2026-11-20T22:15:53.5682181Z ast
+2026-11-20T22:15:53.5682458Z bcmath
+2026-11-20T22:15:53.5683246Z bz2
+2026-11-20T22:15:53.5683574Z calendar
+2026-11-20T22:15:53.5683909Z Core
+2026-11-20T22:15:53.5684225Z ctype
+2026-11-20T22:15:53.5684557Z curl
+2026-11-20T22:15:53.5684865Z date
+2026-11-20T22:15:53.5685210Z dba
+2026-11-20T22:15:53.5685486Z dom
+2026-11-20T22:15:53.5685825Z ds
+2026-11-20T22:15:53.5686121Z enchant
+2026-11-20T22:15:53.5686450Z exif
+2026-11-20T22:15:53.5686797Z FFI
+2026-11-20T22:15:53.5687134Z fileinfo
+2026-11-20T22:15:53.5687488Z filter
+2026-11-20T22:15:53.5687823Z ftp
+2026-11-20T22:15:53.5688104Z gd
+2026-11-20T22:15:53.5688485Z gettext
+2026-11-20T22:15:53.5688832Z gmp
+2026-11-20T22:15:53.5689166Z hash
+2026-11-20T22:15:53.5689473Z iconv
+2026-11-20T22:15:53.5689812Z igbinary
+2026-11-20T22:15:53.5690190Z imagick
+2026-11-20T22:15:53.5690524Z imap
+2026-11-20T22:15:53.5690804Z intl
+2026-11-20T22:15:53.5691144Z json
+2026-11-20T22:15:53.5691451Z ldap
+2026-11-20T22:15:53.5691842Z libxml
+2026-11-20T22:15:53.5692170Z mbstring
+2026-11-20T22:15:53.5692520Z memcache
+2026-11-20T22:15:53.5693195Z memcached
+2026-11-20T22:15:53.5693567Z mongodb
+2026-11-20T22:15:53.5693936Z msgpack
+2026-11-20T22:15:53.5694295Z mysqli
+2026-11-20T22:15:53.5694614Z mysqlnd
+2026-11-20T22:15:53.5694995Z odbc
+2026-11-20T22:15:53.5695318Z openssl
+2026-11-20T22:15:53.5695831Z pcntl
+2026-11-20T22:15:53.5696192Z pcre
+2026-11-20T22:15:53.5696525Z PDO
+2026-11-20T22:15:53.5696901Z pdo_dblib
+2026-11-20T22:15:53.5697235Z PDO_Firebird
+2026-11-20T22:15:53.5697585Z pdo_mysql
+2026-11-20T22:15:53.5697955Z PDO_ODBC
+2026-11-20T22:15:53.5698302Z pdo_pgsql
+2026-11-20T22:15:53.5698689Z pdo_sqlite
+2026-11-20T22:15:53.5699060Z pdo_sqlsrv
+2026-11-20T22:15:53.5699474Z pgsql
+2026-11-20T22:15:53.5699809Z Phar
+2026-11-20T22:15:53.5700137Z posix
+2026-11-20T22:15:53.5700438Z random
+2026-11-20T22:15:53.5700782Z readline
+2026-11-20T22:15:53.5701075Z redis
+2026-11-20T22:15:53.5701626Z Reflection
+2026-11-20T22:15:53.5702209Z session
+2026-11-20T22:15:53.5702994Z shmop
+2026-11-20T22:15:53.5703287Z SimpleXML
+2026-11-20T22:15:53.5703610Z snmp
+2026-11-20T22:15:53.5703939Z soap
+2026-11-20T22:15:53.5704288Z sockets
+2026-11-20T22:15:53.5704627Z sodium
+2026-11-20T22:15:53.5705010Z SPL
+2026-11-20T22:15:53.5705480Z sqlite3
+2026-11-20T22:15:53.5705859Z sqlsrv
+2026-11-20T22:15:53.5706183Z standard
+2026-11-20T22:15:53.5709157Z sysvmsg
+2026-11-20T22:15:53.5709496Z sysvsem
+2026-11-20T22:15:53.5709844Z sysvshm
+2026-11-20T22:15:53.5710163Z tidy
+2026-11-20T22:15:53.5710486Z tokenizer
+2026-11-20T22:15:53.5710788Z xml
+2026-11-20T22:15:53.5711124Z xmlreader
+2026-11-20T22:15:53.5711401Z xmlwriter
+2026-11-20T22:15:53.5711730Z xsl
+2026-11-20T22:15:53.5711990Z yaml
+2026-11-20T22:15:53.5712340Z Zend OPcache
+2026-11-20T22:15:53.5713005Z zip
+2026-11-20T22:15:53.5713277Z zlib
+2026-11-20T22:15:53.5713611Z zmq
+2026-11-20T22:15:53.5713805Z 
+2026-11-20T22:15:53.5713975Z [Zend Modules]
+2026-11-20T22:15:53.5714283Z Zend OPcache
+2026-11-20T22:15:53.5714547Z 
+2026-11-20T22:15:53.5714722Z 
+2026-11-20T22:15:53.6274189Z composer-version exit 0 sha256 1f123bc65dca50e4e45125faef33877d09fb8b784ebcdf7424f1137679a075a1
+2026-11-20T22:15:53.6275287Z Composer version 2.11.2 2026-11-10 10:09:37
+2026-11-20T22:15:53.6275872Z PHP version 8.4.28 (/usr/bin/php8.4)
+2026-11-20T22:15:53.6276435Z Run the "diagnose" command to get more detailed diagnostics output.
+2026-11-20T22:15:53.6276873Z 
+2026-11-20T22:15:53.6290208Z Preparing worktree (detached HEAD 0e8765d)
+2026-11-20T22:15:53.6639890Z HEAD is now at 0e8765d fix(factory): resolve Antigravity-Nox Cycle 5 findings NOX-R5-001..015 (Repair Cycle 5/5) (refs #13)
+2026-11-20T22:15:54.0265676Z baseline-composer exit 0 sha256 e774c1100ab26dee89b0cdd8a09240f00a11defb49db97ef8ae196dfac626641
+2026-11-20T22:15:54.0267140Z No composer.lock file present. Updating dependencies to latest instead of installing from lock file. See https://getcomposer.org/install for more information.
+2026-11-20T22:15:54.0268052Z Loading composer repositories with package information
+2026-11-20T22:15:54.0268560Z Updating dependencies
+2026-11-20T22:15:54.0269036Z Nothing to modify in lock file
+2026-11-20T22:15:54.0269448Z Writing lock file
+2026-11-20T22:15:54.0269924Z Installing dependencies from lock file (including require-dev)
+2026-11-20T22:15:54.0270438Z Nothing to install, update or remove
+2026-11-20T22:15:54.0270851Z Generating optimized autoload files
+2026-11-20T22:15:54.0271205Z 
+2026-11-20T22:15:54.0661037Z baseline-original-php-layout exit 255 sha256 b9a9e32602d5cc1b37de2d66d469914d73d6b95aede8820bec5c1e01a6ff22a5
+2026-11-20T22:15:54.0663045Z PHP Warning:  Failed loading Zend extension 'opcache.so' (tried: /usr/bin/ext/opcache.so (/usr/bin/ext/opcache.so: cannot open shared object file: No such file or directory), /usr/bin/ext/opcache.so.so (/usr/bin/ext/opcache.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0665486Z PHP Warning:  PHP Startup: Unable to load dynamic library 'mysqlnd.so' (tried: /usr/bin/ext/mysqlnd.so (/usr/bin/ext/mysqlnd.so: cannot open shared object file: No such file or directory), /usr/bin/ext/mysqlnd.so.so (/usr/bin/ext/mysqlnd.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0667584Z PHP Warning:  PHP Startup: Unable to load dynamic library 'pdo.so' (tried: /usr/bin/ext/pdo.so (/usr/bin/ext/pdo.so: cannot open shared object file: No such file or directory), /usr/bin/ext/pdo.so.so (/usr/bin/ext/pdo.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0669491Z PHP Warning:  PHP Startup: Unable to load dynamic library 'xml.so' (tried: /usr/bin/ext/xml.so (/usr/bin/ext/xml.so: cannot open shared object file: No such file or directory), /usr/bin/ext/xml.so.so (/usr/bin/ext/xml.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0671696Z PHP Warning:  PHP Startup: Unable to load dynamic library 'amqp.so' (tried: /usr/bin/ext/amqp.so (/usr/bin/ext/amqp.so: cannot open shared object file: No such file or directory), /usr/bin/ext/amqp.so.so (/usr/bin/ext/amqp.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0674084Z PHP Warning:  PHP Startup: Unable to load dynamic library 'apcu.so' (tried: /usr/bin/ext/apcu.so (/usr/bin/ext/apcu.so: cannot open shared object file: No such file or directory), /usr/bin/ext/apcu.so.so (/usr/bin/ext/apcu.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0676292Z PHP Warning:  PHP Startup: Unable to load dynamic library 'ast.so' (tried: /usr/bin/ext/ast.so (/usr/bin/ext/ast.so: cannot open shared object file: No such file or directory), /usr/bin/ext/ast.so.so (/usr/bin/ext/ast.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0678605Z PHP Warning:  PHP Startup: Unable to load dynamic library 'bcmath.so' (tried: /usr/bin/ext/bcmath.so (/usr/bin/ext/bcmath.so: cannot open shared object file: No such file or directory), /usr/bin/ext/bcmath.so.so (/usr/bin/ext/bcmath.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0681140Z PHP Warning:  PHP Startup: Unable to load dynamic library 'bz2.so' (tried: /usr/bin/ext/bz2.so (/usr/bin/ext/bz2.so: cannot open shared object file: No such file or directory), /usr/bin/ext/bz2.so.so (/usr/bin/ext/bz2.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0683521Z PHP Warning:  PHP Startup: Unable to load dynamic library 'calendar.so' (tried: /usr/bin/ext/calendar.so (/usr/bin/ext/calendar.so: cannot open shared object file: No such file or directory), /usr/bin/ext/calendar.so.so (/usr/bin/ext/calendar.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0685785Z PHP Warning:  PHP Startup: Unable to load dynamic library 'ctype.so' (tried: /usr/bin/ext/ctype.so (/usr/bin/ext/ctype.so: cannot open shared object file: No such file or directory), /usr/bin/ext/ctype.so.so (/usr/bin/ext/ctype.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0688033Z PHP Warning:  PHP Startup: Unable to load dynamic library 'curl.so' (tried: /usr/bin/ext/curl.so (/usr/bin/ext/curl.so: cannot open shared object file: No such file or directory), /usr/bin/ext/curl.so.so (/usr/bin/ext/curl.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0690004Z PHP Warning:  PHP Startup: Unable to load dynamic library 'dba.so' (tried: /usr/bin/ext/dba.so (/usr/bin/ext/dba.so: cannot open shared object file: No such file or directory), /usr/bin/ext/dba.so.so (/usr/bin/ext/dba.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0692280Z PHP Warning:  PHP Startup: Unable to load dynamic library 'dom.so' (tried: /usr/bin/ext/dom.so (/usr/bin/ext/dom.so: cannot open shared object file: No such file or directory), /usr/bin/ext/dom.so.so (/usr/bin/ext/dom.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0694688Z PHP Warning:  PHP Startup: Unable to load dynamic library 'enchant.so' (tried: /usr/bin/ext/enchant.so (/usr/bin/ext/enchant.so: cannot open shared object file: No such file or directory), /usr/bin/ext/enchant.so.so (/usr/bin/ext/enchant.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0696880Z PHP Warning:  PHP Startup: Unable to load dynamic library 'exif.so' (tried: /usr/bin/ext/exif.so (/usr/bin/ext/exif.so: cannot open shared object file: No such file or directory), /usr/bin/ext/exif.so.so (/usr/bin/ext/exif.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0699100Z PHP Warning:  PHP Startup: Unable to load dynamic library 'ffi.so' (tried: /usr/bin/ext/ffi.so (/usr/bin/ext/ffi.so: cannot open shared object file: No such file or directory), /usr/bin/ext/ffi.so.so (/usr/bin/ext/ffi.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0701302Z PHP Warning:  PHP Startup: Unable to load dynamic library 'fileinfo.so' (tried: /usr/bin/ext/fileinfo.so (/usr/bin/ext/fileinfo.so: cannot open shared object file: No such file or directory), /usr/bin/ext/fileinfo.so.so (/usr/bin/ext/fileinfo.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0703660Z PHP Warning:  PHP Startup: Unable to load dynamic library 'ftp.so' (tried: /usr/bin/ext/ftp.so (/usr/bin/ext/ftp.so: cannot open shared object file: No such file or directory), /usr/bin/ext/ftp.so.so (/usr/bin/ext/ftp.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0705602Z PHP Warning:  PHP Startup: Unable to load dynamic library 'gd.so' (tried: /usr/bin/ext/gd.so (/usr/bin/ext/gd.so: cannot open shared object file: No such file or directory), /usr/bin/ext/gd.so.so (/usr/bin/ext/gd.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0707669Z PHP Warning:  PHP Startup: Unable to load dynamic library 'gettext.so' (tried: /usr/bin/ext/gettext.so (/usr/bin/ext/gettext.so: cannot open shared object file: No such file or directory), /usr/bin/ext/gettext.so.so (/usr/bin/ext/gettext.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0710000Z PHP Warning:  PHP Startup: Unable to load dynamic library 'gmp.so' (tried: /usr/bin/ext/gmp.so (/usr/bin/ext/gmp.so: cannot open shared object file: No such file or directory), /usr/bin/ext/gmp.so.so (/usr/bin/ext/gmp.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0723783Z PHP Warning:  PHP Startup: Unable to load dynamic library 'iconv.so' (tried: /usr/bin/ext/iconv.so (/usr/bin/ext/iconv.so: cannot open shared object file: No such file or directory), /usr/bin/ext/iconv.so.so (/usr/bin/ext/iconv.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0726116Z PHP Warning:  PHP Startup: Unable to load dynamic library 'igbinary.so' (tried: /usr/bin/ext/igbinary.so (/usr/bin/ext/igbinary.so: cannot open shared object file: No such file or directory), /usr/bin/ext/igbinary.so.so (/usr/bin/ext/igbinary.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0728572Z PHP Warning:  PHP Startup: Unable to load dynamic library 'imagick.so' (tried: /usr/bin/ext/imagick.so (/usr/bin/ext/imagick.so: cannot open shared object file: No such file or directory), /usr/bin/ext/imagick.so.so (/usr/bin/ext/imagick.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0730992Z PHP Warning:  PHP Startup: Unable to load dynamic library 'imap.so' (tried: /usr/bin/ext/imap.so (/usr/bin/ext/imap.so: cannot open shared object file: No such file or directory), /usr/bin/ext/imap.so.so (/usr/bin/ext/imap.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0733467Z PHP Warning:  PHP Startup: Unable to load dynamic library 'intl.so' (tried: /usr/bin/ext/intl.so (/usr/bin/ext/intl.so: cannot open shared object file: No such file or directory), /usr/bin/ext/intl.so.so (/usr/bin/ext/intl.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0735930Z PHP Warning:  PHP Startup: Unable to load dynamic library 'ldap.so' (tried: /usr/bin/ext/ldap.so (/usr/bin/ext/ldap.so: cannot open shared object file: No such file or directory), /usr/bin/ext/ldap.so.so (/usr/bin/ext/ldap.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0738392Z PHP Warning:  PHP Startup: Unable to load dynamic library 'mbstring.so' (tried: /usr/bin/ext/mbstring.so (/usr/bin/ext/mbstring.so: cannot open shared object file: No such file or directory), /usr/bin/ext/mbstring.so.so (/usr/bin/ext/mbstring.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0740735Z PHP Warning:  PHP Startup: Unable to load dynamic library 'memcache.so' (tried: /usr/bin/ext/memcache.so (/usr/bin/ext/memcache.so: cannot open shared object file: No such file or directory), /usr/bin/ext/memcache.so.so (/usr/bin/ext/memcache.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0742969Z PHP Warning:  PHP Startup: Unable to load dynamic library 'mongodb.so' (tried: /usr/bin/ext/mongodb.so (/usr/bin/ext/mongodb.so: cannot open shared object file: No such file or directory), /usr/bin/ext/mongodb.so.so (/usr/bin/ext/mongodb.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0745329Z PHP Warning:  PHP Startup: Unable to load dynamic library 'msgpack.so' (tried: /usr/bin/ext/msgpack.so (/usr/bin/ext/msgpack.so: cannot open shared object file: No such file or directory), /usr/bin/ext/msgpack.so.so (/usr/bin/ext/msgpack.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0747582Z PHP Warning:  PHP Startup: Unable to load dynamic library 'mysqli.so' (tried: /usr/bin/ext/mysqli.so (/usr/bin/ext/mysqli.so: cannot open shared object file: No such file or directory), /usr/bin/ext/mysqli.so.so (/usr/bin/ext/mysqli.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0750143Z PHP Warning:  PHP Startup: Unable to load dynamic library 'odbc.so' (tried: /usr/bin/ext/odbc.so (/usr/bin/ext/odbc.so: cannot open shared object file: No such file or directory), /usr/bin/ext/odbc.so.so (/usr/bin/ext/odbc.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0752406Z PHP Warning:  PHP Startup: Unable to load dynamic library 'pdo_dblib.so' (tried: /usr/bin/ext/pdo_dblib.so (/usr/bin/ext/pdo_dblib.so: cannot open shared object file: No such file or directory), /usr/bin/ext/pdo_dblib.so.so (/usr/bin/ext/pdo_dblib.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0754902Z PHP Warning:  PHP Startup: Unable to load dynamic library 'pdo_firebird.so' (tried: /usr/bin/ext/pdo_firebird.so (/usr/bin/ext/pdo_firebird.so: cannot open shared object file: No such file or directory), /usr/bin/ext/pdo_firebird.so.so (/usr/bin/ext/pdo_firebird.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0757256Z PHP Warning:  PHP Startup: Unable to load dynamic library 'pdo_mysql.so' (tried: /usr/bin/ext/pdo_mysql.so (/usr/bin/ext/pdo_mysql.so: cannot open shared object file: No such file or directory), /usr/bin/ext/pdo_mysql.so.so (/usr/bin/ext/pdo_mysql.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0759520Z PHP Warning:  PHP Startup: Unable to load dynamic library 'pdo_odbc.so' (tried: /usr/bin/ext/pdo_odbc.so (/usr/bin/ext/pdo_odbc.so: cannot open shared object file: No such file or directory), /usr/bin/ext/pdo_odbc.so.so (/usr/bin/ext/pdo_odbc.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0761800Z PHP Warning:  PHP Startup: Unable to load dynamic library 'pdo_pgsql.so' (tried: /usr/bin/ext/pdo_pgsql.so (/usr/bin/ext/pdo_pgsql.so: cannot open shared object file: No such file or directory), /usr/bin/ext/pdo_pgsql.so.so (/usr/bin/ext/pdo_pgsql.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0764568Z PHP Warning:  PHP Startup: Unable to load dynamic library 'pdo_sqlite.so' (tried: /usr/bin/ext/pdo_sqlite.so (/usr/bin/ext/pdo_sqlite.so: cannot open shared object file: No such file or directory), /usr/bin/ext/pdo_sqlite.so.so (/usr/bin/ext/pdo_sqlite.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0767001Z PHP Warning:  PHP Startup: Unable to load dynamic library 'pdo_sqlsrv.so' (tried: /usr/bin/ext/pdo_sqlsrv.so (/usr/bin/ext/pdo_sqlsrv.so: cannot open shared object file: No such file or directory), /usr/bin/ext/pdo_sqlsrv.so.so (/usr/bin/ext/pdo_sqlsrv.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0772107Z PHP Warning:  PHP Startup: Unable to load dynamic library 'pgsql.so' (tried: /usr/bin/ext/pgsql.so (/usr/bin/ext/pgsql.so: cannot open shared object file: No such file or directory), /usr/bin/ext/pgsql.so.so (/usr/bin/ext/pgsql.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0774630Z PHP Warning:  PHP Startup: Unable to load dynamic library 'phar.so' (tried: /usr/bin/ext/phar.so (/usr/bin/ext/phar.so: cannot open shared object file: No such file or directory), /usr/bin/ext/phar.so.so (/usr/bin/ext/phar.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0777109Z PHP Warning:  PHP Startup: Unable to load dynamic library 'posix.so' (tried: /usr/bin/ext/posix.so (/usr/bin/ext/posix.so: cannot open shared object file: No such file or directory), /usr/bin/ext/posix.so.so (/usr/bin/ext/posix.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0779494Z PHP Warning:  PHP Startup: Unable to load dynamic library 'readline.so' (tried: /usr/bin/ext/readline.so (/usr/bin/ext/readline.so: cannot open shared object file: No such file or directory), /usr/bin/ext/readline.so.so (/usr/bin/ext/readline.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0781711Z PHP Warning:  PHP Startup: Unable to load dynamic library 'shmop.so' (tried: /usr/bin/ext/shmop.so (/usr/bin/ext/shmop.so: cannot open shared object file: No such file or directory), /usr/bin/ext/shmop.so.so (/usr/bin/ext/shmop.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0783853Z PHP Warning:  PHP Startup: Unable to load dynamic library 'simplexml.so' (tried: /usr/bin/ext/simplexml.so (/usr/bin/ext/simplexml.so: cannot open shared object file: No such file or directory), /usr/bin/ext/simplexml.so.so (/usr/bin/ext/simplexml.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0786127Z PHP Warning:  PHP Startup: Unable to load dynamic library 'snmp.so' (tried: /usr/bin/ext/snmp.so (/usr/bin/ext/snmp.so: cannot open shared object file: No such file or directory), /usr/bin/ext/snmp.so.so (/usr/bin/ext/snmp.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0788239Z PHP Warning:  PHP Startup: Unable to load dynamic library 'soap.so' (tried: /usr/bin/ext/soap.so (/usr/bin/ext/soap.so: cannot open shared object file: No such file or directory), /usr/bin/ext/soap.so.so (/usr/bin/ext/soap.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0790397Z PHP Warning:  PHP Startup: Unable to load dynamic library 'sockets.so' (tried: /usr/bin/ext/sockets.so (/usr/bin/ext/sockets.so: cannot open shared object file: No such file or directory), /usr/bin/ext/sockets.so.so (/usr/bin/ext/sockets.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0792993Z PHP Warning:  PHP Startup: Unable to load dynamic library 'sqlite3.so' (tried: /usr/bin/ext/sqlite3.so (/usr/bin/ext/sqlite3.so: cannot open shared object file: No such file or directory), /usr/bin/ext/sqlite3.so.so (/usr/bin/ext/sqlite3.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0795707Z PHP Warning:  PHP Startup: Unable to load dynamic library 'sqlsrv.so' (tried: /usr/bin/ext/sqlsrv.so (/usr/bin/ext/sqlsrv.so: cannot open shared object file: No such file or directory), /usr/bin/ext/sqlsrv.so.so (/usr/bin/ext/sqlsrv.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0798191Z PHP Warning:  PHP Startup: Unable to load dynamic library 'sysvmsg.so' (tried: /usr/bin/ext/sysvmsg.so (/usr/bin/ext/sysvmsg.so: cannot open shared object file: No such file or directory), /usr/bin/ext/sysvmsg.so.so (/usr/bin/ext/sysvmsg.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0800370Z PHP Warning:  PHP Startup: Unable to load dynamic library 'sysvsem.so' (tried: /usr/bin/ext/sysvsem.so (/usr/bin/ext/sysvsem.so: cannot open shared object file: No such file or directory), /usr/bin/ext/sysvsem.so.so (/usr/bin/ext/sysvsem.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0802921Z PHP Warning:  PHP Startup: Unable to load dynamic library 'sysvshm.so' (tried: /usr/bin/ext/sysvshm.so (/usr/bin/ext/sysvshm.so: cannot open shared object file: No such file or directory), /usr/bin/ext/sysvshm.so.so (/usr/bin/ext/sysvshm.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0805268Z PHP Warning:  PHP Startup: Unable to load dynamic library 'tidy.so' (tried: /usr/bin/ext/tidy.so (/usr/bin/ext/tidy.so: cannot open shared object file: No such file or directory), /usr/bin/ext/tidy.so.so (/usr/bin/ext/tidy.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0807395Z PHP Warning:  PHP Startup: Unable to load dynamic library 'tokenizer.so' (tried: /usr/bin/ext/tokenizer.so (/usr/bin/ext/tokenizer.so: cannot open shared object file: No such file or directory), /usr/bin/ext/tokenizer.so.so (/usr/bin/ext/tokenizer.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0809749Z PHP Warning:  PHP Startup: Unable to load dynamic library 'xmlreader.so' (tried: /usr/bin/ext/xmlreader.so (/usr/bin/ext/xmlreader.so: cannot open shared object file: No such file or directory), /usr/bin/ext/xmlreader.so.so (/usr/bin/ext/xmlreader.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0812056Z PHP Warning:  PHP Startup: Unable to load dynamic library 'xmlwriter.so' (tried: /usr/bin/ext/xmlwriter.so (/usr/bin/ext/xmlwriter.so: cannot open shared object file: No such file or directory), /usr/bin/ext/xmlwriter.so.so (/usr/bin/ext/xmlwriter.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0814609Z PHP Warning:  PHP Startup: Unable to load dynamic library 'xsl.so' (tried: /usr/bin/ext/xsl.so (/usr/bin/ext/xsl.so: cannot open shared object file: No such file or directory), /usr/bin/ext/xsl.so.so (/usr/bin/ext/xsl.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0817040Z PHP Warning:  PHP Startup: Unable to load dynamic library 'yaml.so' (tried: /usr/bin/ext/yaml.so (/usr/bin/ext/yaml.so: cannot open shared object file: No such file or directory), /usr/bin/ext/yaml.so.so (/usr/bin/ext/yaml.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0819129Z PHP Warning:  PHP Startup: Unable to load dynamic library 'zip.so' (tried: /usr/bin/ext/zip.so (/usr/bin/ext/zip.so: cannot open shared object file: No such file or directory), /usr/bin/ext/zip.so.so (/usr/bin/ext/zip.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0821349Z PHP Warning:  PHP Startup: Unable to load dynamic library 'zmq.so' (tried: /usr/bin/ext/zmq.so (/usr/bin/ext/zmq.so: cannot open shared object file: No such file or directory), /usr/bin/ext/zmq.so.so (/usr/bin/ext/zmq.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0823915Z PHP Warning:  PHP Startup: Unable to load dynamic library 'memcached.so' (tried: /usr/bin/ext/memcached.so (/usr/bin/ext/memcached.so: cannot open shared object file: No such file or directory), /usr/bin/ext/memcached.so.so (/usr/bin/ext/memcached.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0826330Z PHP Warning:  PHP Startup: Unable to load dynamic library 'redis.so' (tried: /usr/bin/ext/redis.so (/usr/bin/ext/redis.so: cannot open shared object file: No such file or directory), /usr/bin/ext/redis.so.so (/usr/bin/ext/redis.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0828492Z PHP Warning:  PHP Startup: Unable to load dynamic library 'ds.so' (tried: /usr/bin/ext/ds.so (/usr/bin/ext/ds.so: cannot open shared object file: No such file or directory), /usr/bin/ext/ds.so.so (/usr/bin/ext/ds.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0830640Z PHP Warning:  PHP Startup: Unable to load dynamic library 'pdo_sqlite' (tried: /usr/bin/ext/pdo_sqlite (/usr/bin/ext/pdo_sqlite: cannot open shared object file: No such file or directory), /usr/bin/ext/pdo_sqlite.so (/usr/bin/ext/pdo_sqlite.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0833353Z PHP Warning:  PHP Startup: Unable to load dynamic library 'sqlite3' (tried: /usr/bin/ext/sqlite3 (/usr/bin/ext/sqlite3: cannot open shared object file: No such file or directory), /usr/bin/ext/sqlite3.so (/usr/bin/ext/sqlite3.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:54.0835212Z PHP Fatal error:  Uncaught Error: Class "PDO" not found in /tmp/forge-r2-ts00_oa3/baseline/integrations/antigravity/benchmarks/php_procurement_inventory/src/ProcurementEngine.php:23
+2026-11-20T22:15:54.0836230Z Stack trace:
+2026-11-20T22:15:54.0837184Z #0 /tmp/forge-r2-ts00_oa3/baseline/integrations/antigravity/benchmarks/php_procurement_inventory/tests/run_tests.php(47): Kirion\BenchmarkA\ProcurementEngine->__construct()
+2026-11-20T22:15:54.0838148Z #1 {main}
+2026-11-20T22:15:54.0838937Z   thrown in /tmp/forge-r2-ts00_oa3/baseline/integrations/antigravity/benchmarks/php_procurement_inventory/src/ProcurementEngine.php on line 23
+2026-11-20T22:15:54.0839704Z 
+2026-11-20T22:15:54.1019505Z baseline-php-layout-probe exit 0 sha256 0dbf5867ba0bc288e872aeae6c1d920a837bd657242dec97cefd33ac2df2b71f
+2026-11-20T22:15:54.1020544Z PHP Warning:  Module "pdo_sqlite" is already loaded in Unknown on line 0
+2026-11-20T22:15:54.1021224Z PHP Warning:  Module "sqlite3" is already loaded in Unknown on line 0
+2026-11-20T22:15:54.1021718Z PDO SQLite and SQLite3 ready
+2026-11-20T22:15:55.5775323Z baseline-A exit 0 sha256 9fa7af652d712041bb16d6a1f51f3f3418a6fa6ab58de0a44404d8ba59e466e7
+2026-11-20T22:15:55.5779279Z test_benchmark_a_php_laravel_procurement_and_inventory (integrations.antigravity.tests.test_qualification_benchmarks.QualificationBenchmarksTests.test_benchmark_a_php_laravel_procurement_and_inventory) ... ok
+2026-11-20T22:15:55.5780281Z 
+2026-11-20T22:15:55.5780587Z ----------------------------------------------------------------------
+2026-11-20T22:15:55.5781240Z Ran 1 test in 0.315s
+2026-11-20T22:15:55.5781472Z 
+2026-11-20T22:15:55.5781696Z OK
+2026-11-20T22:15:55.5781880Z 
+2026-11-20T22:15:55.6084424Z Preparing worktree (detached HEAD 2a5adf6)
+2026-11-20T22:15:55.6430239Z HEAD is now at 2a5adf6 fix(chatgpt): enforce concrete live provider and exact durable nonce replay failure
+2026-11-20T22:15:55.8844379Z candidate-composer exit 0 sha256 e774c1100ab26dee89b0cdd8a09240f00a11defb49db97ef8ae196dfac626641
+2026-11-20T22:15:55.8845973Z No composer.lock file present. Updating dependencies to latest instead of installing from lock file. See https://getcomposer.org/install for more information.
+2026-11-20T22:15:55.8846926Z Loading composer repositories with package information
+2026-11-20T22:15:55.8847695Z Updating dependencies
+2026-11-20T22:15:55.8848175Z Nothing to modify in lock file
+2026-11-20T22:15:55.8848616Z Writing lock file
+2026-11-20T22:15:55.8849062Z Installing dependencies from lock file (including require-dev)
+2026-11-20T22:15:55.8849569Z Nothing to install, update or remove
+2026-11-20T22:15:55.8850230Z Generating optimized autoload files
+2026-11-20T22:15:55.8850518Z 
+2026-11-20T22:15:55.9264827Z candidate-original-php-layout exit 255 sha256 618d251d75bae194c6c91040665936181de38bb97733fbde30c6091ae97a4662
+2026-11-20T22:15:55.9266629Z PHP Warning:  Failed loading Zend extension 'opcache.so' (tried: /usr/bin/ext/opcache.so (/usr/bin/ext/opcache.so: cannot open shared object file: No such file or directory), /usr/bin/ext/opcache.so.so (/usr/bin/ext/opcache.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9268727Z PHP Warning:  PHP Startup: Unable to load dynamic library 'mysqlnd.so' (tried: /usr/bin/ext/mysqlnd.so (/usr/bin/ext/mysqlnd.so: cannot open shared object file: No such file or directory), /usr/bin/ext/mysqlnd.so.so (/usr/bin/ext/mysqlnd.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9270857Z PHP Warning:  PHP Startup: Unable to load dynamic library 'pdo.so' (tried: /usr/bin/ext/pdo.so (/usr/bin/ext/pdo.so: cannot open shared object file: No such file or directory), /usr/bin/ext/pdo.so.so (/usr/bin/ext/pdo.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9273004Z PHP Warning:  PHP Startup: Unable to load dynamic library 'xml.so' (tried: /usr/bin/ext/xml.so (/usr/bin/ext/xml.so: cannot open shared object file: No such file or directory), /usr/bin/ext/xml.so.so (/usr/bin/ext/xml.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9275001Z PHP Warning:  PHP Startup: Unable to load dynamic library 'amqp.so' (tried: /usr/bin/ext/amqp.so (/usr/bin/ext/amqp.so: cannot open shared object file: No such file or directory), /usr/bin/ext/amqp.so.so (/usr/bin/ext/amqp.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9277018Z PHP Warning:  PHP Startup: Unable to load dynamic library 'apcu.so' (tried: /usr/bin/ext/apcu.so (/usr/bin/ext/apcu.so: cannot open shared object file: No such file or directory), /usr/bin/ext/apcu.so.so (/usr/bin/ext/apcu.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9279100Z PHP Warning:  PHP Startup: Unable to load dynamic library 'ast.so' (tried: /usr/bin/ext/ast.so (/usr/bin/ext/ast.so: cannot open shared object file: No such file or directory), /usr/bin/ext/ast.so.so (/usr/bin/ext/ast.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9281297Z PHP Warning:  PHP Startup: Unable to load dynamic library 'bcmath.so' (tried: /usr/bin/ext/bcmath.so (/usr/bin/ext/bcmath.so: cannot open shared object file: No such file or directory), /usr/bin/ext/bcmath.so.so (/usr/bin/ext/bcmath.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9284048Z PHP Warning:  PHP Startup: Unable to load dynamic library 'bz2.so' (tried: /usr/bin/ext/bz2.so (/usr/bin/ext/bz2.so: cannot open shared object file: No such file or directory), /usr/bin/ext/bz2.so.so (/usr/bin/ext/bz2.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9286299Z PHP Warning:  PHP Startup: Unable to load dynamic library 'calendar.so' (tried: /usr/bin/ext/calendar.so (/usr/bin/ext/calendar.so: cannot open shared object file: No such file or directory), /usr/bin/ext/calendar.so.so (/usr/bin/ext/calendar.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9288681Z PHP Warning:  PHP Startup: Unable to load dynamic library 'ctype.so' (tried: /usr/bin/ext/ctype.so (/usr/bin/ext/ctype.so: cannot open shared object file: No such file or directory), /usr/bin/ext/ctype.so.so (/usr/bin/ext/ctype.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9290979Z PHP Warning:  PHP Startup: Unable to load dynamic library 'curl.so' (tried: /usr/bin/ext/curl.so (/usr/bin/ext/curl.so: cannot open shared object file: No such file or directory), /usr/bin/ext/curl.so.so (/usr/bin/ext/curl.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9293338Z PHP Warning:  PHP Startup: Unable to load dynamic library 'dba.so' (tried: /usr/bin/ext/dba.so (/usr/bin/ext/dba.so: cannot open shared object file: No such file or directory), /usr/bin/ext/dba.so.so (/usr/bin/ext/dba.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9295741Z PHP Warning:  PHP Startup: Unable to load dynamic library 'dom.so' (tried: /usr/bin/ext/dom.so (/usr/bin/ext/dom.so: cannot open shared object file: No such file or directory), /usr/bin/ext/dom.so.so (/usr/bin/ext/dom.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9297986Z PHP Warning:  PHP Startup: Unable to load dynamic library 'enchant.so' (tried: /usr/bin/ext/enchant.so (/usr/bin/ext/enchant.so: cannot open shared object file: No such file or directory), /usr/bin/ext/enchant.so.so (/usr/bin/ext/enchant.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9300010Z PHP Warning:  PHP Startup: Unable to load dynamic library 'exif.so' (tried: /usr/bin/ext/exif.so (/usr/bin/ext/exif.so: cannot open shared object file: No such file or directory), /usr/bin/ext/exif.so.so (/usr/bin/ext/exif.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9301997Z PHP Warning:  PHP Startup: Unable to load dynamic library 'ffi.so' (tried: /usr/bin/ext/ffi.so (/usr/bin/ext/ffi.so: cannot open shared object file: No such file or directory), /usr/bin/ext/ffi.so.so (/usr/bin/ext/ffi.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9304288Z PHP Warning:  PHP Startup: Unable to load dynamic library 'fileinfo.so' (tried: /usr/bin/ext/fileinfo.so (/usr/bin/ext/fileinfo.so: cannot open shared object file: No such file or directory), /usr/bin/ext/fileinfo.so.so (/usr/bin/ext/fileinfo.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9306504Z PHP Warning:  PHP Startup: Unable to load dynamic library 'ftp.so' (tried: /usr/bin/ext/ftp.so (/usr/bin/ext/ftp.so: cannot open shared object file: No such file or directory), /usr/bin/ext/ftp.so.so (/usr/bin/ext/ftp.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9308365Z PHP Warning:  PHP Startup: Unable to load dynamic library 'gd.so' (tried: /usr/bin/ext/gd.so (/usr/bin/ext/gd.so: cannot open shared object file: No such file or directory), /usr/bin/ext/gd.so.so (/usr/bin/ext/gd.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9310449Z PHP Warning:  PHP Startup: Unable to load dynamic library 'gettext.so' (tried: /usr/bin/ext/gettext.so (/usr/bin/ext/gettext.so: cannot open shared object file: No such file or directory), /usr/bin/ext/gettext.so.so (/usr/bin/ext/gettext.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9312540Z PHP Warning:  PHP Startup: Unable to load dynamic library 'gmp.so' (tried: /usr/bin/ext/gmp.so (/usr/bin/ext/gmp.so: cannot open shared object file: No such file or directory), /usr/bin/ext/gmp.so.so (/usr/bin/ext/gmp.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9315218Z PHP Warning:  PHP Startup: Unable to load dynamic library 'iconv.so' (tried: /usr/bin/ext/iconv.so (/usr/bin/ext/iconv.so: cannot open shared object file: No such file or directory), /usr/bin/ext/iconv.so.so (/usr/bin/ext/iconv.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9317531Z PHP Warning:  PHP Startup: Unable to load dynamic library 'igbinary.so' (tried: /usr/bin/ext/igbinary.so (/usr/bin/ext/igbinary.so: cannot open shared object file: No such file or directory), /usr/bin/ext/igbinary.so.so (/usr/bin/ext/igbinary.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9319912Z PHP Warning:  PHP Startup: Unable to load dynamic library 'imagick.so' (tried: /usr/bin/ext/imagick.so (/usr/bin/ext/imagick.so: cannot open shared object file: No such file or directory), /usr/bin/ext/imagick.so.so (/usr/bin/ext/imagick.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9322138Z PHP Warning:  PHP Startup: Unable to load dynamic library 'imap.so' (tried: /usr/bin/ext/imap.so (/usr/bin/ext/imap.so: cannot open shared object file: No such file or directory), /usr/bin/ext/imap.so.so (/usr/bin/ext/imap.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9324474Z PHP Warning:  PHP Startup: Unable to load dynamic library 'intl.so' (tried: /usr/bin/ext/intl.so (/usr/bin/ext/intl.so: cannot open shared object file: No such file or directory), /usr/bin/ext/intl.so.so (/usr/bin/ext/intl.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9326614Z PHP Warning:  PHP Startup: Unable to load dynamic library 'ldap.so' (tried: /usr/bin/ext/ldap.so (/usr/bin/ext/ldap.so: cannot open shared object file: No such file or directory), /usr/bin/ext/ldap.so.so (/usr/bin/ext/ldap.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9328807Z PHP Warning:  PHP Startup: Unable to load dynamic library 'mbstring.so' (tried: /usr/bin/ext/mbstring.so (/usr/bin/ext/mbstring.so: cannot open shared object file: No such file or directory), /usr/bin/ext/mbstring.so.so (/usr/bin/ext/mbstring.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9331166Z PHP Warning:  PHP Startup: Unable to load dynamic library 'memcache.so' (tried: /usr/bin/ext/memcache.so (/usr/bin/ext/memcache.so: cannot open shared object file: No such file or directory), /usr/bin/ext/memcache.so.so (/usr/bin/ext/memcache.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9333710Z PHP Warning:  PHP Startup: Unable to load dynamic library 'mongodb.so' (tried: /usr/bin/ext/mongodb.so (/usr/bin/ext/mongodb.so: cannot open shared object file: No such file or directory), /usr/bin/ext/mongodb.so.so (/usr/bin/ext/mongodb.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9336307Z PHP Warning:  PHP Startup: Unable to load dynamic library 'msgpack.so' (tried: /usr/bin/ext/msgpack.so (/usr/bin/ext/msgpack.so: cannot open shared object file: No such file or directory), /usr/bin/ext/msgpack.so.so (/usr/bin/ext/msgpack.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9338781Z PHP Warning:  PHP Startup: Unable to load dynamic library 'mysqli.so' (tried: /usr/bin/ext/mysqli.so (/usr/bin/ext/mysqli.so: cannot open shared object file: No such file or directory), /usr/bin/ext/mysqli.so.so (/usr/bin/ext/mysqli.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9340996Z PHP Warning:  PHP Startup: Unable to load dynamic library 'odbc.so' (tried: /usr/bin/ext/odbc.so (/usr/bin/ext/odbc.so: cannot open shared object file: No such file or directory), /usr/bin/ext/odbc.so.so (/usr/bin/ext/odbc.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9343416Z PHP Warning:  PHP Startup: Unable to load dynamic library 'pdo_dblib.so' (tried: /usr/bin/ext/pdo_dblib.so (/usr/bin/ext/pdo_dblib.so: cannot open shared object file: No such file or directory), /usr/bin/ext/pdo_dblib.so.so (/usr/bin/ext/pdo_dblib.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9345609Z PHP Warning:  PHP Startup: Unable to load dynamic library 'pdo_firebird.so' (tried: /usr/bin/ext/pdo_firebird.so (/usr/bin/ext/pdo_firebird.so: cannot open shared object file: No such file or directory), /usr/bin/ext/pdo_firebird.so.so (/usr/bin/ext/pdo_firebird.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9348115Z PHP Warning:  PHP Startup: Unable to load dynamic library 'pdo_mysql.so' (tried: /usr/bin/ext/pdo_mysql.so (/usr/bin/ext/pdo_mysql.so: cannot open shared object file: No such file or directory), /usr/bin/ext/pdo_mysql.so.so (/usr/bin/ext/pdo_mysql.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9350414Z PHP Warning:  PHP Startup: Unable to load dynamic library 'pdo_odbc.so' (tried: /usr/bin/ext/pdo_odbc.so (/usr/bin/ext/pdo_odbc.so: cannot open shared object file: No such file or directory), /usr/bin/ext/pdo_odbc.so.so (/usr/bin/ext/pdo_odbc.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9352920Z PHP Warning:  PHP Startup: Unable to load dynamic library 'pdo_pgsql.so' (tried: /usr/bin/ext/pdo_pgsql.so (/usr/bin/ext/pdo_pgsql.so: cannot open shared object file: No such file or directory), /usr/bin/ext/pdo_pgsql.so.so (/usr/bin/ext/pdo_pgsql.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9355389Z PHP Warning:  PHP Startup: Unable to load dynamic library 'pdo_sqlite.so' (tried: /usr/bin/ext/pdo_sqlite.so (/usr/bin/ext/pdo_sqlite.so: cannot open shared object file: No such file or directory), /usr/bin/ext/pdo_sqlite.so.so (/usr/bin/ext/pdo_sqlite.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9357674Z PHP Warning:  PHP Startup: Unable to load dynamic library 'pdo_sqlsrv.so' (tried: /usr/bin/ext/pdo_sqlsrv.so (/usr/bin/ext/pdo_sqlsrv.so: cannot open shared object file: No such file or directory), /usr/bin/ext/pdo_sqlsrv.so.so (/usr/bin/ext/pdo_sqlsrv.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9359913Z PHP Warning:  PHP Startup: Unable to load dynamic library 'pgsql.so' (tried: /usr/bin/ext/pgsql.so (/usr/bin/ext/pgsql.so: cannot open shared object file: No such file or directory), /usr/bin/ext/pgsql.so.so (/usr/bin/ext/pgsql.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9362026Z PHP Warning:  PHP Startup: Unable to load dynamic library 'phar.so' (tried: /usr/bin/ext/phar.so (/usr/bin/ext/phar.so: cannot open shared object file: No such file or directory), /usr/bin/ext/phar.so.so (/usr/bin/ext/phar.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9364371Z PHP Warning:  PHP Startup: Unable to load dynamic library 'posix.so' (tried: /usr/bin/ext/posix.so (/usr/bin/ext/posix.so: cannot open shared object file: No such file or directory), /usr/bin/ext/posix.so.so (/usr/bin/ext/posix.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9366551Z PHP Warning:  PHP Startup: Unable to load dynamic library 'readline.so' (tried: /usr/bin/ext/readline.so (/usr/bin/ext/readline.so: cannot open shared object file: No such file or directory), /usr/bin/ext/readline.so.so (/usr/bin/ext/readline.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9369000Z PHP Warning:  PHP Startup: Unable to load dynamic library 'shmop.so' (tried: /usr/bin/ext/shmop.so (/usr/bin/ext/shmop.so: cannot open shared object file: No such file or directory), /usr/bin/ext/shmop.so.so (/usr/bin/ext/shmop.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9371558Z PHP Warning:  PHP Startup: Unable to load dynamic library 'simplexml.so' (tried: /usr/bin/ext/simplexml.so (/usr/bin/ext/simplexml.so: cannot open shared object file: No such file or directory), /usr/bin/ext/simplexml.so.so (/usr/bin/ext/simplexml.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9374233Z PHP Warning:  PHP Startup: Unable to load dynamic library 'snmp.so' (tried: /usr/bin/ext/snmp.so (/usr/bin/ext/snmp.so: cannot open shared object file: No such file or directory), /usr/bin/ext/snmp.so.so (/usr/bin/ext/snmp.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9376662Z PHP Warning:  PHP Startup: Unable to load dynamic library 'soap.so' (tried: /usr/bin/ext/soap.so (/usr/bin/ext/soap.so: cannot open shared object file: No such file or directory), /usr/bin/ext/soap.so.so (/usr/bin/ext/soap.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9379101Z PHP Warning:  PHP Startup: Unable to load dynamic library 'sockets.so' (tried: /usr/bin/ext/sockets.so (/usr/bin/ext/sockets.so: cannot open shared object file: No such file or directory), /usr/bin/ext/sockets.so.so (/usr/bin/ext/sockets.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9381500Z PHP Warning:  PHP Startup: Unable to load dynamic library 'sqlite3.so' (tried: /usr/bin/ext/sqlite3.so (/usr/bin/ext/sqlite3.so: cannot open shared object file: No such file or directory), /usr/bin/ext/sqlite3.so.so (/usr/bin/ext/sqlite3.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9383832Z PHP Warning:  PHP Startup: Unable to load dynamic library 'sqlsrv.so' (tried: /usr/bin/ext/sqlsrv.so (/usr/bin/ext/sqlsrv.so: cannot open shared object file: No such file or directory), /usr/bin/ext/sqlsrv.so.so (/usr/bin/ext/sqlsrv.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9385833Z PHP Warning:  PHP Startup: Unable to load dynamic library 'sysvmsg.so' (tried: /usr/bin/ext/sysvmsg.so (/usr/bin/ext/sysvmsg.so: cannot open shared object file: No such file or directory), /usr/bin/ext/sysvmsg.so.so (/usr/bin/ext/sysvmsg.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9388173Z PHP Warning:  PHP Startup: Unable to load dynamic library 'sysvsem.so' (tried: /usr/bin/ext/sysvsem.so (/usr/bin/ext/sysvsem.so: cannot open shared object file: No such file or directory), /usr/bin/ext/sysvsem.so.so (/usr/bin/ext/sysvsem.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9390399Z PHP Warning:  PHP Startup: Unable to load dynamic library 'sysvshm.so' (tried: /usr/bin/ext/sysvshm.so (/usr/bin/ext/sysvshm.so: cannot open shared object file: No such file or directory), /usr/bin/ext/sysvshm.so.so (/usr/bin/ext/sysvshm.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9392866Z PHP Warning:  PHP Startup: Unable to load dynamic library 'tidy.so' (tried: /usr/bin/ext/tidy.so (/usr/bin/ext/tidy.so: cannot open shared object file: No such file or directory), /usr/bin/ext/tidy.so.so (/usr/bin/ext/tidy.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9395189Z PHP Warning:  PHP Startup: Unable to load dynamic library 'tokenizer.so' (tried: /usr/bin/ext/tokenizer.so (/usr/bin/ext/tokenizer.so: cannot open shared object file: No such file or directory), /usr/bin/ext/tokenizer.so.so (/usr/bin/ext/tokenizer.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9397865Z PHP Warning:  PHP Startup: Unable to load dynamic library 'xmlreader.so' (tried: /usr/bin/ext/xmlreader.so (/usr/bin/ext/xmlreader.so: cannot open shared object file: No such file or directory), /usr/bin/ext/xmlreader.so.so (/usr/bin/ext/xmlreader.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9400323Z PHP Warning:  PHP Startup: Unable to load dynamic library 'xmlwriter.so' (tried: /usr/bin/ext/xmlwriter.so (/usr/bin/ext/xmlwriter.so: cannot open shared object file: No such file or directory), /usr/bin/ext/xmlwriter.so.so (/usr/bin/ext/xmlwriter.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9402891Z PHP Warning:  PHP Startup: Unable to load dynamic library 'xsl.so' (tried: /usr/bin/ext/xsl.so (/usr/bin/ext/xsl.so: cannot open shared object file: No such file or directory), /usr/bin/ext/xsl.so.so (/usr/bin/ext/xsl.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9405104Z PHP Warning:  PHP Startup: Unable to load dynamic library 'yaml.so' (tried: /usr/bin/ext/yaml.so (/usr/bin/ext/yaml.so: cannot open shared object file: No such file or directory), /usr/bin/ext/yaml.so.so (/usr/bin/ext/yaml.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9407242Z PHP Warning:  PHP Startup: Unable to load dynamic library 'zip.so' (tried: /usr/bin/ext/zip.so (/usr/bin/ext/zip.so: cannot open shared object file: No such file or directory), /usr/bin/ext/zip.so.so (/usr/bin/ext/zip.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9409257Z PHP Warning:  PHP Startup: Unable to load dynamic library 'zmq.so' (tried: /usr/bin/ext/zmq.so (/usr/bin/ext/zmq.so: cannot open shared object file: No such file or directory), /usr/bin/ext/zmq.so.so (/usr/bin/ext/zmq.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9411583Z PHP Warning:  PHP Startup: Unable to load dynamic library 'memcached.so' (tried: /usr/bin/ext/memcached.so (/usr/bin/ext/memcached.so: cannot open shared object file: No such file or directory), /usr/bin/ext/memcached.so.so (/usr/bin/ext/memcached.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9413719Z PHP Warning:  PHP Startup: Unable to load dynamic library 'redis.so' (tried: /usr/bin/ext/redis.so (/usr/bin/ext/redis.so: cannot open shared object file: No such file or directory), /usr/bin/ext/redis.so.so (/usr/bin/ext/redis.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9415760Z PHP Warning:  PHP Startup: Unable to load dynamic library 'ds.so' (tried: /usr/bin/ext/ds.so (/usr/bin/ext/ds.so: cannot open shared object file: No such file or directory), /usr/bin/ext/ds.so.so (/usr/bin/ext/ds.so.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9417725Z PHP Warning:  PHP Startup: Unable to load dynamic library 'pdo_sqlite' (tried: /usr/bin/ext/pdo_sqlite (/usr/bin/ext/pdo_sqlite: cannot open shared object file: No such file or directory), /usr/bin/ext/pdo_sqlite.so (/usr/bin/ext/pdo_sqlite.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9420051Z PHP Warning:  PHP Startup: Unable to load dynamic library 'sqlite3' (tried: /usr/bin/ext/sqlite3 (/usr/bin/ext/sqlite3: cannot open shared object file: No such file or directory), /usr/bin/ext/sqlite3.so (/usr/bin/ext/sqlite3.so: cannot open shared object file: No such file or directory)) in Unknown on line 0
+2026-11-20T22:15:55.9421961Z PHP Fatal error:  Uncaught Error: Class "PDO" not found in /tmp/forge-r2-ts00_oa3/candidate/integrations/antigravity/benchmarks/php_procurement_inventory/src/ProcurementEngine.php:23
+2026-11-20T22:15:55.9423226Z Stack trace:
+2026-11-20T22:15:55.9424245Z #0 /tmp/forge-r2-ts00_oa3/candidate/integrations/antigravity/benchmarks/php_procurement_inventory/tests/run_tests.php(47): Kirion\BenchmarkA\ProcurementEngine->__construct()
+2026-11-20T22:15:55.9425236Z #1 {main}
+2026-11-20T22:15:55.9426014Z   thrown in /tmp/forge-r2-ts00_oa3/candidate/integrations/antigravity/benchmarks/php_procurement_inventory/src/ProcurementEngine.php on line 23
+2026-11-20T22:15:55.9426794Z 
+2026-11-20T22:15:55.9610652Z candidate-php-layout-probe exit 0 sha256 0dbf5867ba0bc288e872aeae6c1d920a837bd657242dec97cefd33ac2df2b71f
+2026-11-20T22:15:55.9611767Z PHP Warning:  Module "pdo_sqlite" is already loaded in Unknown on line 0
+2026-11-20T22:15:55.9612441Z PHP Warning:  Module "sqlite3" is already loaded in Unknown on line 0
+2026-11-20T22:15:55.9613806Z PDO SQLite and SQLite3 ready
+2026-11-20T22:15:56.4508083Z candidate-A exit 0 sha256 498d2bbedee490bd6e4946e30b1f057a3b133d0dc8cf6f86af0c815631221b33
+2026-11-20T22:15:56.4510073Z test_benchmark_a_php_laravel_procurement_and_inventory (integrations.antigravity.tests.test_qualification_benchmarks.QualificationBenchmarksTests.test_benchmark_a_php_laravel_procurement_and_inventory) ... ok
+2026-11-20T22:15:56.4511172Z 
+2026-11-20T22:15:56.4511479Z ----------------------------------------------------------------------
+2026-11-20T22:15:56.4512042Z Ran 1 test in 0.368s
+2026-11-20T22:15:56.4512321Z 
+2026-11-20T22:15:56.4512793Z OK
+2026-11-20T22:15:56.4513058Z 
+2026-11-20T22:15:56.4985003Z ##[group]Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+2026-11-20T22:15:56.4985368Z with:
+2026-11-20T22:15:56.4985615Z   name: forge-r4-A-1
+2026-11-20T22:15:56.4985863Z   path: /home/runner/work/_temp/forge-evidence/
+2026-11-20T22:15:56.4986121Z   if-no-files-found: error
+2026-11-20T22:15:56.4986370Z   retention-days: 30
+2026-11-20T22:15:56.4986596Z   compression-level: 6
+2026-11-20T22:15:56.4986811Z   overwrite: false
+2026-11-20T22:15:56.4987033Z   include-hidden-files: false
+2026-11-20T22:15:56.4987263Z env:
+2026-11-20T22:15:56.4987488Z   PYTHONDONTWRITEBYTECODE: 1
+2026-11-20T22:15:56.4987821Z   pythonLocation: /opt/hostedtoolcache/Python/3.13.18/x64
+2026-11-20T22:15:56.4988192Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.13.18/x64/lib/pkgconfig
+2026-11-20T22:15:56.4988560Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.13.18/x64
+2026-11-20T22:15:56.4988912Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.13.18/x64
+2026-11-20T22:15:56.4989465Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.13.18/x64
+2026-11-20T22:15:56.4990049Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.13.18/x64/lib
+2026-11-20T22:15:56.4990437Z   COMPOSER_PROCESS_TIMEOUT: 0
+2026-11-20T22:15:56.4990673Z   COMPOSER_NO_INTERACTION: 1
+2026-11-20T22:15:56.4990883Z   COMPOSER_NO_AUDIT: 1
+2026-11-20T22:15:56.4991112Z ##[endgroup]
+2026-11-20T22:15:56.6263597Z (node:2559) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-20T22:15:56.6264674Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-20T22:15:56.6401755Z With the provided path, there will be 17 files uploaded
+2026-11-20T22:15:56.6402980Z Artifact name is valid!
+2026-11-20T22:15:56.6403429Z Root directory input is valid!
+2026-11-20T22:15:57.2815083Z Beginning upload of artifact content to blob storage
+2026-11-20T22:15:57.3145559Z (node:2559) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-11-20T22:15:57.6414133Z Uploaded bytes 9075
+2026-11-20T22:15:57.7336478Z Finished uploading artifact content to blob storage!
+2026-11-20T22:15:57.7337440Z SHA256 digest of uploaded artifact zip is 8bada8e314b521a80a704b1600cf46bbd7c6682281d2d4919839892d11b53f3c
+2026-11-20T22:15:57.7338380Z Finalizing artifact upload
+2026-11-20T22:15:58.1649483Z Artifact forge-r4-A-1.zip successfully finalized. Artifact ID 14674652461
+2026-11-20T22:15:58.1650414Z Artifact forge-r4-A-1 has been successfully uploaded! Final size is 9075 bytes. Artifact ID is 14674652461
+2026-11-20T22:15:58.1656478Z Artifact download URL: https://github.com/Kirjane/Operation-FORGE.kirion/actions/runs/44827451748/artifacts/14674652461
+2026-11-20T22:15:58.1803873Z Post job cleanup.
+2026-11-20T22:15:58.2713791Z (node:2571) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-20T22:15:58.2715049Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-20T22:15:58.2895259Z Post job cleanup.
+2026-11-20T22:15:58.3694054Z [command]/usr/bin/git version
+2026-11-20T22:15:58.3763569Z git version 2.56.1
+2026-11-20T22:15:58.3825584Z Temporarily overriding HOME='/home/runner/work/_temp/a6faacc5-ef39-48ba-98fc-42e97d3c2c36' before making global git config changes
+2026-11-20T22:15:58.3865475Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-20T22:15:58.3874219Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Operation-FORGE.kirion/Operation-FORGE.kirion
+2026-11-20T22:15:58.3878760Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-20T22:15:58.3886292Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-20T22:15:58.4224988Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-20T22:15:58.4265111Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-20T22:15:58.4512871Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-20T22:15:58.4547727Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-20T22:15:58.4963171Z Cleaning up orphan processes
+2026-11-20T22:15:58.5254400Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@11d5960a326750d5838078e36cf38b85af677262, actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065, actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02, shivammathur/setup-php@bf6b4fbd49ca58e4608c9c89fba0b8d90bd2a39f. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

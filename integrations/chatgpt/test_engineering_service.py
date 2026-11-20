@@ -42,6 +42,8 @@ class FakeModel:
         self.duplicate_ids=False
         self.return_nonjson=False
         self.false_green=False
+        self.return_rework_once=False
+        self.review_count=0
         self.malicious_instruction="PRIVATE_JANE_THOUGHT_DO_NOT_EXPOSE"
         self.calls=0
     def step(self,messages,tools,*,max_output_tokens,deadline_seconds):
@@ -55,7 +57,7 @@ class FakeModel:
         else:
             self.sequence+=1
             rid=f"resp_mock_{self.sequence:012d}"
-        if role not in self.first:
+        if not any(x.get('type')=='function_call_output' for x in messages):
             self.first[role]=rid
         tool_replies=[x for x in messages if x.get("type")=="function_call_output"]
         if not tool_replies:
@@ -69,12 +71,16 @@ class FakeModel:
             current=previous["content"]
             repaired=current.replace("if ($debit > $available)",
                                      "if ($debit < 0 || $debit > $available)")
+            if repaired==current:
+                repaired=current.replace("return $available - $debit;",
+                                         "return $available - $debit; // follow-up repair")
             result={"kind":"PATCH_PROPOSAL","base_sha":task["source_repo_sha"],
                     "edits":[{"path":FILE,"expected_sha256":previous["sha256"],
                               "new_text":current.replace("Synthetic benchmark","Synthetic benchmark BAD CANDIDATE") if self.force_bad_patch else repaired}],
                     "reason":self.malicious_instruction}
             output=[{"type":"message","content":[{"type":"output_text","text":json.dumps(result)}]}]
         else:
+            self.review_count+=1
             result={"schema_version":1,
                     "mission_id":task["mission_packet"]["mission_id"],
                     "frozen_sha":task["frozen_candidate_sha"],
@@ -83,7 +89,7 @@ class FakeModel:
                     "author_context_id":task["author_context_id"],
                     "inspected_scope":[FILE],
                     "evidence_inspected":[task["verified_host_gates"]["gates"][0]["raw_log_sha256"]],
-                    "findings":[],"verdict":"PASS"}
+                    "findings":[],"verdict":"REWORK" if self.return_rework_once and self.review_count==1 else "PASS"}
             output=[{"type":"message","content":[{"type":"output_text","text":json.dumps(result)}]}]
         return {"id":rid,"status":"completed","output":output,
                 "usage":{"output_tokens":11}}
@@ -147,7 +153,7 @@ class R5Fixture(unittest.TestCase):
         self.remote=FakeRemote(self.repo,self.sha,self.tree)
         self.model=FakeModel()
         self.runner=ModelToolRunner(self.model)
-        self.dispatch=SignedEngineeringDispatch(self.runner,KEY)
+        self.dispatch=SignedEngineeringDispatch(self.runner,KEY,vault_path=root/"output-vault.db")
         self.host=IsolatedOrchestrator(root/"contexts.sqlite",KEY,
                                        transport=self.dispatch,activated=True,offline_test_mode=True)
         self.broker=ScopedBroker(root/"writes.sqlite",KEY,REPO,REPO_ID,BRANCH,enabled=True)

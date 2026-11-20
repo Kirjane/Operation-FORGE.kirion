@@ -249,12 +249,15 @@ class IsolatedOrchestrator:
             raise Denied("RECOVERY_CONTEXT_INVALID")
         if (claims.get("request_sha256")!=row["request_hash"] or
             claims.get("sha")!=row["sha"] or claims.get("repo_id")!=row["repo_id"] or
-            claims.get("persona")!=row["persona"] or claims.get("runtime_isolated") is not True or
+            claims.get("persona")!=row["persona"] or
+            not ((claims.get("runtime_isolated") is True and claims.get("mock_only") is not True)
+                 or (self.offline_test_mode and claims.get("mock_only") is True
+                     and claims.get("runtime_isolated") is False)) or
             claims.get("provider") not in ("openai-responses","notion-custom-agent") or
             claims.get("expires_at",0)<=current or claims.get("expires_at",0)>current+3600 or
             (previous_context is not None and ctx==previous_context)):
             raise Denied("RECOVERY_CLAIMS_DRIFT_OR_EXPIRED")
-        summary={"status":"ISOLATED_CONTEXT_ATTESTED","context_id":ctx,
+        summary={"status":"MOCK_CONTEXT_NON_ACCEPTING" if claims.get("mock_only") is True else "ISOLATED_CONTEXT_ATTESTED","context_id":ctx,
                  "provider":claims["provider"],"request_digest":row["request_hash"],
                  "output_sha256":claims["output_sha256"],"non_accepting":True}
         self.journal.register_mission(packet)

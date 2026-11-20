@@ -15,6 +15,7 @@ import threading
 import os
 import pathlib
 import re
+import sqlite3
 import shutil
 import subprocess
 import tempfile
@@ -441,11 +442,55 @@ class SignedEngineeringDispatch:
     Sign only from service-owned memory after verified model calls. Test mocks
     still produce mock receipts; never treat those as independent G13 evidence.
     """
-    def __init__(self,runner:ModelToolRunner,key:bytes):
+    def __init__(self,runner:ModelToolRunner,key:bytes,vault_path=None):
+        if not isinstance(key,bytes) or len(key)<32:
+            raise Denied("SERVICE_SIGNING_KEY_REQUIRED")
         self.runner,self.key=runner,key
         self.stage={};self.results={}
+        self.vault_path=pathlib.Path(vault_path) if vault_path is not None else None
+        if self.vault_path:
+            self.vault_path.parent.mkdir(parents=True,exist_ok=True)
+            with self._db() as db:
+                db.execute("""CREATE TABLE IF NOT EXISTS signed_results(
+                    nonce TEXT PRIMARY KEY,request_sha256 TEXT NOT NULL,
+                    record_json TEXT NOT NULL,mac TEXT NOT NULL)""")
+            os.chmod(self.vault_path,0o600)
+    def _db(self):
+        db=sqlite3.connect(self.vault_path,timeout=15)
+        db.execute("PRAGMA journal_mode=WAL")
+        db.execute("PRAGMA synchronous=FULL")
+        return db
+    def persist(self,nonce,req,receipt,signed):
+        if self.vault_path is None:return
+        record={"request_sha256":fingerprint(req),"output":receipt,"signed":signed}
+        mac=hmac.new(self.key,nonce.encode()+encoded(record),"sha256").hexdigest()
+        with self._db() as db:
+            db.execute("INSERT INTO signed_results(nonce,request_sha256,record_json,mac) VALUES(?,?,?,?)",
+                       (nonce,record["request_sha256"],encoded(record).decode(),mac))
+            db.commit()
+    def durable(self,nonce):
+        if self.vault_path is None:
+            raise Denied("SERVICE_RESULT_JOURNAL_NOT_PROVISIONED")
+        with self._db() as db:
+            row=db.execute("SELECT request_sha256,record_json,mac FROM signed_results WHERE nonce=?",
+                           (nonce,)).fetchone()
+        if row is None:raise Denied("NO_SIGNED_RECOVERY_RECEIPT")
+        try:record=json.loads(row[1])
+        except ValueError as exc:raise Denied("SERVICE_RESULT_VAULT_TAMPERED") from exc
+        mac=hmac.new(self.key,nonce.encode()+encoded(record),"sha256").hexdigest()
+        if (not hmac.compare_digest(mac,row[2]) or
+            record.get("request_sha256")!=row[0] or
+            record.get("signed",{}).get("host_claims",{}).get("request_sha256")!=row[0] or
+            record.get("output",{}).get("model_output_sha256")!=
+                record.get("signed",{}).get("host_claims",{}).get("output_sha256")):
+            raise Denied("SERVICE_RESULT_VAULT_TAMPERED")
+        return record
     def register(self,nonce,context:EngineeringContext):
         if nonce in self.stage or nonce in self.results:raise Denied("DISPATCH_NONCE_REPLAY")
+        if self.vault_path is not None:
+            with self._db() as db:
+                if db.execute("SELECT 1 FROM signed_results WHERE nonce=?",(nonce,)).fetchone():
+                    raise Denied("DURABLE_DISPATCH_NONCE_REPLAY")
         self.stage[nonce]=context
     def __call__(self,req):
         nonce=req["nonce"]
@@ -468,8 +513,10 @@ class SignedEngineeringDispatch:
             claims["mock_only"]=True
             claims["runtime_isolated"]=False
             receipt["test_only_mock_attestation"]=True
-        return {"host_claims":claims,"host_signature":
+        signed={"host_claims":claims,"host_signature":
                 hmac.new(self.key,encoded(claims),"sha256").hexdigest()}
+        self.persist(nonce,req,receipt,signed)
+        return signed
 
 
 class EngineeringPilotService:
@@ -498,10 +545,27 @@ class EngineeringPilotService:
         if self.live and rec.get("test_only_mock_attestation"):
             raise Denied("LIVE_MODEL_CONTEXT_NOT_INDEPENDENT")
         return rec
+    def recover_role(self,packet,*,nonce,previous_context=None):
+        """Recover trusted completed model receipt after lost caller response.
+
+        Never invokes the model a second time. Request binding and expiry are
+        checked by canonical R4 reconciliation; signer MAC by durable vault.
+        """
+        saved=self.dispatch.durable(nonce)
+        evidence=self.host.reconcile_launch(packet,nonce=nonce,
+                    verified_receipt=saved["signed"],previous_context=previous_context)
+        receipt=saved["output"]
+        if evidence["context_id"]!=receipt["context_id"] or evidence["output_sha256"]!=receipt["model_output_sha256"]:
+            raise Denied("RECOVERY_MODEL_OUTPUT_DRIFT")
+        if self.live and receipt.get("test_only_mock_attestation"):
+            raise Denied("MOCK_RECOVERY_CANNOT_QUALIFY_LIVE")
+        return receipt
+
     def run(self,*,writer_packet,reviewer_packet,source_sha,source_tree,source_paths,
             task,nonce_prefix,repo_id):
         if self.live and (not self.exclusive or not self.dispatch.runner.provider.is_live
-                          or not getattr(self.broker,"require_service_actor",False)):
+                          or not getattr(self.broker,"require_service_actor",False)
+                          or self.dispatch.vault_path is None):
             raise Denied("EXCLUSIVE_CREDENTIAL_OR_MODEL_AUTHORIZATION_REQUIRED")
         if not isinstance(task,str) or not 1<=len(task)<=16000 or not re.fullmatch(r"[a-z0-9-]{8,40}",nonce_prefix):
             raise Denied("TASK_OR_NONCE_INVALID")

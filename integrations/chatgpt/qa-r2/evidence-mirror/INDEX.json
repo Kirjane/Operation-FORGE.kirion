@@ -3,12 +3,12 @@
   "mission": "FORGE-CHATGPT-HOST-AUTONOMY-QUALIFICATION-R4",
   "repo": "Kirjane/Operation-FORGE.kirion",
   "canonical_source": "0e8765de6e0e87ea9b4503714f08fa650e1a79c6",
-  "final_candidate": "cdab7514a967b086e7b684e9baca9e4fd08a0b78",
-  "final_candidate_tree": "64a40e5786384c524d5ab89baca4c1a06eae7317",
-  "final_qa_commit": "e31f02d659bc4013effb4e963d778e507445dc57",
-  "final_zip_sha256": "515dd40ea95e3712dfc15ad39e41eade1e92a089c0df0378b37daf349bff3f69",
+  "final_candidate": "a6ad0512dd0592a0464e6502629f178fc6c6d231",
+  "final_candidate_tree": "8d89d0e0ce35c875a4ebec471ff6bb2a6d61d007",
+  "final_qa_commit": "39b82479bc9a2ccb3c1cbbcd88aeea71d0cae5bc",
+  "final_zip_sha256": "16d378c8b289abb07fb9cf0b406bd256473468847b08899465301dbc8306ded3",
   "mirror_branch": "qa/chatgpt-port-evidence-r4",
-  "mirror_commit_before_index": "9f9188880ca2c627b0a7f791e9df511527ff9aa3",
+  "mirror_commit_before_index": "5173b64ac1a6bf9a714c2b911595ace5c08334e4",
   "mirrored_files": [
     {
       "path": "integrations/chatgpt/qa-r2/evidence-mirror/44814331926/r2-before-package-failure.log",
@@ -80,6 +80,48 @@
       "path": "integrations/chatgpt/qa-r2/evidence-mirror/44822939273/r4-repair2-43pass.log",
       "git_blob_sha1": "6e02724786279722ab7ccb470868e781ea5750dc",
       "size_bytes": 42499,
+      "mode": "100644"
+    },
+    {
+      "path": "integrations/chatgpt/qa-r2/evidence-mirror/44823750478/A.log",
+      "git_blob_sha1": "fb34f74186b690e8e0701bc2ffd059dba4e9bf6b",
+      "size_bytes": 80239,
+      "mode": "100644"
+    },
+    {
+      "path": "integrations/chatgpt/qa-r2/evidence-mirror/44823750478/B.log",
+      "git_blob_sha1": "c87f5e6705cd9af5e57a736fabf36f77088e6293",
+      "size_bytes": 30271,
+      "mode": "100644"
+    },
+    {
+      "path": "integrations/chatgpt/qa-r2/evidence-mirror/44823750478/C.log",
+      "git_blob_sha1": "d3552fc3ff0d5e99520fab2f55fbbf0d7fdd4e10",
+      "size_bytes": 21798,
+      "mode": "100644"
+    },
+    {
+      "path": "integrations/chatgpt/qa-r2/evidence-mirror/44823750478/D.log",
+      "git_blob_sha1": "78f599f67e46459e0a7417d54cd97ab5d29c2089",
+      "size_bytes": 21807,
+      "mode": "100644"
+    },
+    {
+      "path": "integrations/chatgpt/qa-r2/evidence-mirror/44823750478/E.log",
+      "git_blob_sha1": "579ed498e9501e130085ba4abee6e5dd0dbf03c0",
+      "size_bytes": 21831,
+      "mode": "100644"
+    },
+    {
+      "path": "integrations/chatgpt/qa-r2/evidence-mirror/44823750478/adapter-package.log",
+      "git_blob_sha1": "170c3378ca23c66097eed1c91dff388c677fca10",
+      "size_bytes": 43198,
+      "mode": "100644"
+    },
+    {
+      "path": "integrations/chatgpt/qa-r2/evidence-mirror/44823750478/core.log",
+      "git_blob_sha1": "a412c0c0861de6a2145ffb51b3d1fa01bbe0786a",
+      "size_bytes": 26552,
       "mode": "100644"
     }
   ],
@@ -389,14 +431,73 @@
         }
       ],
       "url": "https://github.com/Kirjane/Operation-FORGE.kirion/actions/runs/44822939273"
+    },
+    {
+      "run_id": 44823547875,
+      "conclusion": "success",
+      "qa_sha": "1a691de804957374da2ed4921a4b608f235e9224",
+      "source_candidate_sha": "dd5133a425073581258eb1cd746eb155998a2e31",
+      "artifacts": [],
+      "url": "https://github.com/Kirjane/Operation-FORGE.kirion/actions/runs/44823547875"
+    },
+    {
+      "run_id": 44823750478,
+      "conclusion": "success",
+      "qa_sha": "39b82479bc9a2ccb3c1cbbcd88aeea71d0cae5bc",
+      "source_candidate_sha": "a6ad0512dd0592a0464e6502629f178fc6c6d231",
+      "artifacts": [
+        {
+          "id": 14673800196,
+          "name": "forge-r4-B-1",
+          "artifact_zip_sha256": "sha256:038fafda56f6cf7976f911258feb465e59679baef0071e73a07b6a762b36b949",
+          "expires_at": "2026-12-20T21:50:44Z"
+        },
+        {
+          "id": 14673495491,
+          "name": "forge-r4-D-1",
+          "artifact_zip_sha256": "sha256:bd0e99c985e3b9ff6db5e76e43c7e1e29601945da21caa26338266beb557be2b",
+          "expires_at": "2026-12-20T21:50:35Z"
+        },
+        {
+          "id": 14673495407,
+          "name": "forge-r4-A-1",
+          "artifact_zip_sha256": "sha256:a5c94bf693d1de1497f77f4fc2bb64d5c64b09e5b18ce3ac60ddd881802764a7",
+          "expires_at": "2026-12-20T21:50:07Z"
+        },
+        {
+          "id": 14673400486,
+          "name": "forge-r4-core-1",
+          "artifact_zip_sha256": "sha256:62fefe6b201ec68df0345f67db7e3162c9f63030189fcca82c33b1056e4c1d8d",
+          "expires_at": "2026-12-20T21:50:05Z"
+        },
+        {
+          "id": 14673211786,
+          "name": "forge-r4-E-1",
+          "artifact_zip_sha256": "sha256:b8f14619165ae11af82097ae695d87be856913a8e313badec998e199ea5195f5",
+          "expires_at": "2026-12-20T21:50:47Z"
+        },
+        {
+          "id": 14672732406,
+          "name": "forge-r4-C-1",
+          "artifact_zip_sha256": "sha256:761cbc56311577b6468361d2d8c59189b3956f3f6e8bc133577cc82988a85fdc",
+          "expires_at": "2026-12-20T21:50:21Z"
+        },
+        {
+          "id": 14672478502,
+          "name": "forge-r4-adapter-package-1",
+          "artifact_zip_sha256": "sha256:ce486b21a469b1ae5d27861f06fb6767efcf0e16651c739c3cc9dddefe6381a6",
+          "expires_at": "2026-12-20T21:50:13Z"
+        }
+      ],
+      "url": "https://github.com/Kirjane/Operation-FORGE.kirion/actions/runs/44823750478"
     }
   ],
   "privacy": "GitHub Actions credentialless QA logs scanned and redacted for token/email patterns prior to versioning. No client/customer fixture data, secrets or real provider sessions used.",
-  "retention": "Original Actions artifacts expire 2026-12-20 UTC; Git mirrors are content-addressed Git blobs in a separate private repo branch; mirrored logs remain under branch custody (but not an independent backup).",
+  "retention": "R2-R4 original GitHub Actions run artifacts expire 2026-12-20 UTC unless retention is extended. Mirrored sanitized CI text logs are content-addressed Git blobs on the private qa/chatgpt-port-evidence-r4 branch; a separate independent backup has not been authorized.",
   "recovery": "Retrieve per-log git blob by path/blob SHA from mirror branch; verify Git blob; retrieve exact archived runner artifact while retained and compare its sha256 digest above; regenerate final uninstalled plugin via repository source at final_candidate and R4 QA release-root with package.py. For independent disaster recovery, mirror content into a separately authorized archival destination before branch/repository loss.",
   "gates": {
-    "comparative": "core and A-E all PASS on reference and candidate",
-    "host_adversarial": "43/43 MOCK/CONTRACT PASS",
+    "comparative": "Original core and A–E passed for both exact baseline and final R4 candidate (7/7 CI jobs)",
+    "host_adversarial": "46/46 MOCK/CONTRACT PASS",
     "node": "31/31",
     "bridge": "6/6",
     "package": "14/14",

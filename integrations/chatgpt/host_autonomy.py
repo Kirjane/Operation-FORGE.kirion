@@ -76,12 +76,13 @@ class IsolatedOrchestrator:
     Even distinct signed context IDs cannot alone prove a genuinely isolated
     reasoning environment; host owner must attest runtime isolation policy.
     """
-    def __init__(self,path,verify_key,transport=None,activated=False):
+    def __init__(self,path,verify_key,transport=None,activated=False,offline_test_mode=False):
         if not isinstance(verify_key,bytes) or len(verify_key)<32:raise Denied("HOST_VERIFY_KEY_REQUIRED")
         self.key=verify_key
         self.path=Path(path);self.path.parent.mkdir(parents=True,exist_ok=True)
         self.transport=transport
         self.activated=activated
+        self.offline_test_mode=offline_test_mode
         self.journal=FactoryJournal(self.path.with_suffix(".canonical.db"))
         with self.connect() as db:
             db.execute("""CREATE TABLE IF NOT EXISTS contexts(
@@ -179,8 +180,14 @@ class IsolatedOrchestrator:
                 raise Denied("NO_PROVIDER_CONTEXT_ID")
             if claims.get("request_sha256")!=h or claims.get("repo_id")!=repo_id or claims.get("sha")!=sha or claims.get("persona")!=persona:
                 raise Denied("ATTESTED_SCOPE_MISMATCH")
-            if claims.get("runtime_isolated") is not True or claims.get("provider") not in ("notion-custom-agent","openai-responses"):
+            simulated=claims.get("mock_only") is True
+            if simulated:
+                if not self.offline_test_mode or claims.get("runtime_isolated") is not False:
+                    raise Denied("MOCK_MODEL_MUST_NOT_ATTEST_ISOLATION")
+            elif claims.get("runtime_isolated") is not True:
                 raise Denied("ISOLATION_NOT_ATTESTED")
+            if claims.get("provider") not in ("notion-custom-agent","openai-responses"):
+                raise Denied("PROVIDER_NOT_ALLOWLISTED")
             if type(claims.get("expires_at")) is not int or claims["expires_at"]<=current or claims["expires_at"]>current+3600:
                 raise Denied("ATTESTATION_EXPIRED_OR_UNBOUNDED")
             if role=="Reviewer" and ctx==previous_context:
@@ -190,7 +197,7 @@ class IsolatedOrchestrator:
             if not re.fullmatch(r"[0-9a-f]{64}",claims["output_sha256"]):
                 raise Denied("UNHASHED_OUTPUT")
             # Model-authored output is an untrusted artifact; not a gate verdict.
-            summary={"status":"ISOLATED_CONTEXT_ATTESTED","context_id":ctx,
+            summary={"status":"MOCK_CONTEXT_NON_ACCEPTING" if simulated else "ISOLATED_CONTEXT_ATTESTED","context_id":ctx,
                      "provider":claims["provider"],"request_digest":h,
                      "output_sha256":claims["output_sha256"],"non_accepting":True}
             self.journal.register_mission(packet)

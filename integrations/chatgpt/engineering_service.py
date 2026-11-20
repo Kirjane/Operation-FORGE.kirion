@@ -383,7 +383,9 @@ def validate_nox(data:dict,*,packet:dict,candidate:str,author_context:str,
         raise Denied("REVIEW_SAME_CONTEXT_OR_EMPTY_EVIDENCE")
     if not oracle["pass"] and data["verdict"]=="PASS":
         raise Denied("FALSE_APPROVAL_WITH_RED_GATE")
-    if any(x["severity"] in ("P0","P1") and x["disposition"]=="OPEN" for x in data["findings"]) and data["verdict"]=="PASS":
+    if any(x["severity"]=="P0" for x in data["findings"]) and data["verdict"]!="QUARANTINED":
+        raise Denied("P0_REQUIRES_QUARANTINE")
+    if any(x["severity"]=="P1" and x["disposition"]=="OPEN" for x in data["findings"]) and data["verdict"]=="PASS":
         raise Denied("FALSE_APPROVAL_WITH_OPEN_CRITICAL")
     return data
 
@@ -418,7 +420,8 @@ class SignedEngineeringDispatch:
         # In contract tests the fake model is not isolated. Explicitly mark
         # synthetic attestation and never promote it to G13.
         if not receipt["provider_live"]:
-            claims["runtime_isolated"]=True
+            claims["mock_only"]=True
+            claims["runtime_isolated"]=False
             receipt["test_only_mock_attestation"]=True
         return {"host_claims":claims,"host_signature":
                 hmac.new(self.key,encoded(claims),"sha256").hexdigest()}
@@ -513,8 +516,15 @@ class EngineeringPilotService:
             # Reviewer observes candidate and fixed test evidence, NOT Jane messages.
             reviewer={**reviewer_packet,"base_sha":candidate_sha}
             review_nonce=nonce_prefix+"-nox-"+str(cycle).zfill(3)
+            public_tests=[p for p,(mode,blob) in candidate.blobs.items()
+                          if p.startswith("tests/") and p.endswith(".php") and mode=="100644"]
+            public_tests=sorted(public_tests)[:16]
+            frozen_review_snapshot=GitSnapshot(self.target_repo,candidate_sha,candidate_tree,
+                                  exposed=sorted(set(source_paths+public_tests)))
+            reviewer={**reviewer,"mission_id":reviewer_packet["mission_id"]+"-C"+str(cycle),
+                      "run_id":reviewer_packet["run_id"]+"-cycle-"+str(cycle)}
             reader=EngineeringContext(self.forge_snapshot(reviewer,"Antigravity-Nox"),
-                candidate,reviewer,candidate_sha=candidate_sha,task=task,persona="Antigravity-Nox",
+                frozen_review_snapshot,reviewer,candidate_sha=candidate_sha,task=task,persona="Antigravity-Nox",
                 gate_evidence=evidence,author_context_id=rec["context_id"],
                 public_diff=[{"path":x["path"],
                   "old_sha256":x["expected_sha256"],

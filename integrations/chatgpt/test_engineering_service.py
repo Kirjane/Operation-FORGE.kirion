@@ -149,7 +149,7 @@ class R5Fixture(unittest.TestCase):
         self.runner=ModelToolRunner(self.model)
         self.dispatch=SignedEngineeringDispatch(self.runner,KEY)
         self.host=IsolatedOrchestrator(root/"contexts.sqlite",KEY,
-                                       transport=self.dispatch,activated=True)
+                                       transport=self.dispatch,activated=True,offline_test_mode=True)
         self.broker=ScopedBroker(root/"writes.sqlite",KEY,REPO,REPO_ID,BRANCH,enabled=True)
         self.oracle=FixedOracle([["php","tests/public.php"],["php","oracles/hidden.php"]])
         self.service=EngineeringPilotService(forge_repo=ROOT,forge_sha=UPSTREAM_SHA,
@@ -177,6 +177,7 @@ class PipelineTests(R5Fixture):
         self.assertEqual(self.remote.cas_count,1)
         self.assertTrue(out["repair_attempts"][0]["gate_evidence"]["pass"])
         self.assertEqual(out["review"]["verdict"],"PASS")
+        self.assertEqual(self.host.journal.get_mission("R5-REVIEW-1-C0")["state"],"PLANNED")
         self.assertNotEqual(out["review"]["context_id"],out["repair_attempts"][0]["writer_context"])
         self.assertTrue(self.broker.valid())
         self.assertTrue(self.host.valid_receipts())
@@ -187,6 +188,35 @@ class PipelineTests(R5Fixture):
         self.assertTrue(all(not any("Authorization:" in json.dumps(m) for m in p)
                             for p in self.model.prompts))
         self.assertIsNone(out["review"]["tokens"]["cost_usd"])
+    def test_host_never_claims_mock_isolation(self):
+        out=self.runpilot()
+        with self.host.connect() as db:
+            row=db.execute("SELECT receipt FROM contexts WHERE persona='Antigravity-Nox'").fetchone()
+        claims=json.loads(row["receipt"])["claims"]
+        self.assertTrue(claims["mock_only"])
+        self.assertFalse(claims["runtime_isolated"])
+        self.assertEqual(out["gate_status"],"MOCK_NON_ACCEPTING")
+    def test_nox_snapshot_includes_public_tests_not_hidden_oracle(self):
+        self.runpilot()
+        tasks=[json.loads(m[1]["content"]) for m in self.model.prompts]
+        nox=[x for x in tasks if x["phase"]=="Antigravity-Nox"]
+        self.assertTrue(nox)
+        self.assertTrue(all("tests/public.php" in x["available_source_files"] for x in nox))
+        self.assertTrue(all("oracles/hidden.php" not in x["available_source_files"] for x in nox))
+    def test_p0_must_quarantine_not_self_approve(self):
+        p={**self.review,"mission_id":"R5-P0"}
+        finding={"id":"P0-01","severity":"P0","path":FILE,"line":4,
+                 "contract_violated":"integrity","reproduction":"data corrupted",
+                 "requested_correction":"quarantine","disposition":"FIXED"}
+        data={"schema_version":1,"mission_id":p["mission_id"],
+              "frozen_sha":self.sha,"reviewer_context_id":"resp_review_00003",
+              "reviewer_persona":"Antigravity-Nox",
+              "author_context_id":"resp_author_00003",
+              "inspected_scope":[FILE],"evidence_inspected":["oracle"],"findings":[finding],
+              "verdict":"PASS"}
+        with self.assertRaisesRegex(Denied,"P0_REQUIRES_QUARANTINE"):
+            validate_nox(data,packet=p,candidate=self.sha,author_context="resp_author_00003",
+                reviewer_context="resp_review_00003",oracle={"pass":True})
     def test_original_hidden_oracle_red(self):
         e=self.oracle.evaluate(self.snapshot())
         self.assertFalse(e["pass"])

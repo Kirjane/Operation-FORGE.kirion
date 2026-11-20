@@ -16,6 +16,7 @@ import os
 import pathlib
 import re
 import sqlite3
+from contextlib import contextmanager
 import shutil
 import subprocess
 import tempfile
@@ -455,11 +456,15 @@ class SignedEngineeringDispatch:
                     nonce TEXT PRIMARY KEY,request_sha256 TEXT NOT NULL,
                     record_json TEXT NOT NULL,mac TEXT NOT NULL)""")
             os.chmod(self.vault_path,0o600)
+    @contextmanager
     def _db(self):
-        db=sqlite3.connect(self.vault_path,timeout=15)
+        db=sqlite3.connect(self.vault_path,timeout=15,isolation_level=None)
         db.execute("PRAGMA journal_mode=WAL")
         db.execute("PRAGMA synchronous=FULL")
-        return db
+        try:
+            yield db
+        finally:
+            db.close()
     def persist(self,nonce,req,receipt,signed):
         if self.vault_path is None:return
         record={"request_sha256":fingerprint(req),"output":receipt,"signed":signed}
@@ -589,6 +594,10 @@ class EngineeringPilotService:
         max_repair=min(5,writer_packet["budget"]["max_repair_cycles"])
         current_packet=dict(writer_packet)
         for cycle in range(max_repair+1):
+            if cycle:
+                current_packet={**current_packet,
+                    "mission_id":writer_packet["mission_id"]+"-C"+str(cycle),
+                    "run_id":writer_packet["run_id"]+"-cycle-"+str(cycle)}
             nonce=nonce_prefix+"-jane-"+str(cycle).zfill(3)
             ctx=EngineeringContext(self.forge_snapshot(current_packet,"Antigravity-Jane"),
                  source,current_packet,candidate_sha=source.sha,task=task,persona="Antigravity-Jane",
@@ -608,8 +617,8 @@ class EngineeringPilotService:
                 if cycle==max_repair:
                     summary["gate_status"]="BLOCKED"
                     return summary
-                source=candidate
-                current_packet={**current_packet,"base_sha":source.sha}
+                # Failed candidates were never published; retry from the
+                # exact last authorized remote base, not an unpublished SHA.
                 continue
             # Do not allow any remote write without the mandatory broker.
             if not self.broker.enabled:raise Denied("MUTATION_BROKER_INACTIVE")

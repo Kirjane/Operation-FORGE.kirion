@@ -1,0 +1,281 @@
+﻿2026-11-20T21:49:56.1078783Z Current runner version: '2.338.2'
+2026-11-20T21:49:56.1111867Z ##[group]Runner Image Provisioner
+2026-11-20T21:49:56.1113326Z Hosted Compute Agent
+2026-11-20T21:49:56.1114059Z Version: 20261111.635
+2026-11-20T21:49:56.1114963Z Commit: b8a594ea514ff44cadb5342986c68b1eac6e22ed
+2026-11-20T21:49:56.1115860Z Build Date: 2026-11-11T01:49:01Z
+2026-11-20T21:49:56.1116668Z Worker ID: {c0b1e8f0-b34b-47be-bf4e-b9fc2d393e6c}
+2026-11-20T21:49:56.1117661Z Region: westus3
+2026-11-20T21:49:56.1118501Z Cloud: Azure
+2026-11-20T21:49:56.1119271Z ##[endgroup]
+2026-11-20T21:49:56.1121056Z ##[group]Operating System
+2026-11-20T21:49:56.1121840Z Ubuntu
+2026-11-20T21:49:56.1123042Z 24.04.5
+2026-11-20T21:49:56.1123671Z LTS
+2026-11-20T21:49:56.1124366Z ##[endgroup]
+2026-11-20T21:49:56.1125064Z ##[group]Runner Image
+2026-11-20T21:49:56.1125809Z Image: ubuntu-24.04
+2026-11-20T21:49:56.1126558Z Version: 20261116.376.1
+2026-11-20T21:49:56.1128379Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20261116.376/images/ubuntu/Ubuntu2404-Readme.md
+2026-11-20T21:49:56.1130471Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20261116.376
+2026-11-20T21:49:56.1131712Z ##[endgroup]
+2026-11-20T21:49:56.1133195Z ##[group]GITHUB_TOKEN Permissions
+2026-11-20T21:49:56.1135422Z Contents: read
+2026-11-20T21:49:56.1136248Z Metadata: read
+2026-11-20T21:49:56.1136926Z ##[endgroup]
+2026-11-20T21:49:56.1140006Z Secret source: Actions
+2026-11-20T21:49:56.1141387Z Cache mode: write
+2026-11-20T21:49:56.1142455Z Prepare workflow directory
+2026-11-20T21:49:56.1685607Z Prepare all required actions
+2026-11-20T21:49:56.1744352Z Getting action download info
+2026-11-20T21:49:56.5520336Z Download action repository 'actions/checkout@11d5960a326750d5838078e36cf38b85af677262' (SHA:11d5960a326750d5838078e36cf38b85af677262)
+2026-11-20T21:49:56.7013734Z Download action repository 'actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065' (SHA:a26af69be951a213d495a4c3e4e4022e16d87065)
+2026-11-20T21:49:57.0031526Z Download action repository 'shivammathur/setup-php@bf6b4fbd49ca58e4608c9c89fba0b8d90bd2a39f' (SHA:bf6b4fbd49ca58e4608c9c89fba0b8d90bd2a39f)
+2026-11-20T21:49:57.5205089Z Download action repository 'actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1' (SHA:26b0ec14cb23fa6904739307f278c14f94c95bf1)
+2026-11-20T21:49:58.2249070Z Download action repository 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+2026-11-20T21:49:58.5433086Z Complete job name: Compare core (same runner)
+2026-11-20T21:49:58.6103938Z ##[group]Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+2026-11-20T21:49:58.6104541Z with:
+2026-11-20T21:49:58.6104793Z   ref: 39b82479bc9a2ccb3c1cbbcd88aeea71d0cae5bc
+2026-11-20T21:49:58.6105082Z   fetch-depth: 0
+2026-11-20T21:49:58.6105318Z   persist-credentials: false
+2026-11-20T21:49:58.6105604Z   repository: Kirjane/Operation-FORGE.kirion
+2026-11-20T21:49:58.6107743Z   token: ***
+2026-11-20T21:49:58.6108124Z   ssh-strict: true
+2026-11-20T21:49:58.6108363Z   ssh-user: git
+2026-11-20T21:49:58.6108570Z   clean: true
+2026-11-20T21:49:58.6108810Z   sparse-checkout-cone-mode: true
+2026-11-20T21:49:58.6109087Z   fetch-tags: false
+2026-11-20T21:49:58.6109316Z   show-progress: true
+2026-11-20T21:49:58.6109538Z   lfs: false
+2026-11-20T21:49:58.6109742Z   submodules: false
+2026-11-20T21:49:58.6109967Z   set-safe-directory: true
+2026-11-20T21:49:58.6110239Z   allow-unsafe-pr-checkout: false
+2026-11-20T21:49:58.6110660Z env:
+2026-11-20T21:49:58.6110932Z   PYTHONDONTWRITEBYTECODE: 1
+2026-11-20T21:49:58.6111176Z ##[endgroup]
+2026-11-20T21:49:58.8408096Z Syncing repository: Kirjane/Operation-FORGE.kirion
+2026-11-20T21:49:58.8409856Z ##[group]Getting Git version info
+2026-11-20T21:49:58.8410529Z Working directory is '/home/runner/work/Operation-FORGE.kirion/Operation-FORGE.kirion'
+2026-11-20T21:49:58.8457217Z [command]/usr/bin/git version
+2026-11-20T21:49:58.8590256Z git version 2.56.1
+2026-11-20T21:49:58.8694496Z ##[endgroup]
+2026-11-20T21:49:58.8729684Z Temporarily overriding HOME='/home/runner/work/_temp/ff9878e2-e756-4f86-8514-0d647f2e646c' before making global git config changes
+2026-11-20T21:49:58.8731038Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-20T21:49:58.8732345Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Operation-FORGE.kirion/Operation-FORGE.kirion
+2026-11-20T21:49:58.8734591Z Deleting the contents of '/home/runner/work/Operation-FORGE.kirion/Operation-FORGE.kirion'
+2026-11-20T21:49:58.8735783Z ##[group]Initializing the repository
+2026-11-20T21:49:58.8740084Z [command]/usr/bin/git init /home/runner/work/Operation-FORGE.kirion/Operation-FORGE.kirion
+2026-11-20T21:49:58.8884560Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-11-20T21:49:58.8887717Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-11-20T21:49:58.8899110Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-11-20T21:49:58.8899984Z hint: call:
+2026-11-20T21:49:58.8900477Z hint:
+2026-11-20T21:49:58.8901130Z hint: 	git config --global init.defaultBranch <name>
+2026-11-20T21:49:58.8901853Z hint:
+2026-11-20T21:49:58.8902456Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-11-20T21:49:58.8903352Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-11-20T21:49:58.8904070Z hint:
+2026-11-20T21:49:58.8904544Z hint: 	git branch -m <name>
+2026-11-20T21:49:58.8905042Z hint:
+2026-11-20T21:49:58.8905693Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-11-20T21:49:58.8906774Z Initialized empty Git repository in /home/runner/work/Operation-FORGE.kirion/Operation-FORGE.kirion/.git/
+2026-11-20T21:49:58.8919471Z [command]/usr/bin/git remote add origin https://github.com/Kirjane/Operation-FORGE.kirion
+2026-11-20T21:49:58.8995199Z ##[endgroup]
+2026-11-20T21:49:58.8996072Z ##[group]Disabling automatic garbage collection
+2026-11-20T21:49:58.8996874Z [command]/usr/bin/git config --local gc.auto 0
+2026-11-20T21:49:58.9098843Z ##[endgroup]
+2026-11-20T21:49:58.9108771Z ##[group]Setting up auth
+2026-11-20T21:49:58.9119384Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-20T21:49:58.9160261Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-20T21:49:58.9545791Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-20T21:49:58.9593147Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-20T21:49:58.9839962Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-20T21:49:58.9870810Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-20T21:49:59.0100871Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-11-20T21:49:59.0213603Z ##[endgroup]
+2026-11-20T21:49:59.0214613Z ##[group]Fetching the repository
+2026-11-20T21:49:59.0219334Z [command]/usr/bin/git -c protocol.version=2 fetch --prune --no-recurse-submodules origin +refs/heads/*:refs/remotes/origin/* +refs/tags/*:refs/tags/*
+2026-11-20T21:49:59.9340874Z From https://github.com/Kirjane/Operation-FORGE.kirion
+2026-11-20T21:49:59.9443118Z  * [new branch]      KIRCH-FORGE-ENTITY-EVOLUTION-TEST-2 -> origin/KIRCH-FORGE-ENTITY-EVOLUTION-TEST-2
+2026-11-20T21:49:59.9444192Z  * [new branch]      KIRCH-FORGE-ENTITY-EVOLUTION-TEST-3 -> origin/KIRCH-FORGE-ENTITY-EVOLUTION-TEST-3
+2026-11-20T21:49:59.9445088Z  * [new branch]      eval/fci-m02-behavioral-pilot-r0 -> origin/eval/fci-m02-behavioral-pilot-r0
+2026-11-20T21:49:59.9448724Z  * [new branch]      feat/antigravity-software-factory-r1 -> origin/feat/antigravity-software-factory-r1
+2026-11-20T21:49:59.9449710Z  * [new branch]      feat/chatgpt-software-factory-port-r1 -> origin/feat/chatgpt-software-factory-port-r1
+2026-11-20T21:49:59.9450631Z  * [new branch]      feat/fci-m02-provenance-and-memory-r1 -> origin/feat/fci-m02-provenance-and-memory-r1
+2026-11-20T21:49:59.9451423Z  * [new branch]      feat/forge-obsidian-vault-r2 -> origin/feat/forge-obsidian-vault-r2
+2026-11-20T21:49:59.9452042Z  * [new branch]      main       -> origin/main
+2026-11-20T21:49:59.9453325Z  * [new branch]      policy/kirjane-csharp-backend-standard-r1 -> origin/policy/kirjane-csharp-backend-standard-r1
+2026-11-20T21:49:59.9454675Z  * [new branch]      proposal/fci-m01-context-completeness-r1 -> origin/proposal/fci-m01-context-completeness-r1
+2026-11-20T21:49:59.9457619Z  * [new branch]      proposal/kirion-skill-arsenal-multihost-v0-2 -> origin/proposal/kirion-skill-arsenal-multihost-v0-2
+2026-11-20T21:49:59.9458642Z  * [new branch]      qa/chatgpt-port-evidence-r4 -> origin/qa/chatgpt-port-evidence-r4
+2026-11-20T21:49:59.9459332Z  * [new branch]      qa/chatgpt-port-qualification-r2 -> origin/qa/chatgpt-port-qualification-r2
+2026-11-20T21:49:59.9460918Z [command]/usr/bin/git rev-parse --verify --quiet 39b82479bc9a2ccb3c1cbbcd88aeea71d0cae5bc^{object}
+2026-11-20T21:49:59.9461580Z 39b82479bc9a2ccb3c1cbbcd88aeea71d0cae5bc
+2026-11-20T21:49:59.9462470Z ##[endgroup]
+2026-11-20T21:49:59.9462918Z ##[group]Determining the checkout info
+2026-11-20T21:49:59.9463368Z ##[endgroup]
+2026-11-20T21:49:59.9463694Z [command]/usr/bin/git sparse-checkout disable
+2026-11-20T21:49:59.9474306Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-11-20T21:49:59.9530923Z ##[group]Checking out the ref
+2026-11-20T21:49:59.9533448Z [command]/usr/bin/git checkout --progress --force 39b82479bc9a2ccb3c1cbbcd88aeea71d0cae5bc
+2026-11-20T21:50:00.0822784Z Note: switching to '39b82479bc9a2ccb3c1cbbcd88aeea71d0cae5bc'.
+2026-11-20T21:50:00.0823239Z 
+2026-11-20T21:50:00.0823533Z You are in 'detached HEAD' state. You can look around, make experimental
+2026-11-20T21:50:00.0824140Z changes and commit them, and you can discard any commits you make in this
+2026-11-20T21:50:00.0824718Z state without impacting any branches by switching back to a branch.
+2026-11-20T21:50:00.0825077Z 
+2026-11-20T21:50:00.0825365Z If you want to create a new branch to retain commits you create, you may
+2026-11-20T21:50:00.0826264Z do so (now or later) by using -c with the switch command. Example:
+2026-11-20T21:50:00.0826644Z 
+2026-11-20T21:50:00.0826808Z   git switch -c <new-branch-name>
+2026-11-20T21:50:00.0827125Z 
+2026-11-20T21:50:00.0827269Z Or undo this operation with:
+2026-11-20T21:50:00.0827467Z 
+2026-11-20T21:50:00.0827593Z   git switch -
+2026-11-20T21:50:00.0827756Z 
+2026-11-20T21:50:00.0828312Z Turn off this advice by setting config variable advice.detachedHead to false
+2026-11-20T21:50:00.0828714Z 
+2026-11-20T21:50:00.0829102Z HEAD is now at 39b8247 ci(qa): final R4 exact-session protocol regression and original benchmark replay
+2026-11-20T21:50:00.0830616Z ##[endgroup]
+2026-11-20T21:50:00.0831329Z [command]/usr/bin/git log -1 --format=%H
+2026-11-20T21:50:00.0831707Z 39b82479bc9a2ccb3c1cbbcd88aeea71d0cae5bc
+2026-11-20T21:50:00.0832733Z ##[group]Removing auth
+2026-11-20T21:50:00.0833193Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-20T21:50:00.0834668Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-20T21:50:00.0836306Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-20T21:50:00.0837052Z http.https://github.com/.extraheader
+2026-11-20T21:50:00.0838180Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-11-20T21:50:00.0839872Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-20T21:50:00.1009675Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-20T21:50:00.1046839Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-20T21:50:00.1255148Z ##[endgroup]
+2026-11-20T21:50:00.1486505Z ##[group]Run actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+2026-11-20T21:50:00.1486848Z with:
+2026-11-20T21:50:00.1487023Z   python-version: 3.13
+2026-11-20T21:50:00.1487215Z   check-latest: false
+2026-11-20T21:50:00.1489438Z   token: ***
+2026-11-20T21:50:00.1489629Z   update-environment: true
+2026-11-20T21:50:00.1489850Z   allow-prereleases: false
+2026-11-20T21:50:00.1490041Z   freethreaded: false
+2026-11-20T21:50:00.1490215Z env:
+2026-11-20T21:50:00.1490387Z   PYTHONDONTWRITEBYTECODE: 1
+2026-11-20T21:50:00.1490608Z ##[endgroup]
+2026-11-20T21:50:00.2702551Z ##[group]Installed versions
+2026-11-20T21:50:00.2774123Z (node:2108) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-20T21:50:00.2774711Z Successfully set up CPython (3.13.18)
+2026-11-20T21:50:00.2775308Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-20T21:50:00.2775868Z ##[endgroup]
+2026-11-20T21:50:00.3094985Z ##[group]Run python integrations/chatgpt/qa-r2/compare.py "$SUITE" "$RUNNER_TEMP/forge-evidence"
+2026-11-20T21:50:00.3095997Z [36;1mpython integrations/chatgpt/qa-r2/compare.py "$SUITE" "$RUNNER_TEMP/forge-evidence"[0m
+2026-11-20T21:50:00.3461404Z shell: /usr/bin/bash -e {0}
+2026-11-20T21:50:00.3461697Z env:
+2026-11-20T21:50:00.3461903Z   PYTHONDONTWRITEBYTECODE: 1
+2026-11-20T21:50:00.3462187Z   pythonLocation: /opt/hostedtoolcache/Python/3.13.18/x64
+2026-11-20T21:50:00.3462555Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.13.18/x64/lib/pkgconfig
+2026-11-20T21:50:00.3462943Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.13.18/x64
+2026-11-20T21:50:00.3463260Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.13.18/x64
+2026-11-20T21:50:00.3463566Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.13.18/x64
+2026-11-20T21:50:00.3463867Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.13.18/x64/lib
+2026-11-20T21:50:00.3464127Z   SUITE: core
+2026-11-20T21:50:00.3464356Z ##[endgroup]
+2026-11-20T21:50:01.7250185Z python-version exit 0 sha256 12162c47c88cf7ca169474b404c0d8bf22203099f01452797ab5d96e71a148aa
+2026-11-20T21:50:01.7250998Z Python 3.13.18
+2026-11-20T21:50:01.7251388Z 
+2026-11-20T21:50:01.7272260Z Preparing worktree (detached HEAD 0e8765d)
+2026-11-20T21:50:01.7818223Z HEAD is now at 0e8765d fix(factory): resolve Antigravity-Nox Cycle 5 findings NOX-R5-001..015 (Repair Cycle 5/5) (refs #13)
+2026-11-20T21:50:03.9649163Z baseline-core exit 0 sha256 de7cfacd995ebb4e63b946ee166dd91daba1ec03b57e40a2ccadf3873ca25710
+2026-11-20T21:50:03.9650554Z test_f01_plugin_packaging_and_live_discovery (integrations.antigravity.tests.test_factory_core.FactoryCoreTests.test_f01_plugin_packaging_and_live_discovery) ... ok
+2026-11-20T21:50:03.9652007Z test_f02_fleet_dispatcher_and_progressive_skill_selection (integrations.antigravity.tests.test_factory_core.FactoryCoreTests.test_f02_fleet_dispatcher_and_progressive_skill_selection) ... ok
+2026-11-20T21:50:03.9653612Z test_f03_f04_f05_profiles_and_32_skill_catalog (integrations.antigravity.tests.test_factory_core.FactoryCoreTests.test_f03_f04_f05_profiles_and_32_skill_catalog) ... ok
+2026-11-20T21:50:03.9655333Z test_f06_mission_authority_and_lifecycle_transitions (integrations.antigravity.tests.test_factory_core.FactoryCoreTests.test_f06_mission_authority_and_lifecycle_transitions) ... ok
+2026-11-20T21:50:03.9656887Z test_f07_dag_scheduler_backlog_and_journal (integrations.antigravity.tests.test_factory_core.FactoryCoreTests.test_f07_dag_scheduler_backlog_and_journal) ... ok
+2026-11-20T21:50:03.9658796Z test_f08_worktree_sandbox_and_leases (integrations.antigravity.tests.test_factory_core.FactoryCoreTests.test_f08_worktree_sandbox_and_leases) ... ok
+2026-11-20T21:50:03.9660197Z test_f09_f10_f11_f12_f13_f14_end_to_end_pipeline (integrations.antigravity.tests.test_factory_core.FactoryCoreTests.test_f09_f10_f11_f12_f13_f14_end_to_end_pipeline) ... ok
+2026-11-20T21:50:03.9661718Z test_nox_cycle2_security_and_governance_regressions (integrations.antigravity.tests.test_factory_core.FactoryCoreTests.test_nox_cycle2_security_and_governance_regressions)
+2026-11-20T21:50:03.9662833Z Discriminating regression tests for NOX-R2-001..011 findings. ... ok
+2026-11-20T21:50:03.9663931Z test_nox_cycle3_security_and_governance_regressions (integrations.antigravity.tests.test_factory_core.FactoryCoreTests.test_nox_cycle3_security_and_governance_regressions)
+2026-11-20T21:50:03.9665042Z Discriminating regression tests for NOX-R3-001..010 findings. ... ok
+2026-11-20T21:50:03.9666160Z test_nox_cycle4_security_and_governance_regressions (integrations.antigravity.tests.test_factory_core.FactoryCoreTests.test_nox_cycle4_security_and_governance_regressions)
+2026-11-20T21:50:03.9667315Z Discriminating regression tests for NOX-R4-001..012 findings. ... ok
+2026-11-20T21:50:03.9668653Z test_nox_cycle5_security_and_governance_regressions (integrations.antigravity.tests.test_factory_core.FactoryCoreTests.test_nox_cycle5_security_and_governance_regressions)
+2026-11-20T21:50:03.9670061Z Discriminating regression tests for NOX-R5-001..015 findings. ... ok
+2026-11-20T21:50:03.9670563Z 
+2026-11-20T21:50:03.9670848Z ----------------------------------------------------------------------
+2026-11-20T21:50:03.9671386Z Ran 11 tests in 0.875s
+2026-11-20T21:50:03.9671646Z 
+2026-11-20T21:50:03.9671832Z OK
+2026-11-20T21:50:03.9672017Z 
+2026-11-20T21:50:04.0271559Z Preparing worktree (detached HEAD a6ad051)
+2026-11-20T21:50:04.0842452Z HEAD is now at a6ad051 fix(chatgpt): align Notion tool transport with exact session and wait contract
+2026-11-20T21:50:05.0494573Z candidate-core exit 0 sha256 dea788c53f38953fb986cd1be615f2a6e8b69c72b290c8b2ea8cc6055f60c21f
+2026-11-20T21:50:05.0518695Z test_f01_plugin_packaging_and_live_discovery (integrations.antigravity.tests.test_factory_core.FactoryCoreTests.test_f01_plugin_packaging_and_live_discovery) ... ok
+2026-11-20T21:50:05.0539045Z test_f02_fleet_dispatcher_and_progressive_skill_selection (integrations.antigravity.tests.test_factory_core.FactoryCoreTests.test_f02_fleet_dispatcher_and_progressive_skill_selection) ... ok
+2026-11-20T21:50:05.0540856Z test_f03_f04_f05_profiles_and_32_skill_catalog (integrations.antigravity.tests.test_factory_core.FactoryCoreTests.test_f03_f04_f05_profiles_and_32_skill_catalog) ... ok
+2026-11-20T21:50:05.0558907Z test_f06_mission_authority_and_lifecycle_transitions (integrations.antigravity.tests.test_factory_core.FactoryCoreTests.test_f06_mission_authority_and_lifecycle_transitions) ... ok
+2026-11-20T21:50:05.0567608Z test_f07_dag_scheduler_backlog_and_journal (integrations.antigravity.tests.test_factory_core.FactoryCoreTests.test_f07_dag_scheduler_backlog_and_journal) ... ok
+2026-11-20T21:50:05.0569300Z test_f08_worktree_sandbox_and_leases (integrations.antigravity.tests.test_factory_core.FactoryCoreTests.test_f08_worktree_sandbox_and_leases) ... ok
+2026-11-20T21:50:05.0570794Z test_f09_f10_f11_f12_f13_f14_end_to_end_pipeline (integrations.antigravity.tests.test_factory_core.FactoryCoreTests.test_f09_f10_f11_f12_f13_f14_end_to_end_pipeline) ... ok
+2026-11-20T21:50:05.0572488Z test_nox_cycle2_security_and_governance_regressions (integrations.antigravity.tests.test_factory_core.FactoryCoreTests.test_nox_cycle2_security_and_governance_regressions)
+2026-11-20T21:50:05.0573554Z Discriminating regression tests for NOX-R2-001..011 findings. ... ok
+2026-11-20T21:50:05.0574634Z test_nox_cycle3_security_and_governance_regressions (integrations.antigravity.tests.test_factory_core.FactoryCoreTests.test_nox_cycle3_security_and_governance_regressions)
+2026-11-20T21:50:05.0575994Z Discriminating regression tests for NOX-R3-001..010 findings. ... ok
+2026-11-20T21:50:05.0577043Z test_nox_cycle4_security_and_governance_regressions (integrations.antigravity.tests.test_factory_core.FactoryCoreTests.test_nox_cycle4_security_and_governance_regressions)
+2026-11-20T21:50:05.0578211Z Discriminating regression tests for NOX-R4-001..012 findings. ... ok
+2026-11-20T21:50:05.0579271Z test_nox_cycle5_security_and_governance_regressions (integrations.antigravity.tests.test_factory_core.FactoryCoreTests.test_nox_cycle5_security_and_governance_regressions)
+2026-11-20T21:50:05.0580302Z Discriminating regression tests for NOX-R5-001..015 findings. ... ok
+2026-11-20T21:50:05.0580728Z 
+2026-11-20T21:50:05.0580984Z ----------------------------------------------------------------------
+2026-11-20T21:50:05.0581464Z Ran 11 tests in 0.783s
+2026-11-20T21:50:05.0581694Z 
+2026-11-20T21:50:05.0581870Z OK
+2026-11-20T21:50:05.0582068Z 
+2026-11-20T21:50:05.1325005Z ##[group]Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+2026-11-20T21:50:05.1325360Z with:
+2026-11-20T21:50:05.1325538Z   name: forge-r4-core-1
+2026-11-20T21:50:05.1325758Z   path: /home/runner/work/_temp/forge-evidence/
+2026-11-20T21:50:05.1326009Z   if-no-files-found: error
+2026-11-20T21:50:05.1326200Z   retention-days: 30
+2026-11-20T21:50:05.1326384Z   compression-level: 6
+2026-11-20T21:50:05.1326594Z   overwrite: false
+2026-11-20T21:50:05.1326772Z   include-hidden-files: false
+2026-11-20T21:50:05.1326965Z env:
+2026-11-20T21:50:05.1327129Z   PYTHONDONTWRITEBYTECODE: 1
+2026-11-20T21:50:05.1327386Z   pythonLocation: /opt/hostedtoolcache/Python/3.13.18/x64
+2026-11-20T21:50:05.1327727Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.13.18/x64/lib/pkgconfig
+2026-11-20T21:50:05.1328307Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.13.18/x64
+2026-11-20T21:50:05.1328615Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.13.18/x64
+2026-11-20T21:50:05.1328953Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.13.18/x64
+2026-11-20T21:50:05.1329255Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.13.18/x64/lib
+2026-11-20T21:50:05.1329513Z ##[endgroup]
+2026-11-20T21:50:05.2882212Z (node:2495) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-20T21:50:05.2887656Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-20T21:50:05.3279209Z With the provided path, there will be 8 files uploaded
+2026-11-20T21:50:05.3318150Z Artifact name is valid!
+2026-11-20T21:50:05.3329104Z Root directory input is valid!
+2026-11-20T21:50:05.7182350Z Beginning upload of artifact content to blob storage
+2026-11-20T21:50:05.7465630Z (node:2495) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-11-20T21:50:05.9530821Z Uploaded bytes 2887
+2026-11-20T21:50:06.0101639Z Finished uploading artifact content to blob storage!
+2026-11-20T21:50:06.0102465Z SHA256 digest of uploaded artifact zip is 62fefe6b201ec68df0345f67db7e3162c9f63030189fcca82c33b1056e4c1d8d
+2026-11-20T21:50:06.0112216Z Finalizing artifact upload
+2026-11-20T21:50:06.4473043Z Artifact forge-r4-core-1.zip successfully finalized. Artifact ID 14673400486
+2026-11-20T21:50:06.4474141Z Artifact forge-r4-core-1 has been successfully uploaded! Final size is 2887 bytes. Artifact ID is 14673400486
+2026-11-20T21:50:06.4480643Z Artifact download URL: https://github.com/Kirjane/Operation-FORGE.kirion/actions/runs/44823750478/artifacts/14673400486
+2026-11-20T21:50:06.4671368Z Post job cleanup.
+2026-11-20T21:50:06.5717164Z (node:2507) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-20T21:50:06.5718570Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-20T21:50:06.5944553Z Post job cleanup.
+2026-11-20T21:50:06.6978805Z [command]/usr/bin/git version
+2026-11-20T21:50:06.7078962Z git version 2.56.1
+2026-11-20T21:50:06.7181004Z Temporarily overriding HOME='/home/runner/work/_temp/e368a1c2-472d-4ddd-9b5f-2c8b4d55cd17' before making global git config changes
+2026-11-20T21:50:06.7183150Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-20T21:50:06.7210163Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Operation-FORGE.kirion/Operation-FORGE.kirion
+2026-11-20T21:50:06.7318870Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-20T21:50:06.7429227Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-20T21:50:06.8156906Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-20T21:50:06.8230669Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-20T21:50:06.8592051Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-20T21:50:06.8637345Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-20T21:50:06.9034249Z Cleaning up orphan processes
+2026-11-20T21:50:06.9314889Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@11d5960a326750d5838078e36cf38b85af677262, actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065, actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

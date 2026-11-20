@@ -62,9 +62,9 @@ class NotionCustomAgentTransport:
             raise HostUnavailable("APPROVED_PUBLISHED_AGENT_REQUIRED")
         started=self.spawn(agent_url=url,initial_message=json.dumps(request,sort_keys=True))
         session=started.get("session_url")
-        if not session or not isinstance(session,str):
+        if not isinstance(session,str) or not re.fullmatch(r"session://[A-Za-z0-9_-]+/[A-Za-z0-9_-]+",session):
             raise HostUnavailable("NO_PROVIDER_SESSION_ID")
-        result=self.wait(session_url=session)
+        result=self.wait(session_url=session,seconds=60)
         if result.get("status")!="completed" or result.get("session_url")!=session:
             raise HostUnavailable("SESSION_NOT_COMPLETED")
         return {"provider":"notion-custom-agent","provider_context_id":session,

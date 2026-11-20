@@ -316,10 +316,17 @@ class ProviderTransportTests(unittest.TestCase):
     def test_notion_requires_entitlement(self):
         with self.assertRaisesRegex(HostUnavailable,"NOTION_CUSTOM_AGENT_ENTITLEMENT_OR_BINDING_REQUIRED"):
             NotionCustomAgentTransport().launch({"persona":"Antigravity-Nox"})
+    def test_notion_malformed_session_url_denied(self):
+        s=NotionCustomAgentTransport(
+            spawn_session=lambda **x:{"session_url":"https://untrusted.invalid/session"},
+            wait_session=lambda **x:{"status":"completed","session_url":x["session_url"]},
+            agent_urls={"Antigravity-Nox":"agent://abc123/def456"},entitled=True)
+        with self.assertRaisesRegex(HostUnavailable,"NO_PROVIDER_SESSION_ID"):
+            s.launch({"persona":"Antigravity-Nox"})
     def test_notion_mock_session_contract(self):
         t=NotionCustomAgentTransport(
-            spawn_session=lambda **x:{"session_url":"https://notion.so/session/mock"},
-            wait_session=lambda **x:{"status":"completed","session_url":x["session_url"],"turn_id":"turn-123"},
+            spawn_session=lambda **x:{"session_url":"session://abc123/sess456"},
+            wait_session=lambda **x:{"status":"completed" if x["seconds"]==60 else "FAILED","session_url":x["session_url"],"turn_id":"turn-123"},
             agent_urls={"Antigravity-Nox":"agent://abc123/def456"},entitled=True)
         self.assertEqual(t.launch({"persona":"Antigravity-Nox"})["provider_response_id"],"turn-123")
 

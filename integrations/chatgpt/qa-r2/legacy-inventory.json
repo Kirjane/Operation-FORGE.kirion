@@ -1,0 +1,227 @@
+{
+  "release": "pluginrel_6b00a5a14fd08191a3862a52ac2591d0",
+  "version": "0.2.0",
+  "skills": [
+    "forge-activate",
+    "forge-deliver",
+    "forge-fleet",
+    "forge-identity",
+    "forge-plan",
+    "forge-qualify",
+    "forge-recover",
+    "forge-review",
+    "forge-verify",
+    "kirion-aegis",
+    "kirion-argon",
+    "kirion-integrator",
+    "kirion-iris",
+    "kirion-jane",
+    "kirion-lucien",
+    "kirion-maintainer",
+    "kirion-nox",
+    "kirion-qa",
+    "kirion-scribe"
+  ],
+  "files": [
+    {
+      "path": ".codex-plugin/plugin.json",
+      "size_bytes": 1318
+    },
+    {
+      "path": "README.md",
+      "size_bytes": 1098
+    },
+    {
+      "path": "plugin.json",
+      "size_bytes": 1477
+    },
+    {
+      "path": "skills/forge-activate/SKILL.md",
+      "size_bytes": 3431
+    },
+    {
+      "path": "skills/forge-activate/agents/openai.yaml",
+      "size_bytes": 29
+    },
+    {
+      "path": "skills/forge-activate/references/session-record.md",
+      "size_bytes": 571
+    },
+    {
+      "path": "skills/forge-activate/references/source-catalog.md",
+      "size_bytes": 3691
+    },
+    {
+      "path": "skills/forge-deliver/SKILL.md",
+      "size_bytes": 2494
+    },
+    {
+      "path": "skills/forge-deliver/agents/openai.yaml",
+      "size_bytes": 29
+    },
+    {
+      "path": "skills/forge-fleet/SKILL.md",
+      "size_bytes": 3412
+    },
+    {
+      "path": "skills/forge-fleet/agents/openai.yaml",
+      "size_bytes": 27
+    },
+    {
+      "path": "skills/forge-fleet/references/fleet.json",
+      "size_bytes": 3805
+    },
+    {
+      "path": "skills/forge-fleet/references/fleet_preflight.py",
+      "size_bytes": 2155
+    },
+    {
+      "path": "skills/forge-fleet/references/parity-audit.md",
+      "size_bytes": 2510
+    },
+    {
+      "path": "skills/forge-fleet/references/test_fleet_preflight.py",
+      "size_bytes": 1576
+    },
+    {
+      "path": "skills/forge-fleet/references/workflows.md",
+      "size_bytes": 2392
+    },
+    {
+      "path": "skills/forge-identity/SKILL.md",
+      "size_bytes": 2268
+    },
+    {
+      "path": "skills/forge-identity/agents/openai.yaml",
+      "size_bytes": 29
+    },
+    {
+      "path": "skills/forge-plan/SKILL.md",
+      "size_bytes": 2302
+    },
+    {
+      "path": "skills/forge-plan/agents/openai.yaml",
+      "size_bytes": 29
+    },
+    {
+      "path": "skills/forge-plan/references/preflight.py",
+      "size_bytes": 3319
+    },
+    {
+      "path": "skills/forge-plan/references/test_preflight.py",
+      "size_bytes": 1726
+    },
+    {
+      "path": "skills/forge-qualify/SKILL.md",
+      "size_bytes": 2180
+    },
+    {
+      "path": "skills/forge-qualify/agents/openai.yaml",
+      "size_bytes": 29
+    },
+    {
+      "path": "skills/forge-recover/SKILL.md",
+      "size_bytes": 1699
+    },
+    {
+      "path": "skills/forge-recover/agents/openai.yaml",
+      "size_bytes": 29
+    },
+    {
+      "path": "skills/forge-review/SKILL.md",
+      "size_bytes": 2217
+    },
+    {
+      "path": "skills/forge-review/agents/openai.yaml",
+      "size_bytes": 29
+    },
+    {
+      "path": "skills/forge-verify/SKILL.md",
+      "size_bytes": 1766
+    },
+    {
+      "path": "skills/forge-verify/agents/openai.yaml",
+      "size_bytes": 29
+    },
+    {
+      "path": "skills/kirion-aegis/SKILL.md",
+      "size_bytes": 1691
+    },
+    {
+      "path": "skills/kirion-aegis/agents/openai.yaml",
+      "size_bytes": 27
+    },
+    {
+      "path": "skills/kirion-argon/SKILL.md",
+      "size_bytes": 1659
+    },
+    {
+      "path": "skills/kirion-argon/agents/openai.yaml",
+      "size_bytes": 27
+    },
+    {
+      "path": "skills/kirion-integrator/SKILL.md",
+      "size_bytes": 1682
+    },
+    {
+      "path": "skills/kirion-integrator/agents/openai.yaml",
+      "size_bytes": 27
+    },
+    {
+      "path": "skills/kirion-iris/SKILL.md",
+      "size_bytes": 1669
+    },
+    {
+      "path": "skills/kirion-iris/agents/openai.yaml",
+      "size_bytes": 27
+    },
+    {
+      "path": "skills/kirion-jane/SKILL.md",
+      "size_bytes": 1705
+    },
+    {
+      "path": "skills/kirion-jane/agents/openai.yaml",
+      "size_bytes": 27
+    },
+    {
+      "path": "skills/kirion-lucien/SKILL.md",
+      "size_bytes": 1660
+    },
+    {
+      "path": "skills/kirion-lucien/agents/openai.yaml",
+      "size_bytes": 27
+    },
+    {
+      "path": "skills/kirion-maintainer/SKILL.md",
+      "size_bytes": 1698
+    },
+    {
+      "path": "skills/kirion-maintainer/agents/openai.yaml",
+      "size_bytes": 27
+    },
+    {
+      "path": "skills/kirion-nox/SKILL.md",
+      "size_bytes": 1750
+    },
+    {
+      "path": "skills/kirion-nox/agents/openai.yaml",
+      "size_bytes": 27
+    },
+    {
+      "path": "skills/kirion-qa/SKILL.md",
+      "size_bytes": 1705
+    },
+    {
+      "path": "skills/kirion-qa/agents/openai.yaml",
+      "size_bytes": 27
+    },
+    {
+      "path": "skills/kirion-scribe/SKILL.md",
+      "size_bytes": 1610
+    },
+    {
+      "path": "skills/kirion-scribe/agents/openai.yaml",
+      "size_bytes": 27
+    }
+  ]
+}

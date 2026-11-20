@@ -1,0 +1,37 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "kirion-forge-chatgpt",
+  "version": "0.2.0",
+  "description": "ChatGPT-native Operation Forge software factory: pinned engineering doctrine, multi-account GitHub custody, bounded delivery, adversarial review and evidence-driven continuation.",
+  "author": {
+    "email": "kirch.studyspecificbot@gmail.com",
+    "name": "Kirch StudyBot"
+  },
+  "keywords": [
+    "engineering",
+    "github",
+    "forge",
+    "software factory",
+    "review",
+    "qa"
+  ],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "KIRION Forge",
+        "shortDescription": "Autonomous software factory",
+        "longDescription": "Ten Forge engineering personas, authenticated multi-account GitHub routing, six workflow translations, scoped candidate delivery, evidence gates and fresh-session review handoffs. Native subagent isolation is used only when verified; no unattended orchestration or native hooks are included.",
+        "developerName": "Kirch StudyBot",
+        "category": "Productivity",
+        "capabilities": [
+          "Interactive"
+        ],
+        "defaultPrompt": [
+          "Activate Forge for my repository. Reconcile current authority and proceed within scope.",
+          "Continue a Forge mission from its GitHub issue or pull request.",
+          "Review a frozen candidate as independent Nox in this fresh session."
+        ]
+      }
+    }
+  }
+}

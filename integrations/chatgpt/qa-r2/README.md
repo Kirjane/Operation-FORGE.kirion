@@ -1,0 +1,1 @@
+R2 qualification-only scaffold. Exact R1 source and base remain frozen. No client secrets, deployment or writeback. Raw logs and uninstalled ZIPs on Actions; package structural audit is not native activation. Private account release snapshot contains only manifests and inventory. Source repairs must enter PR16 with fresh independent review, not this QA branch.

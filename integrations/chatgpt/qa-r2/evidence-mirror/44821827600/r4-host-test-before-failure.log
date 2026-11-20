@@ -1,0 +1,822 @@
+﻿2026-11-20T21:36:35.1423434Z Current runner version: '2.338.2'
+2026-11-20T21:36:35.1460775Z ##[group]Runner Image Provisioner
+2026-11-20T21:36:35.1492883Z Hosted Compute Agent
+2026-11-20T21:36:35.1494071Z Version: 20261111.635
+2026-11-20T21:36:35.1495268Z Commit: b8a594ea514ff44cadb5342986c68b1eac6e22ed
+2026-11-20T21:36:35.1496662Z Build Date: 2026-11-11T01:49:01Z
+2026-11-20T21:36:35.1498101Z Worker ID: {000685d7-45aa-497d-b5e6-c1db2f9f5aee}
+2026-11-20T21:36:35.1499491Z Region: westus
+2026-11-20T21:36:35.1500533Z Cloud: Azure
+2026-11-20T21:36:35.1501958Z ##[endgroup]
+2026-11-20T21:36:35.1504739Z ##[group]Operating System
+2026-11-20T21:36:35.1506026Z Ubuntu
+2026-11-20T21:36:35.1507058Z 24.04.5
+2026-11-20T21:36:35.1507971Z LTS
+2026-11-20T21:36:35.1509083Z ##[endgroup]
+2026-11-20T21:36:35.1510098Z ##[group]Runner Image
+2026-11-20T21:36:35.1526652Z Image: ubuntu-24.04
+2026-11-20T21:36:35.1528015Z Version: 20261116.376.1
+2026-11-20T21:36:35.1531414Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20261116.376/images/ubuntu/Ubuntu2404-Readme.md
+2026-11-20T21:36:35.1534408Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20261116.376
+2026-11-20T21:36:35.1536434Z ##[endgroup]
+2026-11-20T21:36:35.1538507Z ##[group]GITHUB_TOKEN Permissions
+2026-11-20T21:36:35.1549926Z Contents: read
+2026-11-20T21:36:35.1551037Z Metadata: read
+2026-11-20T21:36:35.1552424Z ##[endgroup]
+2026-11-20T21:36:35.1556385Z Secret source: Actions
+2026-11-20T21:36:35.1558071Z Cache mode: write
+2026-11-20T21:36:35.1559855Z Prepare workflow directory
+2026-11-20T21:36:35.2237205Z Prepare all required actions
+2026-11-20T21:36:35.2287346Z Getting action download info
+2026-11-20T21:36:35.5872279Z Download action repository 'actions/checkout@11d5960a326750d5838078e36cf38b85af677262' (SHA:11d5960a326750d5838078e36cf38b85af677262)
+2026-11-20T21:36:36.4228707Z Download action repository 'actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065' (SHA:a26af69be951a213d495a4c3e4e4022e16d87065)
+2026-11-20T21:36:36.5555590Z Download action repository 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+2026-11-20T21:36:36.9477516Z Complete job name: adapter-package
+2026-11-20T21:36:37.0552930Z ##[group]Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+2026-11-20T21:36:37.0554885Z with:
+2026-11-20T21:36:37.0555846Z   ref: 42e3b842b2998d61b4596201f18e9e0bcf81891a
+2026-11-20T21:36:37.0557064Z   fetch-depth: 0
+2026-11-20T21:36:37.0558009Z   persist-credentials: false
+2026-11-20T21:36:37.0559155Z   repository: Kirjane/Operation-FORGE.kirion
+2026-11-20T21:36:37.0568197Z   token: ***
+2026-11-20T21:36:37.0569084Z   ssh-strict: true
+2026-11-20T21:36:37.0569983Z   ssh-user: git
+2026-11-20T21:36:37.0570865Z   clean: true
+2026-11-20T21:36:37.0571950Z   sparse-checkout-cone-mode: true
+2026-11-20T21:36:37.0573060Z   fetch-tags: false
+2026-11-20T21:36:37.0573999Z   show-progress: true
+2026-11-20T21:36:37.0574929Z   lfs: false
+2026-11-20T21:36:37.0575786Z   submodules: false
+2026-11-20T21:36:37.0576858Z   set-safe-directory: true
+2026-11-20T21:36:37.0577917Z   allow-unsafe-pr-checkout: false
+2026-11-20T21:36:37.0579336Z env:
+2026-11-20T21:36:37.0580302Z   PYTHONDONTWRITEBYTECODE: 1
+2026-11-20T21:36:37.0581587Z ##[endgroup]
+2026-11-20T21:36:40.1539458Z Syncing repository: Kirjane/Operation-FORGE.kirion
+2026-11-20T21:36:40.1542001Z ##[group]Getting Git version info
+2026-11-20T21:36:40.1543011Z Working directory is '/home/runner/work/Operation-FORGE.kirion/Operation-FORGE.kirion'
+2026-11-20T21:36:40.1553849Z [command]/usr/bin/git version
+2026-11-20T21:36:40.3511538Z git version 2.56.1
+2026-11-20T21:36:40.3553175Z ##[endgroup]
+2026-11-20T21:36:40.3583065Z Temporarily overriding HOME='/home/runner/work/_temp/68867572-0a67-47be-9f9b-ec9bdbeb46bb' before making global git config changes
+2026-11-20T21:36:40.3584937Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-20T21:36:40.3586430Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Operation-FORGE.kirion/Operation-FORGE.kirion
+2026-11-20T21:36:40.3930655Z Deleting the contents of '/home/runner/work/Operation-FORGE.kirion/Operation-FORGE.kirion'
+2026-11-20T21:36:40.3942032Z ##[group]Initializing the repository
+2026-11-20T21:36:40.3944640Z [command]/usr/bin/git init /home/runner/work/Operation-FORGE.kirion/Operation-FORGE.kirion
+2026-11-20T21:36:40.4896003Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-11-20T21:36:40.4897486Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-11-20T21:36:40.4898969Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-11-20T21:36:40.4900047Z hint: call:
+2026-11-20T21:36:40.4900629Z hint:
+2026-11-20T21:36:40.4901590Z hint: 	git config --global init.defaultBranch <name>
+2026-11-20T21:36:40.4902459Z hint:
+2026-11-20T21:36:40.4903280Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-11-20T21:36:40.4904440Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-11-20T21:36:40.4905521Z hint:
+2026-11-20T21:36:40.4906120Z hint: 	git branch -m <name>
+2026-11-20T21:36:40.4906758Z hint:
+2026-11-20T21:36:40.4907578Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-11-20T21:36:40.5052674Z Initialized empty Git repository in /home/runner/work/Operation-FORGE.kirion/Operation-FORGE.kirion/.git/
+2026-11-20T21:36:40.5062589Z [command]/usr/bin/git remote add origin https://github.com/Kirjane/Operation-FORGE.kirion
+2026-11-20T21:36:40.5502652Z ##[endgroup]
+2026-11-20T21:36:40.5515696Z ##[group]Disabling automatic garbage collection
+2026-11-20T21:36:40.5532604Z [command]/usr/bin/git config --local gc.auto 0
+2026-11-20T21:36:40.5568255Z ##[endgroup]
+2026-11-20T21:36:40.5569191Z ##[group]Setting up auth
+2026-11-20T21:36:40.5590759Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-20T21:36:40.5659876Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-20T21:36:40.8588924Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-20T21:36:40.8685934Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-20T21:36:40.8981937Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-20T21:36:40.9036628Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-20T21:36:40.9309644Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-11-20T21:36:40.9365975Z ##[endgroup]
+2026-11-20T21:36:40.9367131Z ##[group]Fetching the repository
+2026-11-20T21:36:40.9379961Z [command]/usr/bin/git -c protocol.version=2 fetch --prune --no-recurse-submodules origin +refs/heads/*:refs/remotes/origin/* +refs/tags/*:refs/tags/*
+2026-11-20T21:36:42.0548710Z From https://github.com/Kirjane/Operation-FORGE.kirion
+2026-11-20T21:36:42.0565705Z  * [new branch]      KIRCH-FORGE-ENTITY-EVOLUTION-TEST-2 -> origin/KIRCH-FORGE-ENTITY-EVOLUTION-TEST-2
+2026-11-20T21:36:42.0568648Z  * [new branch]      KIRCH-FORGE-ENTITY-EVOLUTION-TEST-3 -> origin/KIRCH-FORGE-ENTITY-EVOLUTION-TEST-3
+2026-11-20T21:36:42.0570074Z  * [new branch]      eval/fci-m02-behavioral-pilot-r0 -> origin/eval/fci-m02-behavioral-pilot-r0
+2026-11-20T21:36:42.0571868Z  * [new branch]      feat/antigravity-software-factory-r1 -> origin/feat/antigravity-software-factory-r1
+2026-11-20T21:36:42.0573443Z  * [new branch]      feat/chatgpt-software-factory-port-r1 -> origin/feat/chatgpt-software-factory-port-r1
+2026-11-20T21:36:42.0575031Z  * [new branch]      feat/fci-m02-provenance-and-memory-r1 -> origin/feat/fci-m02-provenance-and-memory-r1
+2026-11-20T21:36:42.0576836Z  * [new branch]      feat/forge-obsidian-vault-r2 -> origin/feat/forge-obsidian-vault-r2
+2026-11-20T21:36:42.0577890Z  * [new branch]      main       -> origin/main
+2026-11-20T21:36:42.0579133Z  * [new branch]      policy/kirjane-csharp-backend-standard-r1 -> origin/policy/kirjane-csharp-backend-standard-r1
+2026-11-20T21:36:42.0580781Z  * [new branch]      proposal/fci-m01-context-completeness-r1 -> origin/proposal/fci-m01-context-completeness-r1
+2026-11-20T21:36:42.0584463Z  * [new branch]      proposal/kirion-skill-arsenal-multihost-v0-2 -> origin/proposal/kirion-skill-arsenal-multihost-v0-2
+2026-11-20T21:36:42.0586109Z  * [new branch]      qa/chatgpt-port-qualification-r2 -> origin/qa/chatgpt-port-qualification-r2
+2026-11-20T21:36:42.0588650Z [command]/usr/bin/git rev-parse --verify --quiet 42e3b842b2998d61b4596201f18e9e0bcf81891a^{object}
+2026-11-20T21:36:42.0650586Z 42e3b842b2998d61b4596201f18e9e0bcf81891a
+2026-11-20T21:36:42.0667672Z ##[endgroup]
+2026-11-20T21:36:42.0668622Z ##[group]Determining the checkout info
+2026-11-20T21:36:42.0669620Z ##[endgroup]
+2026-11-20T21:36:42.0695789Z [command]/usr/bin/git sparse-checkout disable
+2026-11-20T21:36:42.0933634Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-11-20T21:36:42.0994954Z ##[group]Checking out the ref
+2026-11-20T21:36:42.1001753Z [command]/usr/bin/git checkout --progress --force 42e3b842b2998d61b4596201f18e9e0bcf81891a
+2026-11-20T21:36:42.1729506Z Note: switching to '42e3b842b2998d61b4596201f18e9e0bcf81891a'.
+2026-11-20T21:36:42.1730756Z 
+2026-11-20T21:36:42.1731631Z You are in 'detached HEAD' state. You can look around, make experimental
+2026-11-20T21:36:42.1732628Z changes and commit them, and you can discard any commits you make in this
+2026-11-20T21:36:42.1733432Z state without impacting any branches by switching back to a branch.
+2026-11-20T21:36:42.1733815Z 
+2026-11-20T21:36:42.1734020Z If you want to create a new branch to retain commits you create, you may
+2026-11-20T21:36:42.1734540Z do so (now or later) by using -c with the switch command. Example:
+2026-11-20T21:36:42.1734813Z 
+2026-11-20T21:36:42.1735159Z   git switch -c <new-branch-name>
+2026-11-20T21:36:42.1735354Z 
+2026-11-20T21:36:42.1735530Z Or undo this operation with:
+2026-11-20T21:36:42.1735702Z 
+2026-11-20T21:36:42.1735788Z   git switch -
+2026-11-20T21:36:42.1735918Z 
+2026-11-20T21:36:42.1736145Z Turn off this advice by setting config variable advice.detachedHead to false
+2026-11-20T21:36:42.1736474Z 
+2026-11-20T21:36:42.1736781Z HEAD is now at 42e3b84 ci(qa): run R4 adversarial host protocols with original core and A-E comparisons
+2026-11-20T21:36:42.1835970Z ##[endgroup]
+2026-11-20T21:36:42.1951738Z [command]/usr/bin/git log -1 --format=%H
+2026-11-20T21:36:42.1992193Z 42e3b842b2998d61b4596201f18e9e0bcf81891a
+2026-11-20T21:36:42.2003357Z ##[group]Removing auth
+2026-11-20T21:36:42.2008691Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-20T21:36:42.2054579Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-20T21:36:42.2320797Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-20T21:36:42.2363899Z http.https://github.com/.extraheader
+2026-11-20T21:36:42.2371973Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-11-20T21:36:42.2419306Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-20T21:36:42.2685124Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-20T21:36:42.2752402Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-20T21:36:42.3102032Z ##[endgroup]
+2026-11-20T21:36:42.3535936Z ##[group]Run actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+2026-11-20T21:36:42.3536679Z with:
+2026-11-20T21:36:42.3537064Z   python-version: 3.13
+2026-11-20T21:36:42.3537514Z   check-latest: false
+2026-11-20T21:36:42.3543402Z   token: ***
+2026-11-20T21:36:42.3543865Z   update-environment: true
+2026-11-20T21:36:42.3544349Z   allow-prereleases: false
+2026-11-20T21:36:42.3544761Z   freethreaded: false
+2026-11-20T21:36:42.3545105Z env:
+2026-11-20T21:36:42.3545429Z   PYTHONDONTWRITEBYTECODE: 1
+2026-11-20T21:36:42.3545889Z ##[endgroup]
+2026-11-20T21:36:42.5314170Z ##[group]Installed versions
+2026-11-20T21:36:42.6096292Z (node:2187) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-20T21:36:42.6097742Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-20T21:36:42.6098780Z Successfully set up CPython (3.13.18)
+2026-11-20T21:36:42.6099673Z ##[endgroup]
+2026-11-20T21:36:42.6388767Z ##[group]Run python integrations/chatgpt/qa-r2/compare.py adapter "$RUNNER_TEMP/forge-evidence"
+2026-11-20T21:36:42.6389976Z [36;1mpython integrations/chatgpt/qa-r2/compare.py adapter "$RUNNER_TEMP/forge-evidence"[0m
+2026-11-20T21:36:42.6496267Z shell: /usr/bin/bash -e {0}
+2026-11-20T21:36:42.6496701Z env:
+2026-11-20T21:36:42.6497048Z   PYTHONDONTWRITEBYTECODE: 1
+2026-11-20T21:36:42.6497571Z   pythonLocation: /opt/hostedtoolcache/Python/3.13.18/x64
+2026-11-20T21:36:42.6498304Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.13.18/x64/lib/pkgconfig
+2026-11-20T21:36:42.6499026Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.13.18/x64
+2026-11-20T21:36:42.6499670Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.13.18/x64
+2026-11-20T21:36:42.6500298Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.13.18/x64
+2026-11-20T21:36:42.6500928Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.13.18/x64/lib
+2026-11-20T21:36:42.6501726Z ##[endgroup]
+2026-11-20T21:36:43.5197086Z python-version exit 0 sha256 12162c47c88cf7ca169474b404c0d8bf22203099f01452797ab5d96e71a148aa
+2026-11-20T21:36:43.5198440Z Python 3.13.18
+2026-11-20T21:36:43.5198715Z 
+2026-11-20T21:36:44.7630123Z node-version exit 0 sha256 17e666b140e321b57eec7d7066da9f774ad2457620dc275d6386b5224ab416ac
+2026-11-20T21:36:44.7631865Z v22.23.5
+2026-11-20T21:36:44.7632369Z 
+2026-11-20T21:36:44.7656037Z Preparing worktree (detached HEAD 03ae31e)
+2026-11-20T21:36:44.8589115Z HEAD is now at 03ae31e test(chatgpt): adversarial host isolation and mandatory broker contracts
+2026-11-20T21:36:46.5008750Z node-adapter exit 0 sha256 585110c44f1fbf4f6865de7c8dcb0b3d64c8942b2a2d36fae7fab0087a7af39c
+2026-11-20T21:36:46.5015426Z [
+2026-11-20T21:36:46.5016011Z   {
+2026-11-20T21:36:46.5016714Z     "name": "identity_match",
+2026-11-20T21:36:46.5017431Z     "expected": "ALLOW",
+2026-11-20T21:36:46.5018039Z     "observed": "ALLOW",
+2026-11-20T21:36:46.5018636Z     "pass": true
+2026-11-20T21:36:46.5019166Z   },
+2026-11-20T21:36:46.5019703Z   {
+2026-11-20T21:36:46.5020234Z     "name": "wrong_id",
+2026-11-20T21:36:46.5020862Z     "expected": "ACTOR_MISMATCH",
+2026-11-20T21:36:46.5022581Z     "observed": "ACTOR_MISMATCH",
+2026-11-20T21:36:46.5023213Z     "pass": true
+2026-11-20T21:36:46.5023730Z   },
+2026-11-20T21:36:46.5024220Z   {
+2026-11-20T21:36:46.5024763Z     "name": "wrong_login",
+2026-11-20T21:36:46.5025567Z     "expected": "ACTOR_MISMATCH",
+2026-11-20T21:36:46.5026244Z     "observed": "ACTOR_MISMATCH",
+2026-11-20T21:36:46.5026874Z     "pass": true
+2026-11-20T21:36:46.5027401Z   },
+2026-11-20T21:36:46.5027870Z   {
+2026-11-20T21:36:46.5028373Z     "name": "unknown_actor",
+2026-11-20T21:36:46.5028969Z     "expected": "ACCOUNT_UNBOUND",
+2026-11-20T21:36:46.5029637Z     "observed": "ACCOUNT_UNBOUND",
+2026-11-20T21:36:46.5030250Z     "pass": true
+2026-11-20T21:36:46.5030773Z   },
+2026-11-20T21:36:46.5031622Z   {
+2026-11-20T21:36:46.5032162Z     "name": "unbound_actor",
+2026-11-20T21:36:46.5032794Z     "expected": "ACCOUNT_UNBOUND",
+2026-11-20T21:36:46.5033778Z     "observed": "ACCOUNT_UNBOUND",
+2026-11-20T21:36:46.5034405Z     "pass": true
+2026-11-20T21:36:46.5034943Z   },
+2026-11-20T21:36:46.5035430Z   {
+2026-11-20T21:36:46.5036517Z     "name": "suspended",
+2026-11-20T21:36:46.5037236Z     "expected": "403",
+2026-11-20T21:36:46.5037814Z     "observed": "403",
+2026-11-20T21:36:46.5038378Z     "pass": true
+2026-11-20T21:36:46.5038909Z   },
+2026-11-20T21:36:46.5039409Z   {
+2026-11-20T21:36:46.5039933Z     "name": "repo_denied",
+2026-11-20T21:36:46.5040568Z     "expected": "REPOSITORY_READ_DENIED",
+2026-11-20T21:36:46.5041772Z     "observed": "REPOSITORY_READ_DENIED",
+2026-11-20T21:36:46.5042476Z     "pass": true
+2026-11-20T21:36:46.5043012Z   },
+2026-11-20T21:36:46.5043480Z   {
+2026-11-20T21:36:46.5043993Z     "name": "wrong_repo",
+2026-11-20T21:36:46.5044629Z     "expected": "REPOSITORY_READ_DENIED",
+2026-11-20T21:36:46.5045319Z     "observed": "REPOSITORY_READ_DENIED",
+2026-11-20T21:36:46.5045994Z     "pass": true
+2026-11-20T21:36:46.5046529Z   },
+2026-11-20T21:36:46.5047322Z   {
+2026-11-20T21:36:46.5047896Z     "name": "write_denied",
+2026-11-20T21:36:46.5048523Z     "expected": "REPOSITORY_WRITE_DENIED",
+2026-11-20T21:36:46.5049218Z     "observed": "REPOSITORY_WRITE_DENIED",
+2026-11-20T21:36:46.5049908Z     "pass": true
+2026-11-20T21:36:46.5050448Z   },
+2026-11-20T21:36:46.5050933Z   {
+2026-11-20T21:36:46.5051762Z     "name": "write_string",
+2026-11-20T21:36:46.5052431Z     "expected": "REPOSITORY_WRITE_DENIED",
+2026-11-20T21:36:46.5053157Z     "observed": "REPOSITORY_WRITE_DENIED",
+2026-11-20T21:36:46.5053839Z     "pass": true
+2026-11-20T21:36:46.5054380Z   },
+2026-11-20T21:36:46.5054878Z   {
+2026-11-20T21:36:46.5055435Z     "name": "bad_permission_argument",
+2026-11-20T21:36:46.5056194Z     "expected": "INVALID_PERMISSION_REQUEST",
+2026-11-20T21:36:46.5056972Z     "observed": "INVALID_PERMISSION_REQUEST",
+2026-11-20T21:36:46.5057708Z     "pass": true
+2026-11-20T21:36:46.5058283Z   },
+2026-11-20T21:36:46.5058958Z   {
+2026-11-20T21:36:46.5059525Z     "name": "invalid_repo",
+2026-11-20T21:36:46.5060184Z     "expected": "INVALID_REPOSITORY",
+2026-11-20T21:36:46.5060895Z     "observed": "INVALID_REPOSITORY",
+2026-11-20T21:36:46.5062010Z     "pass": true
+2026-11-20T21:36:46.5062629Z   },
+2026-11-20T21:36:46.5063180Z   {
+2026-11-20T21:36:46.5063804Z     "name": "exact_pin",
+2026-11-20T21:36:46.5064432Z     "expected": "ALLOW",
+2026-11-20T21:36:46.5065033Z     "observed": "ALLOW",
+2026-11-20T21:36:46.5065593Z     "pass": true
+2026-11-20T21:36:46.5066162Z   },
+2026-11-20T21:36:46.5066678Z   {
+2026-11-20T21:36:46.5067195Z     "name": "head_drift",
+2026-11-20T21:36:46.5067850Z     "expected": "EXACT_HEAD_OR_TREE_DRIFT",
+2026-11-20T21:36:46.5068575Z     "observed": "EXACT_HEAD_OR_TREE_DRIFT",
+2026-11-20T21:36:46.5069295Z     "pass": true
+2026-11-20T21:36:46.5069831Z   },
+2026-11-20T21:36:46.5070325Z   {
+2026-11-20T21:36:46.5070859Z     "name": "tree_drift",
+2026-11-20T21:36:46.5071830Z     "expected": "EXACT_HEAD_OR_TREE_DRIFT",
+2026-11-20T21:36:46.5072621Z     "observed": "EXACT_HEAD_OR_TREE_DRIFT",
+2026-11-20T21:36:46.5073361Z     "pass": true
+2026-11-20T21:36:46.5073885Z   },
+2026-11-20T21:36:46.5074380Z   {
+2026-11-20T21:36:46.5074873Z     "name": "zero_sha",
+2026-11-20T21:36:46.5075462Z     "expected": "INVALID_OBJECT_ID",
+2026-11-20T21:36:46.5076138Z     "observed": "INVALID_OBJECT_ID",
+2026-11-20T21:36:46.5076831Z     "pass": true
+2026-11-20T21:36:46.5077415Z   },
+2026-11-20T21:36:46.5077925Z   {
+2026-11-20T21:36:46.5078469Z     "name": "ref_alias",
+2026-11-20T21:36:46.5079094Z     "expected": "INVALID_BRANCH",
+2026-11-20T21:36:46.5079760Z     "observed": "INVALID_BRANCH",
+2026-11-20T21:36:46.5080446Z     "pass": true
+2026-11-20T21:36:46.5081016Z   },
+2026-11-20T21:36:46.5081936Z   {
+2026-11-20T21:36:46.5082497Z     "name": "branch_mismatch",
+2026-11-20T21:36:46.5083218Z     "expected": "EXACT_HEAD_OR_TREE_DRIFT",
+2026-11-20T21:36:46.5083986Z     "observed": "EXACT_HEAD_OR_TREE_DRIFT",
+2026-11-20T21:36:46.5084707Z     "pass": true
+2026-11-20T21:36:46.5085697Z   },
+2026-11-20T21:36:46.5086255Z   {
+2026-11-20T21:36:46.5086830Z     "name": "no_fake_context",
+2026-11-20T21:36:46.5087502Z     "expected": "ALLOW",
+2026-11-20T21:36:46.5088056Z     "observed": "ALLOW",
+2026-11-20T21:36:46.5088598Z     "pass": true
+2026-11-20T21:36:46.5089126Z   },
+2026-11-20T21:36:46.5089589Z   {
+2026-11-20T21:36:46.5090130Z     "name": "delivery_unbound",
+2026-11-20T21:36:46.5090925Z     "expected": "CORE_BROKER_AND_DURABLE_HOST_BRIDGE_REQUIRED",
+2026-11-20T21:36:46.5092340Z     "observed": "CORE_BROKER_AND_DURABLE_HOST_BRIDGE_REQUIRED",
+2026-11-20T21:36:46.5093205Z     "pass": true
+2026-11-20T21:36:46.5093810Z   },
+2026-11-20T21:36:46.5094307Z   {
+2026-11-20T21:36:46.5094843Z     "name": "luci3n_fresh_identity",
+2026-11-20T21:36:46.5095490Z     "expected": "ALLOW",
+2026-11-20T21:36:46.5096066Z     "observed": "ALLOW",
+2026-11-20T21:36:46.5096637Z     "pass": true
+2026-11-20T21:36:46.5097172Z   },
+2026-11-20T21:36:46.5097662Z   {
+2026-11-20T21:36:46.5098214Z     "name": "legacy_suspended_denied",
+2026-11-20T21:36:46.5099252Z     "expected": "SUSPENDED_LEGACY_ACTOR",
+2026-11-20T21:36:46.5100043Z     "observed": "SUSPENDED_LEGACY_ACTOR",
+2026-11-20T21:36:46.5100731Z     "pass": true
+2026-11-20T21:36:46.5101812Z   },
+2026-11-20T21:36:46.5102605Z   {
+2026-11-20T21:36:46.5103152Z     "name": "nox_account_mismatch",
+2026-11-20T21:36:46.5103769Z     "expected": "ACTOR_MISMATCH",
+2026-11-20T21:36:46.5104368Z     "observed": "ACTOR_MISMATCH",
+2026-11-20T21:36:46.5105014Z     "pass": true
+2026-11-20T21:36:46.5105586Z   },
+2026-11-20T21:36:46.5106082Z   {
+2026-11-20T21:36:46.5106583Z     "name": "nox_cannot_write",
+2026-11-20T21:36:46.5107186Z     "expected": "ROLE_OPERATION_DENIED",
+2026-11-20T21:36:46.5107862Z     "observed": "ROLE_OPERATION_DENIED",
+2026-11-20T21:36:46.5108516Z     "pass": true
+2026-11-20T21:36:46.5109038Z   },
+2026-11-20T21:36:46.5109517Z   {
+2026-11-20T21:36:46.5110072Z     "name": "nox_cannot_approve",
+2026-11-20T21:36:46.5110777Z     "expected": "ROLE_OPERATION_DENIED",
+2026-11-20T21:36:46.5111763Z     "observed": "ROLE_OPERATION_DENIED",
+2026-11-20T21:36:46.5112419Z     "pass": true
+2026-11-20T21:36:46.5112974Z   },
+2026-11-20T21:36:46.5113445Z   {
+2026-11-20T21:36:46.5113919Z     "name": "nox_nonaccepting",
+2026-11-20T21:36:46.5114558Z     "expected": "ALLOW",
+2026-11-20T21:36:46.5115177Z     "observed": "ALLOW",
+2026-11-20T21:36:46.5115750Z     "pass": true
+2026-11-20T21:36:46.5116244Z   },
+2026-11-20T21:36:46.5116731Z   {
+2026-11-20T21:36:46.5117259Z     "name": "repo_id_drift",
+2026-11-20T21:36:46.5117920Z     "expected": "REPOSITORY_ID_OR_ACCESS_DRIFT",
+2026-11-20T21:36:46.5118679Z     "observed": "REPOSITORY_ID_OR_ACCESS_DRIFT",
+2026-11-20T21:36:46.5119389Z     "pass": true
+2026-11-20T21:36:46.5119940Z   },
+2026-11-20T21:36:46.5120450Z   {
+2026-11-20T21:36:46.5120974Z     "name": "writer_no_push",
+2026-11-20T21:36:46.5121935Z     "expected": "REPOSITORY_WRITE_DENIED",
+2026-11-20T21:36:46.5122626Z     "observed": "REPOSITORY_WRITE_DENIED",
+2026-11-20T21:36:46.5123258Z     "pass": true
+2026-11-20T21:36:46.5123775Z   },
+2026-11-20T21:36:46.5124261Z   {
+2026-11-20T21:36:46.5124775Z     "name": "writer_preflight_only",
+2026-11-20T21:36:46.5125407Z     "expected": "ALLOW",
+2026-11-20T21:36:46.5125951Z     "observed": "ALLOW",
+2026-11-20T21:36:46.5126484Z     "pass": true
+2026-11-20T21:36:46.5126975Z   },
+2026-11-20T21:36:46.5127452Z   {
+2026-11-20T21:36:46.5127960Z     "name": "branch_dotdot",
+2026-11-20T21:36:46.5128579Z     "expected": "INVALID_BRANCH",
+2026-11-20T21:36:46.5129230Z     "observed": "INVALID_BRANCH",
+2026-11-20T21:36:46.5129861Z     "pass": true
+2026-11-20T21:36:46.5130377Z   },
+2026-11-20T21:36:46.5130821Z   {
+2026-11-20T21:36:46.5131546Z     "name": "branch_full_ref",
+2026-11-20T21:36:46.5132147Z     "expected": "INVALID_BRANCH",
+2026-11-20T21:36:46.5132844Z     "observed": "INVALID_BRANCH",
+2026-11-20T21:36:46.5133411Z     "pass": true
+2026-11-20T21:36:46.5133922Z   }
+2026-11-20T21:36:46.5134411Z ]
+2026-11-20T21:36:46.5134761Z 
+2026-11-20T21:36:47.1821939Z python-bridge exit 0 sha256 918d90f6adbafb80e7df081b28a346994beb72744cf25177ce6cfd804d1aca04
+2026-11-20T21:36:47.1823377Z test_bad_trust (__main__.HostBridge.test_bad_trust) ... ok
+2026-11-20T21:36:47.1824081Z test_cycle (__main__.HostBridge.test_cycle) ... ok
+2026-11-20T21:36:47.1825091Z test_journal_reopen_and_conflict (__main__.HostBridge.test_journal_reopen_and_conflict) ... ok
+2026-11-20T21:36:47.1826364Z test_plan_is_not_launch (__main__.HostBridge.test_plan_is_not_launch) ... ok
+2026-11-20T21:36:47.1827575Z test_repair_controller_is_canonical (__main__.HostBridge.test_repair_controller_is_canonical) ... ok
+2026-11-20T21:36:47.1828760Z test_repo_and_sha_drift (__main__.HostBridge.test_repo_and_sha_drift) ... ok
+2026-11-20T21:36:47.1829407Z 
+2026-11-20T21:36:47.1829769Z ----------------------------------------------------------------------
+2026-11-20T21:36:47.1830526Z Ran 6 tests in 0.021s
+2026-11-20T21:36:47.1830877Z 
+2026-11-20T21:36:47.1831402Z OK
+2026-11-20T21:36:47.1831727Z 
+2026-11-20T21:36:47.9933637Z r4-host-adversarial exit 1 sha256 5b08ffac0d518aff958edc1a42139091f8cff732c1ce2b0563a3ec949b7b43ec
+2026-11-20T21:36:47.9935828Z test_bad_actor_or_numeric_id (integrations.chatgpt.test_host_autonomy.BrokerTests.test_bad_actor_or_numeric_id) ... ok
+2026-11-20T21:36:47.9937556Z test_bad_write_receipt_is_unknown (integrations.chatgpt.test_host_autonomy.BrokerTests.test_bad_write_receipt_is_unknown) ... ok
+2026-11-20T21:36:47.9939426Z test_branch_head_drift (integrations.chatgpt.test_host_autonomy.BrokerTests.test_branch_head_drift) ... ok
+2026-11-20T21:36:47.9941568Z test_collision_after_interrupted_mutation (integrations.chatgpt.test_host_autonomy.BrokerTests.test_collision_after_interrupted_mutation) ... ok
+2026-11-20T21:36:47.9943503Z test_disabled_default_boundary (integrations.chatgpt.test_host_autonomy.BrokerTests.test_disabled_default_boundary) ... ERROR
+2026-11-20T21:36:47.9945142Z test_hmac_audit_forgery (integrations.chatgpt.test_host_autonomy.BrokerTests.test_hmac_audit_forgery) ... ok
+2026-11-20T21:36:47.9946693Z test_journal_forgery (integrations.chatgpt.test_host_autonomy.BrokerTests.test_journal_forgery) ... ok
+2026-11-20T21:36:47.9948592Z test_lost_network_without_positive_proof_stays_unknown (integrations.chatgpt.test_host_autonomy.BrokerTests.test_lost_network_without_positive_proof_stays_unknown) ... ok
+2026-11-20T21:36:47.9950947Z test_network_loss_after_remote_commit_recover_without_replay (integrations.chatgpt.test_host_autonomy.BrokerTests.test_network_loss_after_remote_commit_recover_without_replay) ... ok
+2026-11-20T21:36:47.9953269Z test_nonallowlisted_branch (integrations.chatgpt.test_host_autonomy.BrokerTests.test_nonallowlisted_branch) ... ok
+2026-11-20T21:36:47.9954975Z test_nonce_changed_payload_denied (integrations.chatgpt.test_host_autonomy.BrokerTests.test_nonce_changed_payload_denied) ... ok
+2026-11-20T21:36:47.9956601Z test_off_role_denial (integrations.chatgpt.test_host_autonomy.BrokerTests.test_off_role_denial) ... ok
+2026-11-20T21:36:47.9958271Z test_positive_write_and_idempotency (integrations.chatgpt.test_host_autonomy.BrokerTests.test_positive_write_and_idempotency) ... ok
+2026-11-20T21:36:47.9960192Z test_postwrite_wrong_tree_rejected (integrations.chatgpt.test_host_autonomy.BrokerTests.test_postwrite_wrong_tree_rejected) ... ok
+2026-11-20T21:36:47.9963315Z test_repo_immutable_id_drift (integrations.chatgpt.test_host_autonomy.BrokerTests.test_repo_immutable_id_drift) ... /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8e0225d50>
+2026-11-20T21:36:47.9965591Z   pass
+2026-11-20T21:36:47.9966333Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:47.9967956Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8e0225e40>
+2026-11-20T21:36:47.9969310Z   pass
+2026-11-20T21:36:47.9970070Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:47.9972345Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8e0226020>
+2026-11-20T21:36:47.9973730Z   pass
+2026-11-20T21:36:47.9974507Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:47.9976101Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8e02267a0>
+2026-11-20T21:36:47.9977482Z   pass
+2026-11-20T21:36:47.9978238Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:47.9979787Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8e0227880>
+2026-11-20T21:36:47.9981367Z   pass
+2026-11-20T21:36:47.9982144Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:47.9983928Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8e0227b50>
+2026-11-20T21:36:47.9985367Z   pass
+2026-11-20T21:36:47.9986188Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:47.9987782Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8e016be20>
+2026-11-20T21:36:47.9989112Z   pass
+2026-11-20T21:36:47.9989844Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:47.9991606Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8e00ac040>
+2026-11-20T21:36:47.9993001Z   pass
+2026-11-20T21:36:47.9993773Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:47.9995428Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8e00ac9a0>
+2026-11-20T21:36:47.9996850Z   pass
+2026-11-20T21:36:47.9997647Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:47.9999315Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8e00aca90>
+2026-11-20T21:36:48.0000715Z   pass
+2026-11-20T21:36:48.0001760Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0003497Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8e00acb80>
+2026-11-20T21:36:48.0004894Z   pass
+2026-11-20T21:36:48.0005651Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0007254Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8e00acc70>
+2026-11-20T21:36:48.0008670Z   pass
+2026-11-20T21:36:48.0009432Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0011047Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8e00acd60>
+2026-11-20T21:36:48.0012733Z   pass
+2026-11-20T21:36:48.0013505Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0015103Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8e00ace50>
+2026-11-20T21:36:48.0016517Z   pass
+2026-11-20T21:36:48.0017290Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0018895Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8e0226200>
+2026-11-20T21:36:48.0020634Z   pass
+2026-11-20T21:36:48.0021657Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0023402Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8e00acf40>
+2026-11-20T21:36:48.0025063Z   pass
+2026-11-20T21:36:48.0025857Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0027425Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8e00ad030>
+2026-11-20T21:36:48.0028811Z   pass
+2026-11-20T21:36:48.0029604Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0031527Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8e00ad120>
+2026-11-20T21:36:48.0033062Z   pass
+2026-11-20T21:36:48.0034440Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0036126Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8e00ad210>
+2026-11-20T21:36:48.0037539Z   pass
+2026-11-20T21:36:48.0038309Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0039984Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8e00ad300>
+2026-11-20T21:36:48.0041694Z   pass
+2026-11-20T21:36:48.0042453Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0044117Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8e00ad3f0>
+2026-11-20T21:36:48.0045501Z   pass
+2026-11-20T21:36:48.0046299Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0047986Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8e00ad4e0>
+2026-11-20T21:36:48.0049431Z   pass
+2026-11-20T21:36:48.0050238Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0052130Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8e00ad5d0>
+2026-11-20T21:36:48.0053579Z   pass
+2026-11-20T21:36:48.0054382Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0056044Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8e00ad6c0>
+2026-11-20T21:36:48.0057510Z   pass
+2026-11-20T21:36:48.0058324Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0060030Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8e00ad7b0>
+2026-11-20T21:36:48.0061698Z   pass
+2026-11-20T21:36:48.0062483Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0064116Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8e00ad8a0>
+2026-11-20T21:36:48.0065567Z   pass
+2026-11-20T21:36:48.0066317Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0068060Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8e00ad990>
+2026-11-20T21:36:48.0069486Z   pass
+2026-11-20T21:36:48.0070231Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0072081Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8e00adb70>
+2026-11-20T21:36:48.0073998Z   pass
+2026-11-20T21:36:48.0074804Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0076468Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8e00ada80>
+2026-11-20T21:36:48.0077890Z   pass
+2026-11-20T21:36:48.0078682Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0080358Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8e00adc60>
+2026-11-20T21:36:48.0082002Z   pass
+2026-11-20T21:36:48.0082786Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0084648Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8e00add50>
+2026-11-20T21:36:48.0086096Z   pass
+2026-11-20T21:36:48.0086902Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0088571Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8e00ade40>
+2026-11-20T21:36:48.0089987Z   pass
+2026-11-20T21:36:48.0090780Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0092729Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8e00adf30>
+2026-11-20T21:36:48.0094179Z   pass
+2026-11-20T21:36:48.0095008Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0096692Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8e00ae020>
+2026-11-20T21:36:48.0098150Z   pass
+2026-11-20T21:36:48.0098971Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0100635Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8e00ae110>
+2026-11-20T21:36:48.0102275Z   pass
+2026-11-20T21:36:48.0103053Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0104674Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8e00ae200>
+2026-11-20T21:36:48.0106037Z   pass
+2026-11-20T21:36:48.0106787Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0108379Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8e00ae2f0>
+2026-11-20T21:36:48.0109755Z   pass
+2026-11-20T21:36:48.0110529Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0112389Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8e00ae3e0>
+2026-11-20T21:36:48.0113750Z   pass
+2026-11-20T21:36:48.0114516Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0116167Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8e00ae4d0>
+2026-11-20T21:36:48.0117539Z   pass
+2026-11-20T21:36:48.0118311Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0119901Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8e00ae5c0>
+2026-11-20T21:36:48.0121656Z   pass
+2026-11-20T21:36:48.0122521Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0124366Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8e00ae6b0>
+2026-11-20T21:36:48.0125750Z   pass
+2026-11-20T21:36:48.0126543Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0128162Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8e00ae7a0>
+2026-11-20T21:36:48.0129555Z   pass
+2026-11-20T21:36:48.0130299Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0132101Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8e00ae890>
+2026-11-20T21:36:48.0133470Z   pass
+2026-11-20T21:36:48.0134224Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0136139Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8e00ae980>
+2026-11-20T21:36:48.0137599Z   pass
+2026-11-20T21:36:48.0138405Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0140057Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8e00aea70>
+2026-11-20T21:36:48.0141653Z   pass
+2026-11-20T21:36:48.0142417Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0144002Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8e00aec50>
+2026-11-20T21:36:48.0145420Z   pass
+2026-11-20T21:36:48.0146229Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0147902Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8e00aed40>
+2026-11-20T21:36:48.0149356Z   pass
+2026-11-20T21:36:48.0150102Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0151926Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8e00aeb60>
+2026-11-20T21:36:48.0153313Z   pass
+2026-11-20T21:36:48.0154143Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0155853Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8e00aef20>
+2026-11-20T21:36:48.0157224Z   pass
+2026-11-20T21:36:48.0157988Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0159754Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8e00af010>
+2026-11-20T21:36:48.0161380Z   pass
+2026-11-20T21:36:48.0162162Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0163758Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8e00af100>
+2026-11-20T21:36:48.0165168Z   pass
+2026-11-20T21:36:48.0165959Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0167626Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8e00af1f0>
+2026-11-20T21:36:48.0169068Z   pass
+2026-11-20T21:36:48.0169888Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0171742Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8e00aee30>
+2026-11-20T21:36:48.0173478Z   pass
+2026-11-20T21:36:48.0174308Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0175979Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8e00af2e0>
+2026-11-20T21:36:48.0177431Z   pass
+2026-11-20T21:36:48.0178225Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0179827Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8e00af3d0>
+2026-11-20T21:36:48.0181421Z   pass
+2026-11-20T21:36:48.0182186Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0183824Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8e00af4c0>
+2026-11-20T21:36:48.0185504Z   pass
+2026-11-20T21:36:48.0186365Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0188029Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8e00af5b0>
+2026-11-20T21:36:48.0189479Z   pass
+2026-11-20T21:36:48.0190294Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0192220Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8e00af6a0>
+2026-11-20T21:36:48.0193656Z   pass
+2026-11-20T21:36:48.0194434Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0196096Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8e00afa60>
+2026-11-20T21:36:48.0197552Z   pass
+2026-11-20T21:36:48.0198375Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0200049Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8e00afb50>
+2026-11-20T21:36:48.0201778Z   pass
+2026-11-20T21:36:48.0202604Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0204282Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8dfe70130>
+2026-11-20T21:36:48.0205728Z   pass
+2026-11-20T21:36:48.0206619Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0208533Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8dfe70220>
+2026-11-20T21:36:48.0210097Z   pass
+2026-11-20T21:36:48.0210931Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0212897Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8dfe70310>
+2026-11-20T21:36:48.0214326Z   pass
+2026-11-20T21:36:48.0215087Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0216696Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8dfe70400>
+2026-11-20T21:36:48.0218125Z   pass
+2026-11-20T21:36:48.0218892Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0220524Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8dfe704f0>
+2026-11-20T21:36:48.0222215Z   pass
+2026-11-20T21:36:48.0223055Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0225233Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8dfe705e0>
+2026-11-20T21:36:48.0226683Z   pass
+2026-11-20T21:36:48.0227510Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0229208Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8dfe706d0>
+2026-11-20T21:36:48.0230690Z   pass
+2026-11-20T21:36:48.0231748Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0233461Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8dfe708b0>
+2026-11-20T21:36:48.0234881Z   pass
+2026-11-20T21:36:48.0235693Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0237594Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8dfe709a0>
+2026-11-20T21:36:48.0239051Z   pass
+2026-11-20T21:36:48.0239825Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0241740Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8e00afc40>
+2026-11-20T21:36:48.0243203Z   pass
+2026-11-20T21:36:48.0243959Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0245534Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8dfe70a90>
+2026-11-20T21:36:48.0246898Z   pass
+2026-11-20T21:36:48.0247647Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0249327Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8dfe70b80>
+2026-11-20T21:36:48.0250769Z   pass
+2026-11-20T21:36:48.0251755Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0253419Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8dfe70c70>
+2026-11-20T21:36:48.0254815Z   pass
+2026-11-20T21:36:48.0255583Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0257168Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8dfe70d60>
+2026-11-20T21:36:48.0258501Z   pass
+2026-11-20T21:36:48.0259164Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0260732Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8dfe70e50>
+2026-11-20T21:36:48.0262456Z   pass
+2026-11-20T21:36:48.0263164Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0264683Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8dfe70f40>
+2026-11-20T21:36:48.0265975Z   pass
+2026-11-20T21:36:48.0266676Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0268185Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8dfe71030>
+2026-11-20T21:36:48.0269471Z   pass
+2026-11-20T21:36:48.0270166Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0271906Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8dfe71120>
+2026-11-20T21:36:48.0273527Z   pass
+2026-11-20T21:36:48.0274344Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0275919Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8dfe71210>
+2026-11-20T21:36:48.0277247Z   pass
+2026-11-20T21:36:48.0277978Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0279596Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8dfe71300>
+2026-11-20T21:36:48.0281306Z   pass
+2026-11-20T21:36:48.0282221Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0283928Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8dfe713f0>
+2026-11-20T21:36:48.0285387Z   pass
+2026-11-20T21:36:48.0286464Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0288193Z /opt/hostedtoolcache/Python/3.13.18/x64/lib/python3.13/functools.py:55: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x7fd8dfe714e0>
+2026-11-20T21:36:48.0289664Z   pass
+2026-11-20T21:36:48.0290487Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
+2026-11-20T21:36:48.0321944Z ok
+2026-11-20T21:36:48.0323186Z test_repository_permissions_denied (integrations.chatgpt.test_host_autonomy.BrokerTests.test_repository_permissions_denied) ... ok
+2026-11-20T21:36:48.0325186Z test_stale_pr_and_not_draft (integrations.chatgpt.test_host_autonomy.BrokerTests.test_stale_pr_and_not_draft) ... ok
+2026-11-20T21:36:48.0326963Z test_unauthorized_file_path (integrations.chatgpt.test_host_autonomy.BrokerTests.test_unauthorized_file_path) ... ok
+2026-11-20T21:36:48.0328974Z test_unsupported_cas_denied_without_retry (integrations.chatgpt.test_host_autonomy.BrokerTests.test_unsupported_cas_denied_without_retry) ... ok
+2026-11-20T21:36:48.0330988Z test_absent_service_fails_closed (integrations.chatgpt.test_host_autonomy.LauncherTests.test_absent_service_fails_closed) ... ok
+2026-11-20T21:36:48.0333194Z test_bounded_repair_controller (integrations.chatgpt.test_host_autonomy.LauncherTests.test_bounded_repair_controller) ... ok
+2026-11-20T21:36:48.0334922Z test_forged_signer (integrations.chatgpt.test_host_autonomy.LauncherTests.test_forged_signer) ... ok
+2026-11-20T21:36:48.0336602Z test_fresh_review_context_mock_only (integrations.chatgpt.test_host_autonomy.LauncherTests.test_fresh_review_context_mock_only) ... ok
+2026-11-20T21:36:48.0338602Z test_injected_model_output_cannot_approve (integrations.chatgpt.test_host_autonomy.LauncherTests.test_injected_model_output_cannot_approve) ... ok
+2026-11-20T21:36:48.0340556Z test_mock_attested_writer (integrations.chatgpt.test_host_autonomy.LauncherTests.test_mock_attested_writer) ... ok
+2026-11-20T21:36:48.0342537Z test_nonce_replay (integrations.chatgpt.test_host_autonomy.LauncherTests.test_nonce_replay) ... ok
+2026-11-20T21:36:48.0344450Z test_provider_timeout_is_unknown_not_retried (integrations.chatgpt.test_host_autonomy.LauncherTests.test_provider_timeout_is_unknown_not_retried) ... ok
+2026-11-20T21:36:48.0346569Z test_reader_requires_distinct_context (integrations.chatgpt.test_host_autonomy.LauncherTests.test_reader_requires_distinct_context) ... ok
+2026-11-20T21:36:48.0348501Z test_repo_actor_substitution (integrations.chatgpt.test_host_autonomy.LauncherTests.test_repo_actor_substitution) ... ok
+2026-11-20T21:36:48.0350353Z test_review_without_author_proof (integrations.chatgpt.test_host_autonomy.LauncherTests.test_review_without_author_proof) ... ok
+2026-11-20T21:36:48.0352548Z test_spoofed_context_metadata (integrations.chatgpt.test_host_autonomy.LauncherTests.test_spoofed_context_metadata) ... ok
+2026-11-20T21:36:48.0354413Z test_stale_evidence_rejected (integrations.chatgpt.test_host_autonomy.LauncherTests.test_stale_evidence_rejected) ... ok
+2026-11-20T21:36:48.0356804Z test_untrusted_result_cannot_override_signed_sha (integrations.chatgpt.test_host_autonomy.LauncherTests.test_untrusted_result_cannot_override_signed_sha) ... ok
+2026-11-20T21:36:48.0359153Z test_wrong_repository_metadata (integrations.chatgpt.test_host_autonomy.LauncherTests.test_wrong_repository_metadata) ... ok
+2026-11-20T21:36:48.0361381Z test_notion_mock_session_contract (integrations.chatgpt.test_host_autonomy.ProviderTransportTests.test_notion_mock_session_contract) ... ok
+2026-11-20T21:36:48.0363464Z test_notion_requires_entitlement (integrations.chatgpt.test_host_autonomy.ProviderTransportTests.test_notion_requires_entitlement) ... ok
+2026-11-20T21:36:48.0365411Z test_openai_paid_default_denied (integrations.chatgpt.test_host_autonomy.ProviderTransportTests.test_openai_paid_default_denied) ... ok
+2026-11-20T21:36:48.0367511Z test_openai_provider_no_tool_authority (integrations.chatgpt.test_host_autonomy.ProviderTransportTests.test_openai_provider_no_tool_authority) ... ok
+2026-11-20T21:36:48.0370105Z test_openai_real_https_contract_mock_transport (integrations.chatgpt.test_host_autonomy.ProviderTransportTests.test_openai_real_https_contract_mock_transport) ... ok
+2026-11-20T21:36:48.0371729Z 
+2026-11-20T21:36:48.0372122Z ======================================================================
+2026-11-20T21:36:48.0373375Z ERROR: test_disabled_default_boundary (integrations.chatgpt.test_host_autonomy.BrokerTests.test_disabled_default_boundary)
+2026-11-20T21:36:48.0374746Z ----------------------------------------------------------------------
+2026-11-20T21:36:48.0375609Z Traceback (most recent call last):
+2026-11-20T21:36:48.0385722Z   File "/tmp/forge-r2-r8fmoxqq/candidate/integrations/chatgpt/test_host_autonomy.py", line 132, in test_disabled_default_boundary
+2026-11-20T21:36:48.0387456Z     with self.assertRaisesRegex(Denied,"HOST_MEDIATION_NOT_ACTIVE"):b.execute()
+2026-11-20T21:36:48.0388524Z                                                                     ~~~~~~~~~^^
+2026-11-20T21:36:48.0390279Z TypeError: ScopedBroker.execute() missing 12 required keyword-only arguments: 'packet', 'nonce', 'worker', 'paths', 'expected', 'target', 'tree', 'actor', 'repository', 'head', 'pr', and 'mutate'
+2026-11-20T21:36:48.0392102Z 
+2026-11-20T21:36:48.0392562Z ----------------------------------------------------------------------
+2026-11-20T21:36:48.0393356Z Ran 39 tests in 0.589s
+2026-11-20T21:36:48.0393804Z 
+2026-11-20T21:36:48.0394141Z FAILED (errors=1)
+2026-11-20T21:36:48.0394549Z 
+2026-11-20T21:36:50.8377336Z package-build-1 exit 0 sha256 22ff548962982336edd7e85af46c4060b6e75b36e23b7ad2103d717c907d21d9
+2026-11-20T21:36:50.8384850Z 0c2754ae079e96e97f03817cf6a558f24f28e3e83b3cbac545ef86132bf4c348 /home/runner/work/_temp/forge-evidence/candidate-1.zip
+2026-11-20T21:36:50.8385959Z 
+2026-11-20T21:36:53.5874509Z package-build-2 exit 0 sha256 d13318785556b5466f1408a97e1a01a164147c118ea14c94037c28916d603db1
+2026-11-20T21:36:53.5882780Z 0c2754ae079e96e97f03817cf6a558f24f28e3e83b3cbac545ef86132bf4c348 /home/runner/work/_temp/forge-evidence/candidate-2.zip
+2026-11-20T21:36:53.5891969Z 
+2026-11-20T21:36:53.7825994Z package-audit exit 0 sha256 7178dd124902ba47fe19a46b6f2e3ccb4b507d0bcdd8c3a8c1dac2e896ae1d8e
+2026-11-20T21:36:53.7845639Z [
+2026-11-20T21:36:53.7852153Z   {
+2026-11-20T21:36:53.7852690Z     "test": "reproducible",
+2026-11-20T21:36:53.7853352Z     "pass": true,
+2026-11-20T21:36:53.7854218Z     "detail": "0c2754ae079e96e97f03817cf6a558f24f28e3e83b3cbac545ef86132bf4c348"
+2026-11-20T21:36:53.7855147Z   },
+2026-11-20T21:36:53.7855673Z   {
+2026-11-20T21:36:53.7856255Z     "test": "archive safe unique paths",
+2026-11-20T21:36:53.7856981Z     "pass": true,
+2026-11-20T21:36:53.7857549Z     "detail": null
+2026-11-20T21:36:53.7858091Z   },
+2026-11-20T21:36:53.7858582Z   {
+2026-11-20T21:36:53.7859086Z     "test": "zip CRC",
+2026-11-20T21:36:53.7859673Z     "pass": true,
+2026-11-20T21:36:53.7860246Z     "detail": null
+2026-11-20T21:36:53.7860790Z   },
+2026-11-20T21:36:53.7861524Z   {
+2026-11-20T21:36:53.7862485Z     "test": "exact inventory and candidate pin",
+2026-11-20T21:36:53.7863222Z     "pass": true,
+2026-11-20T21:36:53.7863775Z     "detail": {
+2026-11-20T21:36:53.7864344Z       "canonical": 1489,
+2026-11-20T21:36:53.7864929Z       "port": 13
+2026-11-20T21:36:53.7865463Z     }
+2026-11-20T21:36:53.7865933Z   },
+2026-11-20T21:36:53.7866400Z   {
+2026-11-20T21:36:53.7866981Z     "test": "all git blobs, modes and manifest hashes match",
+2026-11-20T21:36:53.7867706Z     "pass": true,
+2026-11-20T21:36:53.7868232Z     "detail": []
+2026-11-20T21:36:53.7868791Z   },
+2026-11-20T21:36:53.7869331Z   {
+2026-11-20T21:36:53.7869962Z     "test": "native projections exactly canonical",
+2026-11-20T21:36:53.7870723Z     "pass": true,
+2026-11-20T21:36:53.7871614Z     "detail": []
+2026-11-20T21:36:53.7872162Z   },
+2026-11-20T21:36:53.7872686Z   {
+2026-11-20T21:36:53.7873484Z     "test": "legacy routes",
+2026-11-20T21:36:53.7874229Z     "pass": true,
+2026-11-20T21:36:53.7874798Z     "detail": []
+2026-11-20T21:36:53.7875368Z   },
+2026-11-20T21:36:53.7876135Z   {
+2026-11-20T21:36:53.7876839Z     "test": "all 10 persona and legacy alias targets resolve",
+2026-11-20T21:36:53.7877638Z     "pass": true,
+2026-11-20T21:36:53.7878197Z     "detail": []
+2026-11-20T21:36:53.7878709Z   },
+2026-11-20T21:36:53.7879200Z   {
+2026-11-20T21:36:53.7879723Z     "test": "collision precedence",
+2026-11-20T21:36:53.7880381Z     "pass": true,
+2026-11-20T21:36:53.7880961Z     "detail": null
+2026-11-20T21:36:53.7881821Z   },
+2026-11-20T21:36:53.7882325Z   {
+2026-11-20T21:36:53.7882883Z     "test": "native skill names",
+2026-11-20T21:36:53.7883518Z     "pass": true,
+2026-11-20T21:36:53.7884052Z     "detail": {
+2026-11-20T21:36:53.7884593Z       "count": 60,
+2026-11-20T21:36:53.7885145Z       "mismatch": []
+2026-11-20T21:36:53.7885702Z     }
+2026-11-20T21:36:53.7886212Z   },
+2026-11-20T21:36:53.7886698Z   {
+2026-11-20T21:36:53.7887254Z     "test": "manifest version and identity",
+2026-11-20T21:36:53.7887964Z     "pass": true,
+2026-11-20T21:36:53.7888530Z     "detail": null
+2026-11-20T21:36:53.7889072Z   },
+2026-11-20T21:36:53.7889555Z   {
+2026-11-20T21:36:53.7890084Z     "test": "no unmapped archive files",
+2026-11-20T21:36:53.7890736Z     "pass": true,
+2026-11-20T21:36:53.7891637Z     "detail": []
+2026-11-20T21:36:53.7892174Z   },
+2026-11-20T21:36:53.7892625Z   {
+2026-11-20T21:36:53.7893193Z     "test": "negative control tampering changes git blob",
+2026-11-20T21:36:53.7893871Z     "pass": true,
+2026-11-20T21:36:53.7894500Z     "detail": null
+2026-11-20T21:36:53.7895044Z   },
+2026-11-20T21:36:53.7895499Z   {
+2026-11-20T21:36:53.7896032Z     "test": "negative duplicate/traversal controls",
+2026-11-20T21:36:53.7896697Z     "pass": true,
+2026-11-20T21:36:53.7897196Z     "detail": null
+2026-11-20T21:36:53.7897675Z   }
+2026-11-20T21:36:53.7898116Z ]
+2026-11-20T21:36:53.7898453Z 
+2026-11-20T21:36:53.8508576Z ##[error]Process completed with exit code 1.
+2026-11-20T21:36:53.8613894Z ##[group]Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+2026-11-20T21:36:53.8614474Z with:
+2026-11-20T21:36:53.8614697Z   name: forge-r4-adapter-package-1
+2026-11-20T21:36:53.8615027Z   path: /home/runner/work/_temp/forge-evidence/
+2026-11-20T21:36:53.8615338Z   if-no-files-found: error
+2026-11-20T21:36:53.8615565Z   retention-days: 30
+2026-11-20T21:36:53.8615776Z   compression-level: 6
+2026-11-20T21:36:53.8615996Z   overwrite: false
+2026-11-20T21:36:53.8616208Z   include-hidden-files: false
+2026-11-20T21:36:53.8616436Z env:
+2026-11-20T21:36:53.8616627Z   PYTHONDONTWRITEBYTECODE: 1
+2026-11-20T21:36:53.8616928Z   pythonLocation: /opt/hostedtoolcache/Python/3.13.18/x64
+2026-11-20T21:36:53.8617358Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.13.18/x64/lib/pkgconfig
+2026-11-20T21:36:53.8617778Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.13.18/x64
+2026-11-20T21:36:53.8618148Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.13.18/x64
+2026-11-20T21:36:53.8618555Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.13.18/x64
+2026-11-20T21:36:53.8618930Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.13.18/x64/lib
+2026-11-20T21:36:53.8619460Z ##[endgroup]
+2026-11-20T21:36:54.0520014Z (node:5265) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-20T21:36:54.0521969Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-20T21:36:54.0757299Z With the provided path, there will be 15 files uploaded
+2026-11-20T21:36:54.0758501Z Artifact name is valid!
+2026-11-20T21:36:54.0759061Z Root directory input is valid!
+2026-11-20T21:36:54.7003207Z Beginning upload of artifact content to blob storage
+2026-11-20T21:36:54.9520462Z (node:5265) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-11-20T21:36:55.6873400Z Uploaded bytes 2649619
+2026-11-20T21:36:55.7680600Z Finished uploading artifact content to blob storage!
+2026-11-20T21:36:55.7696578Z SHA256 digest of uploaded artifact zip is 1a1e719da7aff2c6e287c50defadd141fc8e1d5417d8897d42c0074146283cf1
+2026-11-20T21:36:55.7697532Z Finalizing artifact upload
+2026-11-20T21:36:56.1773860Z Artifact forge-r4-adapter-package-1.zip successfully finalized. Artifact ID 14671037998
+2026-11-20T21:36:56.1775142Z Artifact forge-r4-adapter-package-1 has been successfully uploaded! Final size is 2649619 bytes. Artifact ID is 14671037998
+2026-11-20T21:36:56.1783534Z Artifact download URL: https://github.com/Kirjane/Operation-FORGE.kirion/actions/runs/44821827600/artifacts/14671037998
+2026-11-20T21:36:56.2110025Z Post job cleanup.
+2026-11-20T21:36:56.3172168Z [command]/usr/bin/git version
+2026-11-20T21:36:56.3259138Z git version 2.56.1
+2026-11-20T21:36:56.3339963Z Temporarily overriding HOME='/home/runner/work/_temp/dd684a4f-7dbd-4233-846e-f77a75a38d31' before making global git config changes
+2026-11-20T21:36:56.3344039Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-20T21:36:56.3348608Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Operation-FORGE.kirion/Operation-FORGE.kirion
+2026-11-20T21:36:56.3479485Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-20T21:36:56.3512717Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-20T21:36:56.4125918Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-20T21:36:56.4210854Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-20T21:36:56.4792413Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-20T21:36:56.4873013Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-20T21:36:56.5429488Z Cleaning up orphan processes
+2026-11-20T21:36:56.5793108Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@11d5960a326750d5838078e36cf38b85af677262, actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065, actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

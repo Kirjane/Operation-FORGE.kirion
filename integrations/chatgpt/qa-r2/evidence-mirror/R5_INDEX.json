@@ -1,0 +1,243 @@
+{
+  "schema": 1,
+  "mission": "FORGE-CHATGPT-INDEPENDENT-ENGINEERING-PILOT-R5",
+  "source_repo": "Kirjane/Operation-FORGE.kirion",
+  "baseline_sha": "0e8765de6e0e87ea9b4503714f08fa650e1a79c6",
+  "baseline_tree": "80eaa7a4f879871e5df533203b8b60b563f8b782",
+  "r5_source_sha": "2a5adf6f573f944d69e5afd97845cd280d7b564c",
+  "r5_source_tree": "07a73092439f46576f58d5aa570814e506f97bf7",
+  "qa_commit": "3d06d67275e1f2241188e37f54e0a30ea5526fc6",
+  "uninstalled_plugin_version": "0.3.0-rc.2",
+  "candidate_plugin_inner_zip_sha256": "7e433aca7b2b87764f4ba15c00ff3cc33754730f7f2107c5e912d5759f46f451",
+  "qa_outcomes": {
+    "jobs": "7/7 success",
+    "original_core_and_A_to_E": "baseline/candidate unchanged; all six comparative jobs PASS",
+    "node_adapter": "31/31",
+    "python_bridge": "6/6",
+    "r4_host": "46/46",
+    "r5_pipeline": "44/44",
+    "r5_host_edges": "13/13",
+    "package_audit": "14/14",
+    "candidate_builds": "2/2 reproducible"
+  },
+  "source_custody": {
+    "inherited_upstream_blobs_and_modes_unchanged": 1489,
+    "modified_paths": "30 under integrations/chatgpt only"
+  },
+  "run_artifacts": [
+    {
+      "id": 44826049789,
+      "qa_sha": "e5f84ac6b6c6bac416b8f58b81fdc7e021db985c",
+      "conclusion": "success",
+      "source_candidate_sha": "9143b246f8d7c2793b6dbcac436e596a32fb0f4f",
+      "url": "https://github.com/Kirjane/Operation-FORGE.kirion/actions/runs/44826049789",
+      "artifacts": [
+        {
+          "id": 14674835157,
+          "name": "forge-r4-E-1",
+          "sha256": "sha256:1318d173761f4a56fee636f5880abc6e417dba52f920451a9605da117eb8ba43",
+          "expires_at": "2026-12-20T22:07:01Z"
+        },
+        {
+          "id": 14674561143,
+          "name": "forge-r4-C-1",
+          "sha256": "sha256:82271f7f27bbc0f41ca8b8653f40a8b75dc993ad35437a0c2c56df25188a93e5",
+          "expires_at": "2026-12-20T22:06:26Z"
+        },
+        {
+          "id": 14674352040,
+          "name": "forge-r4-D-1",
+          "sha256": "sha256:30b73dba42b3b22563b91fa4469b8196a144fc9cee1e533c1ffa4cd89f2c7e82",
+          "expires_at": "2026-12-20T22:06:47Z"
+        },
+        {
+          "id": 14674306074,
+          "name": "forge-r4-core-1",
+          "sha256": "sha256:2f80452b228acbe89fd7c31472227d9c191319e276225e3302d266bfc92a2f81",
+          "expires_at": "2026-12-20T22:06:08Z"
+        },
+        {
+          "id": 14673129858,
+          "name": "forge-r4-B-1",
+          "sha256": "sha256:2604424f3e32e7b7d9ea323ea0a1cbb0179d95023fc8dca6e0ff1603faefc167",
+          "expires_at": "2026-12-20T22:06:58Z"
+        },
+        {
+          "id": 14673004839,
+          "name": "forge-r4-adapter-package-1",
+          "sha256": "sha256:c5b8e7f878c362f2efc45d236a5938c69630d517bd327827bbaf80007a64990d",
+          "expires_at": "2026-12-20T22:06:21Z"
+        },
+        {
+          "id": 14672919456,
+          "name": "forge-r4-A-1",
+          "sha256": "sha256:285fc91d544f0f10ec8744119b24040d374d9c49f5abcfe82bc452c8160a24e0",
+          "expires_at": "2026-12-20T22:06:13Z"
+        }
+      ]
+    },
+    {
+      "id": 44827130032,
+      "qa_sha": "762ec04563a3987a2f6e59f3f23a9dcb412378bc",
+      "conclusion": "failure",
+      "source_candidate_sha": "7a46108757dcbf63f41bc5113e064c9c157d6a59",
+      "url": "https://github.com/Kirjane/Operation-FORGE.kirion/actions/runs/44827130032",
+      "artifacts": [
+        {
+          "id": 14675190650,
+          "name": "forge-r4-B-1",
+          "sha256": "sha256:ee3c53cfc3268111dae7b033c6c4d0eae41b44f326340d4c61f64e0ac51eadb5",
+          "expires_at": "2026-12-20T22:14:03Z"
+        },
+        {
+          "id": 14674946076,
+          "name": "forge-r4-A-1",
+          "sha256": "sha256:ae9fc79bf0f62ce9f5ba0de976d2311a82d14754b0cec647f9abe36bab27f651",
+          "expires_at": "2026-12-20T22:13:35Z"
+        },
+        {
+          "id": 14674306921,
+          "name": "forge-r4-D-1",
+          "sha256": "sha256:d9d2b82f0fed9739071bfe91ab4e6c4f31052ae13b9fa0dcbf57840ddf6d0d5c",
+          "expires_at": "2026-12-20T22:14:04Z"
+        },
+        {
+          "id": 14674263901,
+          "name": "forge-r4-core-1",
+          "sha256": "sha256:28bf7ea85bc05cb023b84fe52b36ba05428b6fa7a15fa10d49155a78121f21b7",
+          "expires_at": "2026-12-20T22:13:33Z"
+        },
+        {
+          "id": 14673864185,
+          "name": "forge-r4-C-1",
+          "sha256": "sha256:eb03c309e684daa082b05762e232997eb6859489bf169c4577da83e61794e0f2",
+          "expires_at": "2026-12-20T22:13:46Z"
+        },
+        {
+          "id": 14673564424,
+          "name": "forge-r4-adapter-package-1",
+          "sha256": "sha256:502e643addb82559fcd293cd07e28c95e7f655bb06ece9ce7b755e43e67561f6",
+          "expires_at": "2026-12-20T22:13:49Z"
+        },
+        {
+          "id": 14673479536,
+          "name": "forge-r4-E-1",
+          "sha256": "sha256:0ae1d2c3fd987ff9d07eedba423cccdd7d4268626675df98a5fbda1a0325dcf4",
+          "expires_at": "2026-12-20T22:14:18Z"
+        }
+      ]
+    },
+    {
+      "id": 44827451748,
+      "qa_sha": "3d06d67275e1f2241188e37f54e0a30ea5526fc6",
+      "conclusion": "success",
+      "source_candidate_sha": "2a5adf6f573f944d69e5afd97845cd280d7b564c",
+      "url": "https://github.com/Kirjane/Operation-FORGE.kirion/actions/runs/44827451748",
+      "artifacts": [
+        {
+          "id": 14675270993,
+          "name": "forge-r4-C-1",
+          "sha256": "sha256:e315aa7ad68603be5d4c11bcae34c0220c46ba74d8a7baeb5128c277f8329597",
+          "expires_at": "2026-12-20T22:16:08Z"
+        },
+        {
+          "id": 14675151197,
+          "name": "forge-r4-B-1",
+          "sha256": "sha256:d8461f64013a86458c549acdf09f71cef99aa46f51f9a59d2f3954f3d6036aa3",
+          "expires_at": "2026-12-20T22:16:37Z"
+        },
+        {
+          "id": 14675096041,
+          "name": "forge-r4-core-1",
+          "sha256": "sha256:f03c8d971ccae3b381ddbbef02e36777fb25d96a77c8a9e48d22328c3b345eeb",
+          "expires_at": "2026-12-20T22:15:45Z"
+        },
+        {
+          "id": 14675011437,
+          "name": "forge-r4-E-1",
+          "sha256": "sha256:958f4693e499a6a72a81e34abd42d5dd5c5e36d6c609db806066b770d9361593",
+          "expires_at": "2026-12-20T22:16:43Z"
+        },
+        {
+          "id": 14674652461,
+          "name": "forge-r4-A-1",
+          "sha256": "sha256:8bada8e314b521a80a704b1600cf46bbd7c6682281d2d4919839892d11b53f3c",
+          "expires_at": "2026-12-20T22:15:56Z"
+        },
+        {
+          "id": 14674417938,
+          "name": "forge-r4-D-1",
+          "sha256": "sha256:5dff0312de6899eb48f4129941f5ee342f2590767543a8103ba95e6b65e9b42b",
+          "expires_at": "2026-12-20T22:16:30Z"
+        },
+        {
+          "id": 14673454950,
+          "name": "forge-r4-adapter-package-1",
+          "sha256": "sha256:e9bcf3c1137befb2985fdd5dbe92c54bee9f436dc09e86cea3586483a58e7650",
+          "expires_at": "2026-12-20T22:15:58Z"
+        }
+      ]
+    }
+  ],
+  "mirrored_git_logs": [
+    {
+      "path": "integrations/chatgpt/qa-r2/evidence-mirror/r5/44826049789/r5-first-green-adapter.log",
+      "git_blob_sha1": "66a9901a0cad71cbfb01da81090049bd9ad47b24",
+      "size_bytes": 50752,
+      "mode": "100644"
+    },
+    {
+      "path": "integrations/chatgpt/qa-r2/evidence-mirror/r5/44827130032/r5-replay-negative-red-adapter.log",
+      "git_blob_sha1": "fa425f5e14af22490e3d3af751ee48257f3c091e",
+      "size_bytes": 55333,
+      "mode": "100644"
+    },
+    {
+      "path": "integrations/chatgpt/qa-r2/evidence-mirror/r5/44827451748/A.log",
+      "git_blob_sha1": "aae0bc55c8f618022aabca2f4c71aa5f20c6ae42",
+      "size_bytes": 80230,
+      "mode": "100644"
+    },
+    {
+      "path": "integrations/chatgpt/qa-r2/evidence-mirror/r5/44827451748/B.log",
+      "git_blob_sha1": "ea04c671238fae233f72b12dffc16ba82a1a1197",
+      "size_bytes": 30261,
+      "mode": "100644"
+    },
+    {
+      "path": "integrations/chatgpt/qa-r2/evidence-mirror/r5/44827451748/C.log",
+      "git_blob_sha1": "473fdf86573034e34c9e9c775c45acc5c6f3f771",
+      "size_bytes": 21803,
+      "mode": "100644"
+    },
+    {
+      "path": "integrations/chatgpt/qa-r2/evidence-mirror/r5/44827451748/D.log",
+      "git_blob_sha1": "3aa30d7a4e115bd73e057b1f794b345ef3642790",
+      "size_bytes": 21804,
+      "mode": "100644"
+    },
+    {
+      "path": "integrations/chatgpt/qa-r2/evidence-mirror/r5/44827451748/E.log",
+      "git_blob_sha1": "21889af19969e9af5ca6a54c019d822ef05c1bef",
+      "size_bytes": 21830,
+      "mode": "100644"
+    },
+    {
+      "path": "integrations/chatgpt/qa-r2/evidence-mirror/r5/44827451748/core.log",
+      "git_blob_sha1": "98c6bebfa0e7a55a8cc5ac724f2ef5b4a4a72e75",
+      "size_bytes": 26551,
+      "mode": "100644"
+    },
+    {
+      "path": "integrations/chatgpt/qa-r2/evidence-mirror/r5/44827451748/r5-final-adapter.log",
+      "git_blob_sha1": "f3e10ae82cfb4576f6c08e851e2dfefdac993fff",
+      "size_bytes": 54513,
+      "mode": "100644"
+    }
+  ],
+  "red_green_history": "44826049789 7/7 first 39-test pass; 44827130032 6/6 comparative success, adapter fails from stronger durable nonce replay old test expectation; 44827451748 fully green. Failure preserved.",
+  "privacy": "GitHub Action logs from no-secrets, no-client-data QA runner, token/email/bearer patterns redacted before Git commit; SHA1 Git blob digest authenticates stored sanitized text; raw original artifacts retain separate provider-signed SHA256 digests.",
+  "storage_limit": "Git mirror in same private repository is durable while branch lives, NOT independent off-GitHub backup. Original Actions artifacts expire around 2026-12-20T22:16Z; download authorized backup separately before expiry if needed.",
+  "qualifier": "G13 independent engineering model context, deployed host credential mediation, native plugin activation and genuine separate Nox review remain BLOCKED/NOT_RUN. Mock independent-looking response IDs and signed test receipts are never accepted as genuine provider isolation.",
+  "production": "PR #16 open draft unmerged, installed plugin v0.2.0 unchanged, no paid model/API call, deployment, release or production promote"
+}

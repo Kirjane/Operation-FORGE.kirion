@@ -1,0 +1,96 @@
+{
+  "mission": "FORGE-CHATGPT-HOST-AUTONOMY-QUALIFICATION-R4",
+  "qualified_on": "2026-11-21 Asia/Manila",
+  "qualification_kind": "first_party_tool_capability_inventory_plus_external_official_API_docs",
+  "requirement": "Callable engineering model context from same ChatGPT conversation AND attested independent model boundary",
+  "surfaces": [
+    {
+      "surface": "ChatGPT native subagent launcher",
+      "api": "NONE_EXPOSED_IN_CURRENT_TOOL_CATALOG",
+      "same_operator_callable": false,
+      "model_context": false,
+      "status": "NOT_AVAILABLE",
+      "proof": "ALL_TOOLS name+description inventory; no launch/subagent API",
+      "cost": "unknown"
+    },
+    {
+      "surface": "Notion Custom Agents MCP",
+      "api": [
+        "mcp__Notion__notion_search_agents",
+        "mcp__Notion__notion_spawn_session",
+        "mcp__Notion__notion_wait_session"
+      ],
+      "same_operator_callable": true,
+      "model_context": "yes_if_entitled_and_published_agent",
+      "status": "BLOCKED_ENTITLEMENT",
+      "proof": "R3 live search_agents returned entitlement_required / Business plan or higher; https://www.notion.com/help/custom-agents",
+      "cost": "Business/Enterprise access; Notion credits may apply"
+    },
+    {
+      "surface": "OpenAI Responses API",
+      "api": "POST https://api.openai.com/v1/responses",
+      "same_operator_callable": "NO_DIRECT_AUTHORIZED_TOOL; implement transport for later host bridge",
+      "model_context": "separate provider response when activated; no native tool grants",
+      "status": "BLOCKED_PAID_PROVIDER_CREDENTIAL",
+      "proof": "https://developers.openai.com/api/reference/resources/responses/methods/create",
+      "cost": "metered API; not authorized"
+    },
+    {
+      "surface": "GitHub Actions",
+      "api": [
+        "mcp__GitHub__update_ref",
+        "mcp__GitHub__fetch_workflow_run_jobs"
+      ],
+      "same_operator_callable": true,
+      "model_context": false,
+      "status": "AVAILABLE_DETERMINISTIC_EXECUTOR",
+      "proof": "run 44821827600; did not invoke an AI provider",
+      "cost": "repository runner quota"
+    },
+    {
+      "surface": "Vercel Sandbox",
+      "api": "mcp__Vercel__run_session_command",
+      "same_operator_callable": "conditional_on_sandbox",
+      "model_context": false,
+      "status": "PROCESS_ONLY_NO_MODEL_PROOF",
+      "proof": "tool contract available",
+      "cost": "possible resource charges; no deployment authorized"
+    },
+    {
+      "surface": "ChatGPT Automations",
+      "api": "mcp__Automations__run_now",
+      "same_operator_callable": "only existing enabled saved task; may inline",
+      "model_context": "not guaranteed, not arbitrary launcher",
+      "status": "NOT_QUALIFIED_FOR_MISSION_DISPATCH",
+      "proof": "tool description explicitly run existing saved prompt or inline_run",
+      "cost": "plan-limited"
+    },
+    {
+      "surface": "ChatGPT Plugin Creator",
+      "api": [
+        "mcp__Plugin_Creator__get_plugin_files",
+        "mcp__Plugin_Creator__update_plugin"
+      ],
+      "same_operator_callable": true,
+      "model_context": false,
+      "status": "SOURCE_READ_ONLY_NO_ACTIVATION",
+      "proof": "installed v0.2.0 release pluginrel_6b00a5a14fd08191a3862a52ac2591d0; no update authorized",
+      "cost": "unknown"
+    },
+    {
+      "surface": "Figma Weave AI",
+      "api": "mcp__Figma__weave_run_model",
+      "same_operator_callable": "restricted to Weave model media predictions",
+      "model_context": "not engineering worker with GitHub delegation",
+      "status": "UNSUITABLE"
+    }
+  ],
+  "host_requirements": [
+    "Engineer approve and provision independent model provider with bounded budget OR eligible published Notion Custom Agents, with authorized tool-surface identity bindings",
+    "Run host service with exclusive writing credentials plus external attestation/HMAC key and shared durable SQLite or transactional database, not inside model prompt",
+    "Bind all GitHub mutations through service broker, revoke direct bypass routes for workers; verify repo_id, actor ID, branch CAS, ownership, lease, idempotency, and remote reconciliation",
+    "Authorize isolated test plugin/runtime activation separately for native loader, 32 canonical skills, persona precedence and API operation enforcement",
+    "Run disposable Jane -> verified independent Nox -> repair -> retest pilot, preserving production holds and accepting only by authorized independent authority"
+  ],
+  "evidence": "run 44821827600 failure-before; further repaired source exact SHA to be recorded"
+}

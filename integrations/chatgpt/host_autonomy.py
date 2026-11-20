@@ -9,6 +9,7 @@ import hmac
 import json
 import re
 import sqlite3
+from contextlib import contextmanager
 import time
 import urllib.request
 from pathlib import Path
@@ -88,12 +89,16 @@ class IsolatedOrchestrator:
               mission TEXT NOT NULL,persona TEXT NOT NULL,repo_id INTEGER NOT NULL,
               sha TEXT NOT NULL,state TEXT NOT NULL,
               provider_id TEXT,receipt TEXT NOT NULL DEFAULT '{}')""")
+    @contextmanager
     def connect(self):
         db=sqlite3.connect(self.path,isolation_level=None,timeout=15)
         db.row_factory=sqlite3.Row
         db.execute("PRAGMA journal_mode=WAL")
         db.execute("PRAGMA synchronous=FULL")
-        return db
+        try:
+            yield db
+        finally:
+            db.close()
     def launch(self,packet,*,repo_id,sha,nonce,expected_actor,previous_context=None,now=None):
         if not self.activated or self.transport is None:
             raise HostUnavailable("NO_AUTHORIZED_ISOLATED_MODEL_SERVICE")
@@ -122,17 +127,17 @@ class IsolatedOrchestrator:
         h=fingerprint(req)
         current=int(now if now is not None else time.time())
         with self.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
             old=db.execute("SELECT 1 FROM contexts WHERE nonce=?",(nonce,)).fetchone()
             if old:raise Denied("CONTEXT_NONCE_REPLAY")
             active=db.execute("SELECT COUNT(*) FROM contexts WHERE state='IN_FLIGHT'").fetchone()[0]
             if active>=2:raise Denied("MAX_THREE_INCLUDING_PRIMARY")
-            db.execute("BEGIN IMMEDIATE")
             db.execute("""INSERT INTO contexts(nonce,request_hash,mission,persona,repo_id,sha,state)
                           VALUES(?,?,?,?,?,?,'IN_FLIGHT')""",(nonce,h,packet["mission_id"],persona,repo_id,sha))
             db.execute("COMMIT")
         try:
             # Transport callable MUST be a trusted host bridge; never a model-generated JSON tool result.
-            received=self.transport(req)
+            received=self.transport(req) if callable(self.transport) else self.transport.launch(req)
             claims=received["host_claims"]
             signature=received["host_signature"]
             if not isinstance(claims,dict) or not isinstance(signature,str):

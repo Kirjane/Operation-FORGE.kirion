@@ -8,6 +8,7 @@ import hmac
 import json
 import re
 import sqlite3
+from contextlib import contextmanager
 from pathlib import Path
 from integrations.antigravity.factory.authority import verify_mission_packet, is_valid_git_sha
 from integrations.antigravity.factory.ownership import LeaseManager
@@ -44,12 +45,16 @@ class ScopedBroker:
             db.execute("""CREATE TABLE IF NOT EXISTS audit(
               seq INTEGER PRIMARY KEY AUTOINCREMENT,event TEXT NOT NULL,
               payload TEXT NOT NULL,prev TEXT NOT NULL,mac TEXT NOT NULL)""")
+    @contextmanager
     def connect(self):
         db=sqlite3.connect(self.path,isolation_level=None,timeout=15)
         db.row_factory=sqlite3.Row
         db.execute("PRAGMA journal_mode=WAL")
         db.execute("PRAGMA synchronous=FULL")
-        return db
+        try:
+            yield db
+        finally:
+            db.close()
     def log(self,db,event,payload):
         row=db.execute("SELECT mac FROM audit ORDER BY seq DESC LIMIT 1").fetchone()
         prev=row["mac"] if row else "0"*64

@@ -129,7 +129,8 @@ class BrokerTests(unittest.TestCase):
         self.assertFalse(self.broker.valid())
     def test_disabled_default_boundary(self):
         b=ScopedBroker(Path(self.temp.name)/"off.db",KEY,REPO,1377058358,BRANCH)
-        with self.assertRaisesRegex(Denied,"HOST_MEDIATION_NOT_ACTIVE"):b.execute()
+        self.broker.enabled=False
+        with self.assertRaisesRegex(Denied,"HOST_MEDIATION_NOT_ACTIVE"):self.call()
 
 class LauncherTests(unittest.TestCase):
     def setUp(self):

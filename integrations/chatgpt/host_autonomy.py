@@ -89,6 +89,8 @@ class IsolatedOrchestrator:
               mission TEXT NOT NULL,persona TEXT NOT NULL,repo_id INTEGER NOT NULL,
               sha TEXT NOT NULL,state TEXT NOT NULL,
               provider_id TEXT,receipt TEXT NOT NULL DEFAULT '{}')""")
+        with self.connect() as db:
+            db.execute("CREATE UNIQUE INDEX IF NOT EXISTS unique_host_context ON contexts(provider_id) WHERE provider_id IS NOT NULL")
     @contextmanager
     def connect(self):
         db=sqlite3.connect(self.path,isolation_level=None,timeout=15)
@@ -99,11 +101,38 @@ class IsolatedOrchestrator:
             yield db
         finally:
             db.close()
+    def valid_receipts(self):
+        """Verify signed service claims against materialized rows and canonical dispatch events."""
+        if not self.journal.verify_hash_chain():return False
+        try:
+            with self.connect() as db:
+                rows=list(db.execute("SELECT * FROM contexts"))
+            completed={}
+            for row in rows:
+                if row["state"]=="COMPLETED":
+                    receipt=json.loads(row["receipt"])
+                    claims=receipt["claims"]; signature=receipt["signature"]
+                    if not isinstance(signature,str) or not hmac.compare_digest(
+                            hmac.new(self.key,encoded(claims),"sha256").hexdigest(),signature):
+                        return False
+                    if claims.get("context_id")!=row["provider_id"] or claims.get("request_sha256")!=row["request_hash"]:
+                        return False
+                    if claims.get("sha")!=row["sha"] or claims.get("persona")!=row["persona"] or claims.get("repo_id")!=row["repo_id"]:
+                        return False
+                    completed[(row["request_hash"],row["provider_id"])]=True
+                elif row["state"] not in ("IN_FLIGHT","UNKNOWN") or row["provider_id"] is not None:
+                    return False
+            canonical={(e["payload"]["dispatch_key"],e["payload"]["context_id"]) for e in self.journal.list_events()
+                       if e["event_type"]=="WORKER_DISPATCHED"}
+            return set(completed)==canonical
+        except (KeyError,TypeError,ValueError,sqlite3.DatabaseError):
+            return False
+
     def launch(self,packet,*,repo_id,sha,nonce,expected_actor,previous_context=None,now=None):
         if not self.activated or self.transport is None:
             raise HostUnavailable("NO_AUTHORIZED_ISOLATED_MODEL_SERVICE")
-        if not self.journal.verify_hash_chain():
-            raise Denied("CANONICAL_JOURNAL_INVALID")
+        if not self.valid_receipts():
+            raise Denied("SIGNED_CONTEXT_OR_CANONICAL_JOURNAL_INVALID")
         verify_mission_packet(packet,trusted_verifiers={
             "Engineer:Kirch-Ivan-Balite","Maintainer:Kirch-Nairu"})
         if type(repo_id)!=int or repo_id<1 or not is_valid_git_sha(sha):
@@ -176,5 +205,48 @@ class IsolatedOrchestrator:
             with self.connect() as db:
                 db.execute("UPDATE contexts SET state='UNKNOWN' WHERE nonce=? AND state='IN_FLIGHT'",(nonce,))
             raise
+    def reconcile_launch(self,packet,*,nonce,verified_receipt,previous_context=None,now=None):
+        """Recover a timed-out launch from a trusted service receipt; never re-invoke model."""
+        if not self.activated or not self.journal.verify_hash_chain():
+            raise Denied("RECOVERY_HOST_NOT_AUTHORIZED")
+        verify_mission_packet(packet,trusted_verifiers={
+            "Engineer:Kirch-Ivan-Balite","Maintainer:Kirch-Nairu"})
+        with self.connect() as db:
+            row=db.execute("SELECT * FROM contexts WHERE nonce=?",(nonce,)).fetchone()
+        if row is None or row["state"] not in ("UNKNOWN","IN_FLIGHT") or row["mission"]!=packet["mission_id"]:
+            raise Denied("NO_RECOVERABLE_CONTEXT")
+        if fingerprint(packet)=="" or not isinstance(verified_receipt,dict):
+            raise Denied("INVALID_RECOVERY_PACKET")
+        claims=verified_receipt.get("host_claims")
+        sig=verified_receipt.get("host_signature")
+        if not isinstance(claims,dict) or not isinstance(sig,str) or not hmac.compare_digest(
+                hmac.new(self.key,encoded(claims),"sha256").hexdigest(),sig):
+            raise Denied("RECOVERY_SIGNATURE_INVALID")
+        ctx=claims.get("context_id")
+        current=int(now if now is not None else time.time())
+        if not isinstance(ctx,str) or not re.fullmatch(r"[A-Za-z0-9_:./-]{10,256}",ctx):
+            raise Denied("RECOVERY_CONTEXT_INVALID")
+        if (claims.get("request_sha256")!=row["request_hash"] or
+            claims.get("sha")!=row["sha"] or claims.get("repo_id")!=row["repo_id"] or
+            claims.get("persona")!=row["persona"] or claims.get("runtime_isolated") is not True or
+            claims.get("provider") not in ("openai-responses","notion-custom-agent") or
+            claims.get("expires_at",0)<=current or claims.get("expires_at",0)>current+3600 or
+            (previous_context is not None and ctx==previous_context)):
+            raise Denied("RECOVERY_CLAIMS_DRIFT_OR_EXPIRED")
+        summary={"status":"ISOLATED_CONTEXT_ATTESTED","context_id":ctx,
+                 "provider":claims["provider"],"request_digest":row["request_hash"],
+                 "output_sha256":claims["output_sha256"],"non_accepting":True}
+        self.journal.register_mission(packet)
+        cached,prior=self.journal.record_idempotent_dispatch(
+            row["request_hash"],packet["mission_id"],row["persona"],ctx,summary)
+        if cached and prior!=summary:
+            raise Denied("RECOVERY_DISPATCH_CONFLICT")
+        with self.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            db.execute("UPDATE contexts SET state='COMPLETED',provider_id=?,receipt=? WHERE nonce=? AND state IN ('UNKNOWN','IN_FLIGHT')",
+                       (ctx,encoded({"claims":claims,"signature":sig}).decode(),nonce))
+            db.execute("COMMIT")
+        if not self.valid_receipts():raise Denied("RECOVERY_LEDGER_INVALID")
+        return summary
     def repair_controller(self):
         return SelfHealingController(max_repair_cycles=5,max_identical_retries=2)

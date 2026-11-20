@@ -234,6 +234,30 @@ class LauncherTests(unittest.TestCase):
     def test_untrusted_result_cannot_override_signed_sha(self):
         self.tamper["sha"]=NEW_SHA
         with self.assertRaisesRegex(Denied,"ATTESTED_SCOPE_MISMATCH"):self.launch()
+    def test_reconcile_model_timeout_from_signed_receipt(self):
+        saved=[]
+        original=self.trusted
+        def lost(req):
+            saved.append(original(req))
+            raise TimeoutError("provider completed but caller lost result")
+        self.host.transport=lost
+        with self.assertRaises(TimeoutError):self.launch()
+        result=self.host.reconcile_launch(self.packet,nonce="launch-nonce-000001",
+                   verified_receipt=saved[0],now=1000)
+        self.assertEqual(result["context_id"],self.ctx)
+        self.assertTrue(self.host.valid_receipts())
+    def test_reconcile_rejects_forged_provider_reply(self):
+        saved=[]
+        original=self.trusted
+        def lost(req):
+            saved.append(original(req))
+            raise TimeoutError("response lost")
+        self.host.transport=lost
+        with self.assertRaises(TimeoutError):self.launch()
+        saved[0]["host_signature"]="0"*64
+        with self.assertRaisesRegex(Denied,"RECOVERY_SIGNATURE_INVALID"):
+            self.host.reconcile_launch(self.packet,nonce="launch-nonce-000001",
+                       verified_receipt=saved[0],now=1000)
     def test_bounded_repair_controller(self):
         self.assertIsNotNone(self.host.repair_controller())
 

@@ -63,15 +63,56 @@ class ScopedBroker:
         db.execute("INSERT INTO audit(event,payload,prev,mac) VALUES(?,?,?,?)",
                    (event,encoded(payload).decode(),prev,mac))
     def valid(self):
+        """Reconstruct materialized write state from HMAC-chained events."""
         prev="0"*64
-        with self.connect() as db:
-            for row in db.execute("SELECT * FROM audit ORDER BY seq"):
+        state={}
+        try:
+            with self.connect() as db:
+                events=list(db.execute("SELECT * FROM audit ORDER BY seq"))
+                rows=list(db.execute("SELECT * FROM ops"))
+            for row in events:
                 if row["prev"]!=prev:return False
-                msg=encoded({"prev":prev,"event":row["event"],"payload":json.loads(row["payload"])})
+                payload=json.loads(row["payload"])
+                msg=encoded({"prev":prev,"event":row["event"],"payload":payload})
                 mac=hmac.new(self.key,msg,"sha256").hexdigest()
                 if not hmac.compare_digest(mac,row["mac"]):return False
                 prev=mac
-        return self.journal.verify_hash_chain()
+                nonce=payload["nonce"]
+                if row["event"]=="RESERVED":
+                    req=payload["request"]
+                    if nonce in state or fingerprint(req)!=payload["digest"] or req["nonce"]!=nonce:
+                        return False
+                    state[nonce]={"status":"IN_FLIGHT","digest":payload["digest"],
+                                  "request":req,"receipt_digest":None}
+                elif row["event"] in ("UNCERTAIN","CONFIRMED","RECONCILED"):
+                    if nonce not in state:return False
+                    cur=state[nonce]
+                    required={"UNCERTAIN":"IN_FLIGHT","CONFIRMED":"IN_FLIGHT",
+                              "RECONCILED":"UNKNOWN"}[row["event"]]
+                    if row["event"]=="RECONCILED" and cur["status"]=="IN_FLIGHT":
+                        required="IN_FLIGHT"  # crash before status update; positive proof still needed
+                    if cur["status"]!=required:return False
+                    cur["status"]={"UNCERTAIN":"UNKNOWN","CONFIRMED":"DONE",
+                                   "RECONCILED":"DONE"}[row["event"]]
+                    if row["event"]!="UNCERTAIN":cur["receipt_digest"]=payload["digest"]
+                else:return False
+            if len(state)!=len(rows):return False
+            for row in rows:
+                x=state.get(row["nonce"])
+                if x is None or x["status"]!=row["status"] or x["digest"]!=row["fingerprint"]:
+                    return False
+                req=x["request"]
+                for col,field in (("mission","mission"),("worker","worker"),
+                                  ("branch","branch"),("expected","expected"),
+                                  ("target","target"),("tree","tree")):
+                    if row[col]!=req[field]:return False
+                if req["repo_id"]!=self.repo_id or req["branch"]!=self.branch:
+                    return False
+                if row["status"]=="DONE":
+                    if fingerprint(json.loads(row["receipt"]))!=x["receipt_digest"]:return False
+            return self.journal.verify_hash_chain()
+        except (KeyError,TypeError,ValueError,sqlite3.DatabaseError):
+            return False
     def check_remote(self,packet,expected,actor,repository,head,pr):
         # Explicit role->actor, no generic write capability or legacy Lucien substitution.
         if packet["assigned_persona"]!="Antigravity-Jane" or packet["formal_role"]!="Code Writer":
@@ -122,7 +163,7 @@ class ScopedBroker:
                     raise Denied("WRITE_COLLISION")
                 db.execute("INSERT INTO ops(nonce,fingerprint,mission,worker,branch,expected,target,tree,status) VALUES(?,?,?,?,?,?,?,?,'IN_FLIGHT')",
                            (nonce,key,packet["mission_id"],worker,self.branch,expected,target,tree))
-                self.log(db,"RESERVED",{"nonce":nonce,"digest":key})
+                self.log(db,"RESERVED",{"nonce":nonce,"digest":key,"request":payload})
                 db.execute("COMMIT")
         except BaseException:
             self.leases.release_worker_leases(packet["mission_id"],worker)
@@ -156,7 +197,7 @@ class ScopedBroker:
         if not self.enabled or not self.valid():raise Denied("RECONCILE_DISABLED")
         with self.connect() as db:
             row=db.execute("SELECT * FROM ops WHERE nonce=?",(nonce,)).fetchone()
-            if row is None or row["status"]!="UNKNOWN":raise Denied("NO_UNCERTAIN_WRITE")
+            if row is None or row["status"] not in ("UNKNOWN","IN_FLIGHT"):raise Denied("NO_UNCERTAIN_WRITE")
             observed=head()
             if observed.get("sha")!=row["target"] or observed.get("tree")!=row["tree"]:
                 raise Denied("NO_POSITIVE_REMOTE_PROOF")

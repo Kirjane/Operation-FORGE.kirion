@@ -127,6 +127,14 @@ class BrokerTests(unittest.TestCase):
         with sqlite3.connect(self.broker.path) as db:
             db.execute("UPDATE audit SET payload=? WHERE seq=1",('{"fabricated":true}',))
         self.assertFalse(self.broker.valid())
+    def test_materialized_operation_row_forgery_denied(self):
+        def uncertain(expected,target):raise TimeoutError("lost response")
+        uncertain.cas_enforced=True
+        with self.assertRaises(TimeoutError):self.call(mutate=uncertain)
+        with sqlite3.connect(self.broker.path) as db:
+            db.execute("UPDATE ops SET status='DONE',receipt=? WHERE nonce=?",
+                       ('{"success":true,"sha":"'+NEW_SHA+'"}',NONCE))
+        self.assertFalse(self.broker.valid())
     def test_disabled_default_boundary(self):
         b=ScopedBroker(Path(self.temp.name)/"off.db",KEY,REPO,1377058358,BRANCH)
         self.broker.enabled=False
@@ -163,6 +171,11 @@ class LauncherTests(unittest.TestCase):
         self.assertEqual(x["context_id"],self.ctx)
         self.assertTrue(x["non_accepting"])
         self.assertNotIn("model_output",x)
+    def test_context_row_forgery_denied(self):
+        self.launch()
+        with sqlite3.connect(self.host.path) as db:
+            db.execute("UPDATE contexts SET sha=? WHERE nonce=?",(NEW_SHA,"launch-nonce-000001"))
+        self.assertFalse(self.host.valid_receipts())
     def test_absent_service_fails_closed(self):
         x=IsolatedOrchestrator(Path(self.temp.name)/"off.db",KEY,activated=False)
         with self.assertRaisesRegex(HostUnavailable,"NO_AUTHORIZED_ISOLATED_MODEL_SERVICE"):

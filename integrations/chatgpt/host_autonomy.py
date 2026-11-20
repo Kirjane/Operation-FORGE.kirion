@@ -215,8 +215,22 @@ class IsolatedOrchestrator:
             row=db.execute("SELECT * FROM contexts WHERE nonce=?",(nonce,)).fetchone()
         if row is None or row["state"] not in ("UNKNOWN","IN_FLIGHT") or row["mission"]!=packet["mission_id"]:
             raise Denied("NO_RECOVERABLE_CONTEXT")
-        if fingerprint(packet)=="" or not isinstance(verified_receipt,dict):
+        if not isinstance(verified_receipt,dict):
             raise Denied("INVALID_RECOVERY_PACKET")
+        # Reconstruct the exact original launch request. A valid host signature
+        # alone cannot authorize substituting a mission packet on recovery.
+        if packet["formal_role"]=="Reviewer" and not previous_context:
+            raise Denied("RECOVERY_REVIEWER_AUTHOR_CONTEXT_REQUIRED")
+        original_request={
+            "mission":packet["mission_id"],"packet_sha256":fingerprint(packet),
+            "repo":packet["repo_name"],"repo_id":row["repo_id"],
+            "sha":row["sha"],"persona":row["persona"],
+            "formal_role":packet["formal_role"],"nonce":nonce,
+            "previous_context":previous_context or None,"max_simultaneous":3,
+            "no_promote":True,"model_tool_writes":False,
+        }
+        if fingerprint(original_request)!=row["request_hash"]:
+            raise Denied("RECOVERY_PACKET_OR_CONTEXT_DRIFT")
         claims=verified_receipt.get("host_claims")
         sig=verified_receipt.get("host_signature")
         if not isinstance(claims,dict) or not isinstance(sig,str) or not hmac.compare_digest(

@@ -258,6 +258,39 @@ class LauncherTests(unittest.TestCase):
         with self.assertRaisesRegex(Denied,"RECOVERY_SIGNATURE_INVALID"):
             self.host.reconcile_launch(self.packet,nonce="launch-nonce-000001",
                        verified_receipt=saved[0],now=1000)
+    def test_reconcile_rejects_changed_authority_packet(self):
+        saved=[]
+        original=self.trusted
+        def lost(req):
+            saved.append(original(req))
+            raise TimeoutError("provider receipt lost")
+        self.host.transport=lost
+        with self.assertRaises(TimeoutError):self.launch()
+        changed={**self.packet,"owned_paths":["src/other/"]}
+        with self.assertRaisesRegex(Denied,"RECOVERY_PACKET_OR_CONTEXT_DRIFT"):
+            self.host.reconcile_launch(changed,nonce="launch-nonce-000001",
+                  verified_receipt=saved[0],now=1000)
+    def test_reviewer_recovery_requires_exact_original_author_context(self):
+        p=make_valid_packet("R4-RECOVERY-NOX","Antigravity-Nox","Reviewer")
+        saved=[]
+        original=self.trusted
+        def lost(req):
+            saved.append(original(req))
+            raise TimeoutError("provider receipt lost")
+        self.host.transport=lost
+        self.ctx="ctx-provider-review-000002"
+        with self.assertRaises(TimeoutError):
+            self.launch(packet=p,nonce="review-nonce-000004",
+                        expected_actor=("Kirion-Nox",339503629),
+                        previous_context="ctx-provider-writer-000001")
+        with self.assertRaisesRegex(Denied,"RECOVERY_REVIEWER_AUTHOR_CONTEXT_REQUIRED"):
+            self.host.reconcile_launch(p,nonce="review-nonce-000004",
+                verified_receipt=saved[0],now=1000)
+        with self.assertRaisesRegex(Denied,"RECOVERY_PACKET_OR_CONTEXT_DRIFT"):
+            self.host.reconcile_launch(p,nonce="review-nonce-000004",
+                verified_receipt=saved[0],previous_context="ctx-other-writer-000003",now=1000)
+        self.assertEqual(self.host.reconcile_launch(p,nonce="review-nonce-000004",
+                verified_receipt=saved[0],previous_context="ctx-provider-writer-000001",now=1000)["context_id"],self.ctx)
     def test_bounded_repair_controller(self):
         self.assertIsNotNone(self.host.repair_controller())
 

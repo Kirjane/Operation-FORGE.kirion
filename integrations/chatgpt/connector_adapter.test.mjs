@@ -25,6 +25,19 @@ async function runConnectorTests(create) {
  await test("branch_mismatch",()=>mk().pin("Kirch-Nairu",R,"feat/other",A,B),"EXACT_HEAD_OR_TREE_DRIFT");
  await test("no_fake_context",()=>{const x=mk().dispatch();return x.nativeLaunch===false&&x.contextId===null&&x.independentReview===false;});
  await test("delivery_unbound",()=>mk().delivery(),"CORE_BROKER_AND_DURABLE_HOST_BRIDGE_REQUIRED");
+ const scope={repo:R,repoId:"1377058358",branch:N,sha:A,tree:B};
+ const scoped=(login,id,repoId="1377058358",push=true)=>create({...good,identity:async()=>({login,id}),repository:async()=>({id:repoId,repository_full_name:R,permissions:{pull:true,push}})},{[login]:"test-link"});
+ await test("luci3n_fresh_identity",()=>scoped("Kirion-Luci3n",359299805).authorizeScoped("luci3n","READ",scope));
+ await test("legacy_suspended_denied",()=>mk({},{"Kirion-Lucien":"legacy"}).authenticate("Kirion-Lucien"),"SUSPENDED_LEGACY_ACTOR");
+ await test("nox_account_mismatch",()=>scoped("Kirion-Nox",335897759).authorizeScoped("nox","SAME_CONTEXT_REVIEW",scope),"ACTOR_MISMATCH");
+ await test("nox_cannot_write",()=>scoped("Kirion-Nox",339503629).authorizeScoped("nox","PREPARE_CANDIDATE",scope),"ROLE_OPERATION_DENIED");
+ await test("nox_cannot_approve",()=>scoped("Kirion-Nox",339503629).authorizeScoped("nox","APPROVE",scope),"ROLE_OPERATION_DENIED");
+ await test("nox_nonaccepting",async()=>{const v=await scoped("Kirion-Nox",339503629).authorizeScoped("nox","SAME_CONTEXT_REVIEW",scope);return !v.independentReview&&!v.mutationPerformed;});
+ await test("repo_id_drift",()=>scoped("Kirion-Nox",339503629,"9").authorizeScoped("nox","READ",scope),"REPOSITORY_ID_OR_ACCESS_DRIFT");
+ await test("writer_no_push",()=>scoped("Kirion-Jane",335897759,"1377058358",false).authorizeScoped("writer","PREPARE_CANDIDATE",scope),"REPOSITORY_WRITE_DENIED");
+ await test("writer_preflight_only",async()=>!(await scoped("Kirion-Jane",335897759).authorizeScoped("writer","PREPARE_CANDIDATE",scope)).mutationPerformed);
+ await test("branch_dotdot",()=>mk().pin("Kirch-Nairu",R,"feat/a..b",A,B),"INVALID_BRANCH");
+ await test("branch_full_ref",()=>mk().pin("Kirch-Nairu",R,"refs/heads/main",A,B),"INVALID_BRANCH");
  return cases;
 }
 const cases=await runConnectorTests(createConnectorAdapter);console.log(JSON.stringify(cases,null,2));if(cases.some(x=>!x.pass))process.exitCode=1;

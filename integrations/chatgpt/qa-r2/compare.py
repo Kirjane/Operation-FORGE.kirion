@@ -7,8 +7,8 @@ OUT=pathlib.Path(sys.argv[2]).resolve()
 OUT.mkdir(parents=True,exist_ok=False)
 BASE="0e8765de6e0e87ea9b4503714f08fa650e1a79c6"
 BT="80eaa7a4f879871e5df533203b8b60b563f8b782"
-HEAD="279e8f42e740b252763272c38afc81b0fbce1617"
-HT="b692b6348c0e95dbd6530f1e28ea8182ba8a0499"
+HEAD="79399ec37da4d45715bb4a66916d694b1797274f"
+HT="7fe1a7a801cef93bcfb30dfcead120d5c10d4516"
 ENV={k:os.environ[k] for k in ("PATH","HOME","LANG","LC_ALL","DOTNET_ROOT","DOTNET_ROOT_X64","DOTNET_MULTILEVEL_LOOKUP","PHP_INI_SCAN_DIR","COMPOSER_HOME","LD_LIBRARY_PATH","TMPDIR","TMP","TEMP","NUGET_PACKAGES") if k in os.environ}
 ENV.update(PYTHONDONTWRITEBYTECODE="1",DOTNET_CLI_TELEMETRY_OPTOUT="1",DOTNET_NOLOGO="1",GIT_TERMINAL_PROMPT="0",CI="true")
 records=[]
@@ -71,7 +71,7 @@ def main():
                 status.append(run("python-bridge",[sys.executable,str(QA/"test_bridge.py")],dest))
                 for i in (1,2):
                     status.append(run(f"package-build-{i}",[sys.executable,"integrations/chatgpt/package.py","--repo",str(dest),"--candidate",HEAD,"--release-root",str(QA/"release-root"),"--out",str(OUT/f"candidate-{i}.zip")],dest))
-                status.append(run("package-audit",[sys.executable,str(QA/"audit_package.py"),str(OUT),str(QA/"legacy-inventory.json")],dest))
+                status.append(run("package-audit",[sys.executable,str(QA/"audit_package.py"),str(OUT),str(QA/"legacy-inventory.json"),HEAD],dest))
             else:
                 if SUITE=="A":
                     bench=dest/"integrations/antigravity/benchmarks/php_procurement_inventory"

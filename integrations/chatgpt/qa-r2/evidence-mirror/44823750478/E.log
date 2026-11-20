@@ -1,0 +1,253 @@
+﻿2026-11-20T21:50:40.5540719Z Current runner version: '2.338.2'
+2026-11-20T21:50:40.5567838Z ##[group]Runner Image Provisioner
+2026-11-20T21:50:40.5569092Z Hosted Compute Agent
+2026-11-20T21:50:40.5569833Z Version: 20261111.635
+2026-11-20T21:50:40.5570686Z Commit: b8a594ea514ff44cadb5342986c68b1eac6e22ed
+2026-11-20T21:50:40.5571796Z Build Date: 2026-11-11T01:49:01Z
+2026-11-20T21:50:40.5572588Z Worker ID: {78d25300-c941-45fd-ad6f-c6be8e805e6e}
+2026-11-20T21:50:40.5573509Z Region: eastus2
+2026-11-20T21:50:40.5574177Z Cloud: Azure
+2026-11-20T21:50:40.5575327Z ##[endgroup]
+2026-11-20T21:50:40.5576896Z ##[group]Operating System
+2026-11-20T21:50:40.5577663Z Ubuntu
+2026-11-20T21:50:40.5578653Z 24.04.5
+2026-11-20T21:50:40.5579315Z LTS
+2026-11-20T21:50:40.5580009Z ##[endgroup]
+2026-11-20T21:50:40.5580764Z ##[group]Runner Image
+2026-11-20T21:50:40.5581517Z Image: ubuntu-24.04
+2026-11-20T21:50:40.5582310Z Version: 20261116.376.1
+2026-11-20T21:50:40.5583846Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20261116.376/images/ubuntu/Ubuntu2404-Readme.md
+2026-11-20T21:50:40.5586025Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20261116.376
+2026-11-20T21:50:40.5587240Z ##[endgroup]
+2026-11-20T21:50:40.5589033Z ##[group]GITHUB_TOKEN Permissions
+2026-11-20T21:50:40.5591217Z Contents: read
+2026-11-20T21:50:40.5592033Z Metadata: read
+2026-11-20T21:50:40.5592705Z ##[endgroup]
+2026-11-20T21:50:40.5595115Z Secret source: Actions
+2026-11-20T21:50:40.5596231Z Cache mode: write
+2026-11-20T21:50:40.5597123Z Prepare workflow directory
+2026-11-20T21:50:40.6035591Z Prepare all required actions
+2026-11-20T21:50:40.6089994Z Getting action download info
+2026-11-20T21:50:40.8193482Z Download action repository 'actions/checkout@11d5960a326750d5838078e36cf38b85af677262' (SHA:11d5960a326750d5838078e36cf38b85af677262)
+2026-11-20T21:50:41.1057965Z Download action repository 'actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065' (SHA:a26af69be951a213d495a4c3e4e4022e16d87065)
+2026-11-20T21:50:41.4618594Z Download action repository 'shivammathur/setup-php@bf6b4fbd49ca58e4608c9c89fba0b8d90bd2a39f' (SHA:bf6b4fbd49ca58e4608c9c89fba0b8d90bd2a39f)
+2026-11-20T21:50:41.6947302Z Download action repository 'actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1' (SHA:26b0ec14cb23fa6904739307f278c14f94c95bf1)
+2026-11-20T21:50:41.9862111Z Download action repository 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+2026-11-20T21:50:42.3996737Z Complete job name: Compare E (same runner)
+2026-11-20T21:50:42.4783760Z ##[group]Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+2026-11-20T21:50:42.4785040Z with:
+2026-11-20T21:50:42.4785714Z   ref: 39b82479bc9a2ccb3c1cbbcd88aeea71d0cae5bc
+2026-11-20T21:50:42.4786575Z   fetch-depth: 0
+2026-11-20T21:50:42.4787227Z   persist-credentials: false
+2026-11-20T21:50:42.4788024Z   repository: Kirjane/Operation-FORGE.kirion
+2026-11-20T21:50:42.4795010Z   token: ***
+2026-11-20T21:50:42.4795623Z   ssh-strict: true
+2026-11-20T21:50:42.4796269Z   ssh-user: git
+2026-11-20T21:50:42.4796885Z   clean: true
+2026-11-20T21:50:42.4797539Z   sparse-checkout-cone-mode: true
+2026-11-20T21:50:42.4798408Z   fetch-tags: false
+2026-11-20T21:50:42.4799046Z   show-progress: true
+2026-11-20T21:50:42.4799697Z   lfs: false
+2026-11-20T21:50:42.4800294Z   submodules: false
+2026-11-20T21:50:42.4800939Z   set-safe-directory: true
+2026-11-20T21:50:42.4801684Z   allow-unsafe-pr-checkout: false
+2026-11-20T21:50:42.4802596Z env:
+2026-11-20T21:50:42.4803240Z   PYTHONDONTWRITEBYTECODE: 1
+2026-11-20T21:50:42.4803966Z ##[endgroup]
+2026-11-20T21:50:42.6906392Z Syncing repository: Kirjane/Operation-FORGE.kirion
+2026-11-20T21:50:42.6909761Z ##[group]Getting Git version info
+2026-11-20T21:50:42.6911599Z Working directory is '/home/runner/work/Operation-FORGE.kirion/Operation-FORGE.kirion'
+2026-11-20T21:50:42.6914170Z [command]/usr/bin/git version
+2026-11-20T21:50:42.7049543Z git version 2.56.1
+2026-11-20T21:50:42.7080749Z ##[endgroup]
+2026-11-20T21:50:42.7091061Z Temporarily overriding HOME='/home/runner/work/_temp/966acf6e-1f22-4501-90af-c7d6999946a2' before making global git config changes
+2026-11-20T21:50:42.7094470Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-20T21:50:42.7138711Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Operation-FORGE.kirion/Operation-FORGE.kirion
+2026-11-20T21:50:42.7261738Z Deleting the contents of '/home/runner/work/Operation-FORGE.kirion/Operation-FORGE.kirion'
+2026-11-20T21:50:42.7271839Z ##[group]Initializing the repository
+2026-11-20T21:50:42.7309643Z [command]/usr/bin/git init /home/runner/work/Operation-FORGE.kirion/Operation-FORGE.kirion
+2026-11-20T21:50:42.7641067Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-11-20T21:50:42.7651209Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-11-20T21:50:42.7669795Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-11-20T21:50:42.7699090Z hint: call:
+2026-11-20T21:50:42.7719326Z hint:
+2026-11-20T21:50:42.7739339Z hint: 	git config --global init.defaultBranch <name>
+2026-11-20T21:50:42.7741091Z hint:
+2026-11-20T21:50:42.7779832Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-11-20T21:50:42.7809696Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-11-20T21:50:42.7811672Z hint:
+2026-11-20T21:50:42.7830461Z hint: 	git branch -m <name>
+2026-11-20T21:50:42.7850269Z hint:
+2026-11-20T21:50:42.7869813Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-11-20T21:50:42.7891560Z Initialized empty Git repository in /home/runner/work/Operation-FORGE.kirion/Operation-FORGE.kirion/.git/
+2026-11-20T21:50:42.7950191Z [command]/usr/bin/git remote add origin https://github.com/Kirjane/Operation-FORGE.kirion
+2026-11-20T21:50:42.7971770Z ##[endgroup]
+2026-11-20T21:50:42.7973524Z ##[group]Disabling automatic garbage collection
+2026-11-20T21:50:42.7975156Z [command]/usr/bin/git config --local gc.auto 0
+2026-11-20T21:50:42.7978747Z ##[endgroup]
+2026-11-20T21:50:42.7980451Z ##[group]Setting up auth
+2026-11-20T21:50:42.7984951Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-20T21:50:42.8092852Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-20T21:50:42.8570417Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-20T21:50:42.8614913Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-20T21:50:42.8831670Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-20T21:50:42.8874178Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-20T21:50:42.9088908Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-11-20T21:50:42.9133602Z ##[endgroup]
+2026-11-20T21:50:42.9134943Z ##[group]Fetching the repository
+2026-11-20T21:50:42.9147002Z [command]/usr/bin/git -c protocol.version=2 fetch --prune --no-recurse-submodules origin +refs/heads/*:refs/remotes/origin/* +refs/tags/*:refs/tags/*
+2026-11-20T21:50:43.3926897Z From https://github.com/Kirjane/Operation-FORGE.kirion
+2026-11-20T21:50:43.3934746Z  * [new branch]      KIRCH-FORGE-ENTITY-EVOLUTION-TEST-2 -> origin/KIRCH-FORGE-ENTITY-EVOLUTION-TEST-2
+2026-11-20T21:50:43.3935777Z  * [new branch]      KIRCH-FORGE-ENTITY-EVOLUTION-TEST-3 -> origin/KIRCH-FORGE-ENTITY-EVOLUTION-TEST-3
+2026-11-20T21:50:43.3938049Z  * [new branch]      eval/fci-m02-behavioral-pilot-r0 -> origin/eval/fci-m02-behavioral-pilot-r0
+2026-11-20T21:50:43.3939429Z  * [new branch]      feat/antigravity-software-factory-r1 -> origin/feat/antigravity-software-factory-r1
+2026-11-20T21:50:43.3940465Z  * [new branch]      feat/chatgpt-software-factory-port-r1 -> origin/feat/chatgpt-software-factory-port-r1
+2026-11-20T21:50:43.3945381Z  * [new branch]      feat/fci-m02-provenance-and-memory-r1 -> origin/feat/fci-m02-provenance-and-memory-r1
+2026-11-20T21:50:43.3947741Z  * [new branch]      feat/forge-obsidian-vault-r2 -> origin/feat/forge-obsidian-vault-r2
+2026-11-20T21:50:43.3948778Z  * [new branch]      main       -> origin/main
+2026-11-20T21:50:43.3956120Z  * [new branch]      policy/kirjane-csharp-backend-standard-r1 -> origin/policy/kirjane-csharp-backend-standard-r1
+2026-11-20T21:50:43.3957611Z  * [new branch]      proposal/fci-m01-context-completeness-r1 -> origin/proposal/fci-m01-context-completeness-r1
+2026-11-20T21:50:43.3966708Z  * [new branch]      proposal/kirion-skill-arsenal-multihost-v0-2 -> origin/proposal/kirion-skill-arsenal-multihost-v0-2
+2026-11-20T21:50:43.3968112Z  * [new branch]      qa/chatgpt-port-evidence-r4 -> origin/qa/chatgpt-port-evidence-r4
+2026-11-20T21:50:43.3969980Z  * [new branch]      qa/chatgpt-port-qualification-r2 -> origin/qa/chatgpt-port-qualification-r2
+2026-11-20T21:50:43.3972866Z [command]/usr/bin/git rev-parse --verify --quiet 39b82479bc9a2ccb3c1cbbcd88aeea71d0cae5bc^{object}
+2026-11-20T21:50:43.3973743Z 39b82479bc9a2ccb3c1cbbcd88aeea71d0cae5bc
+2026-11-20T21:50:43.3975221Z ##[endgroup]
+2026-11-20T21:50:43.3975854Z ##[group]Determining the checkout info
+2026-11-20T21:50:43.3976552Z ##[endgroup]
+2026-11-20T21:50:43.3977040Z [command]/usr/bin/git sparse-checkout disable
+2026-11-20T21:50:43.3978668Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-11-20T21:50:43.3980382Z ##[group]Checking out the ref
+2026-11-20T21:50:43.3981156Z [command]/usr/bin/git checkout --progress --force 39b82479bc9a2ccb3c1cbbcd88aeea71d0cae5bc
+2026-11-20T21:50:43.4503304Z Note: switching to '39b82479bc9a2ccb3c1cbbcd88aeea71d0cae5bc'.
+2026-11-20T21:50:43.4505062Z 
+2026-11-20T21:50:43.4505573Z You are in 'detached HEAD' state. You can look around, make experimental
+2026-11-20T21:50:43.4506421Z changes and commit them, and you can discard any commits you make in this
+2026-11-20T21:50:43.4507160Z state without impacting any branches by switching back to a branch.
+2026-11-20T21:50:43.4507651Z 
+2026-11-20T21:50:43.4508034Z If you want to create a new branch to retain commits you create, you may
+2026-11-20T21:50:43.4509115Z do so (now or later) by using -c with the switch command. Example:
+2026-11-20T21:50:43.4509585Z 
+2026-11-20T21:50:43.4509862Z   git switch -c <new-branch-name>
+2026-11-20T21:50:43.4510262Z 
+2026-11-20T21:50:43.4510530Z Or undo this operation with:
+2026-11-20T21:50:43.4517741Z 
+2026-11-20T21:50:43.4528728Z   git switch -
+2026-11-20T21:50:43.4540422Z 
+2026-11-20T21:50:43.4548729Z Turn off this advice by setting config variable advice.detachedHead to false
+2026-11-20T21:50:43.4549205Z 
+2026-11-20T21:50:43.4549673Z HEAD is now at 39b8247 ci(qa): final R4 exact-session protocol regression and original benchmark replay
+2026-11-20T21:50:43.4551244Z ##[endgroup]
+2026-11-20T21:50:43.4902749Z [command]/usr/bin/git log -1 --format=%H
+2026-11-20T21:50:43.4934430Z 39b82479bc9a2ccb3c1cbbcd88aeea71d0cae5bc
+2026-11-20T21:50:43.4966207Z ##[group]Removing auth
+2026-11-20T21:50:43.4970927Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-20T21:50:43.4986136Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-20T21:50:43.5200107Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-20T21:50:43.5370582Z http.https://github.com/.extraheader
+2026-11-20T21:50:43.5376289Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-11-20T21:50:43.5415321Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-20T21:50:43.5630116Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-20T21:50:43.5665895Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-20T21:50:43.5919563Z ##[endgroup]
+2026-11-20T21:50:43.6149085Z ##[group]Run actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+2026-11-20T21:50:43.6149438Z with:
+2026-11-20T21:50:43.6149620Z   python-version: 3.13
+2026-11-20T21:50:43.6149814Z   check-latest: false
+2026-11-20T21:50:43.6151785Z   token: ***
+2026-11-20T21:50:43.6151969Z   update-environment: true
+2026-11-20T21:50:43.6152180Z   allow-prereleases: false
+2026-11-20T21:50:43.6152379Z   freethreaded: false
+2026-11-20T21:50:43.6152560Z env:
+2026-11-20T21:50:43.6152728Z   PYTHONDONTWRITEBYTECODE: 1
+2026-11-20T21:50:43.6152941Z ##[endgroup]
+2026-11-20T21:50:43.7295378Z ##[group]Installed versions
+2026-11-20T21:50:43.7366419Z (node:2101) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-20T21:50:43.7367484Z Successfully set up CPython (3.13.18)
+2026-11-20T21:50:43.7368257Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-20T21:50:43.7386826Z ##[endgroup]
+2026-11-20T21:50:43.7630293Z ##[group]Run python integrations/chatgpt/qa-r2/compare.py "$SUITE" "$RUNNER_TEMP/forge-evidence"
+2026-11-20T21:50:43.7631107Z [36;1mpython integrations/chatgpt/qa-r2/compare.py "$SUITE" "$RUNNER_TEMP/forge-evidence"[0m
+2026-11-20T21:50:43.7927411Z shell: /usr/bin/bash -e {0}
+2026-11-20T21:50:43.7927691Z env:
+2026-11-20T21:50:43.7927896Z   PYTHONDONTWRITEBYTECODE: 1
+2026-11-20T21:50:43.7928194Z   pythonLocation: /opt/hostedtoolcache/Python/3.13.18/x64
+2026-11-20T21:50:43.7928722Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.13.18/x64/lib/pkgconfig
+2026-11-20T21:50:43.7929094Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.13.18/x64
+2026-11-20T21:50:43.7929403Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.13.18/x64
+2026-11-20T21:50:43.7929710Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.13.18/x64
+2026-11-20T21:50:43.7930009Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.13.18/x64/lib
+2026-11-20T21:50:43.7930265Z   SUITE: E
+2026-11-20T21:50:43.7930483Z ##[endgroup]
+2026-11-20T21:50:44.6276239Z python-version exit 0 sha256 12162c47c88cf7ca169474b404c0d8bf22203099f01452797ab5d96e71a148aa
+2026-11-20T21:50:44.6277217Z Python 3.13.18
+2026-11-20T21:50:44.6277497Z 
+2026-11-20T21:50:44.6297194Z Preparing worktree (detached HEAD 0e8765d)
+2026-11-20T21:50:44.6839178Z HEAD is now at 0e8765d fix(factory): resolve Antigravity-Nox Cycle 5 findings NOX-R5-001..015 (Repair Cycle 5/5) (refs #13)
+2026-11-20T21:50:46.4792271Z baseline-E exit 0 sha256 7ca1db120198ad482a127783f39e566e8d2316e5c55256ffbcc8bbb7b69e6751
+2026-11-20T21:50:46.4794804Z test_benchmark_e_adversarial_authority_and_supply_chain (integrations.antigravity.tests.test_qualification_benchmarks.QualificationBenchmarksTests.test_benchmark_e_adversarial_authority_and_supply_chain) ... ok
+2026-11-20T21:50:46.4796340Z 
+2026-11-20T21:50:46.4799257Z ----------------------------------------------------------------------
+2026-11-20T21:50:46.4800027Z Ran 1 test in 1.007s
+2026-11-20T21:50:46.4815639Z 
+2026-11-20T21:50:46.4816045Z OK
+2026-11-20T21:50:46.4816379Z 
+2026-11-20T21:50:46.5367100Z Preparing worktree (detached HEAD a6ad051)
+2026-11-20T21:50:46.5873088Z HEAD is now at a6ad051 fix(chatgpt): align Notion tool transport with exact session and wait contract
+2026-11-20T21:50:47.7511091Z candidate-E exit 0 sha256 19e3f50a2026c05704dc664ed54e7303b9ef6e9ccbff177cdf9fe084b12ebfe2
+2026-11-20T21:50:47.7520061Z test_benchmark_e_adversarial_authority_and_supply_chain (integrations.antigravity.tests.test_qualification_benchmarks.QualificationBenchmarksTests.test_benchmark_e_adversarial_authority_and_supply_chain) ... ok
+2026-11-20T21:50:47.7521711Z 
+2026-11-20T21:50:47.7527800Z ----------------------------------------------------------------------
+2026-11-20T21:50:47.7528732Z Ran 1 test in 1.002s
+2026-11-20T21:50:47.7529082Z 
+2026-11-20T21:50:47.7529333Z OK
+2026-11-20T21:50:47.7529634Z 
+2026-11-20T21:50:47.8261447Z ##[group]Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+2026-11-20T21:50:47.8261788Z with:
+2026-11-20T21:50:47.8261951Z   name: forge-r4-E-1
+2026-11-20T21:50:47.8262161Z   path: /home/runner/work/_temp/forge-evidence/
+2026-11-20T21:50:47.8262409Z   if-no-files-found: error
+2026-11-20T21:50:47.8262598Z   retention-days: 30
+2026-11-20T21:50:47.8262802Z   compression-level: 6
+2026-11-20T21:50:47.8262988Z   overwrite: false
+2026-11-20T21:50:47.8263165Z   include-hidden-files: false
+2026-11-20T21:50:47.8263360Z env:
+2026-11-20T21:50:47.8263537Z   PYTHONDONTWRITEBYTECODE: 1
+2026-11-20T21:50:47.8263787Z   pythonLocation: /opt/hostedtoolcache/Python/3.13.18/x64
+2026-11-20T21:50:47.8264149Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.13.18/x64/lib/pkgconfig
+2026-11-20T21:50:47.8264470Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.13.18/x64
+2026-11-20T21:50:47.8264800Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.13.18/x64
+2026-11-20T21:50:47.8265123Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.13.18/x64
+2026-11-20T21:50:47.8265459Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.13.18/x64/lib
+2026-11-20T21:50:47.8265715Z ##[endgroup]
+2026-11-20T21:50:47.9621243Z (node:2269) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-20T21:50:47.9622570Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-20T21:50:47.9746660Z With the provided path, there will be 8 files uploaded
+2026-11-20T21:50:47.9747934Z Artifact name is valid!
+2026-11-20T21:50:47.9748724Z Root directory input is valid!
+2026-11-20T21:50:48.1749124Z Beginning upload of artifact content to blob storage
+2026-11-20T21:50:48.2158913Z (node:2269) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-11-20T21:50:48.2539041Z Uploaded bytes 2338
+2026-11-20T21:50:48.2657901Z Finished uploading artifact content to blob storage!
+2026-11-20T21:50:48.2658866Z SHA256 digest of uploaded artifact zip is b8f14619165ae11af82097ae695d87be856913a8e313badec998e199ea5195f5
+2026-11-20T21:50:48.2661805Z Finalizing artifact upload
+2026-11-20T21:50:48.6219550Z Artifact forge-r4-E-1.zip successfully finalized. Artifact ID 14673211786
+2026-11-20T21:50:48.6220646Z Artifact forge-r4-E-1 has been successfully uploaded! Final size is 2338 bytes. Artifact ID is 14673211786
+2026-11-20T21:50:48.6226666Z Artifact download URL: https://github.com/Kirjane/Operation-FORGE.kirion/actions/runs/44823750478/artifacts/14673211786
+2026-11-20T21:50:48.6404268Z Post job cleanup.
+2026-11-20T21:50:48.7440394Z (node:2281) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-20T21:50:48.7494944Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-20T21:50:48.7653323Z Post job cleanup.
+2026-11-20T21:50:48.8545485Z [command]/usr/bin/git version
+2026-11-20T21:50:48.8622519Z git version 2.56.1
+2026-11-20T21:50:48.8656149Z Temporarily overriding HOME='/home/runner/work/_temp/260961c1-3517-4962-a4f6-09fd105961d7' before making global git config changes
+2026-11-20T21:50:48.8657213Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-20T21:50:48.8658568Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Operation-FORGE.kirion/Operation-FORGE.kirion
+2026-11-20T21:50:48.8749906Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-20T21:50:48.8763255Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-20T21:50:48.9081944Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-20T21:50:48.9123159Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-20T21:50:48.9485085Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-20T21:50:48.9589882Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-20T21:50:49.0036532Z Cleaning up orphan processes
+2026-11-20T21:50:49.0315335Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@11d5960a326750d5838078e36cf38b85af677262, actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065, actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

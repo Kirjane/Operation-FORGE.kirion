@@ -71,7 +71,7 @@ class FakeModel:
                                      "if ($debit < 0 || $debit > $available)")
             result={"kind":"PATCH_PROPOSAL","base_sha":task["source_repo_sha"],
                     "edits":[{"path":FILE,"expected_sha256":previous["sha256"],
-                              "new_text":current if self.force_bad_patch else repaired}],
+                              "new_text":current.replace("Synthetic benchmark","Synthetic benchmark BAD CANDIDATE") if self.force_bad_patch else repaired}],
                     "reason":self.malicious_instruction}
             output=[{"type":"message","content":[{"type":"output_text","text":json.dumps(result)}]}]
         else:
@@ -399,6 +399,6 @@ class ResponseTransportTests(unittest.TestCase):
         self.assertEqual(method,"POST")
     def test_no_budget_overspend(self):
         with self.assertRaisesRegex(Denied,"TOKEN_BUDGET_OUT_OF_BOUNDS"):
-            OpenAIEngineeringProvider("x").step([],[],max_output_tokens=900000,deadline_seconds=10)
+            OpenAIEngineeringProvider(model="test",api_key="fake",authorized=True).step([],[],max_output_tokens=900000,deadline_seconds=10)
 
 if __name__=="__main__":unittest.main()

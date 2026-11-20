@@ -467,6 +467,8 @@ class EngineeringPilotService:
         verify_mission_packet(reviewer_packet,expected_repo=self.broker.repo)
         if reviewer_packet["formal_role"]!="Reviewer" or "WRITE_OWNED" in reviewer_packet["allowed_operations"]:
             raise Denied("NOX_WRITE_PRIVILEGES")
+        if any(clean_path(x).startswith(("oracles/","secrets/",".git/")) for x in source_paths):
+            raise Denied("HIDDEN_ORACLE_SOURCE_NOT_EXPOSED")
         source=GitSnapshot(self.target_repo,source_sha,source_tree,exposed=source_paths)
         first=self.oracle.evaluate(source)
         # Require discriminatory negative pre-fix evidence; do not celebrate an already green fixture.

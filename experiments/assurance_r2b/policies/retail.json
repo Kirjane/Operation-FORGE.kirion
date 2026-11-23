@@ -1,0 +1,48 @@
+{
+  "schema_version": "r2a-0.2-synthetic-policy",
+  "classification": "SYNTHETIC_TEST_ONLY_NOT_PROJECT_AUTHORITY",
+  "policy_id": "R2A-SIM-RETAIL",
+  "repository": "Kirjane/Salryn",
+  "historical_references": [
+    "https://github.com/Kirjane/Salryn/pull/105",
+    "https://github.com/Kirjane/Salryn/issues/91"
+  ],
+  "gates": [
+    {
+      "id": "RETAIL_NONAUTHOR_SOURCE_REVIEW",
+      "applies_to": [
+        "SOURCE_REVIEWED",
+        "RELEASE_READY"
+      ],
+      "minimum_level": "E1",
+      "allowed_types": [
+        "SOURCE"
+      ],
+      "target_binding": "EXACT_SOURCE_SHA_AND_REVIEWER"
+    },
+    {
+      "id": "RETAIL_WINDOWS_LAB_ABC",
+      "applies_to": [
+        "RELEASE_READY"
+      ],
+      "minimum_level": "E5",
+      "allowed_types": [
+        "DEVICE",
+        "RUNTIME"
+      ],
+      "target_binding": "EXACT_INSTALLER_AND_DEVICE"
+    },
+    {
+      "id": "RETAIL_SIGNING_AUTHORIZATION",
+      "applies_to": [
+        "RELEASE_READY"
+      ],
+      "minimum_level": "E4",
+      "allowed_types": [
+        "BUILD",
+        "DEPLOYMENT"
+      ],
+      "target_binding": "SIGNING_POLICY_AND_ARTIFACT_SHA256"
+    }
+  ]
+}

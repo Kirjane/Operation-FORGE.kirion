@@ -37,7 +37,8 @@
       "requested_evidence_level": "E4"
     },
     "offered_evidence_ids": [
-      "tal-path-only"
+      "tal-path-only",
+      "tal-blob-diff"
     ]
   },
   "simulated_resolver_context": {
@@ -125,7 +126,9 @@
       "path": "app/Http/Controllers/PlanningController.php",
       "approved_blob_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       "observed_blob_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-      "linked_evidence_id": "tal-blob-diff"
+      "linked_evidence_id": "tal-blob-diff",
+      "repository": "Project-Intra-Smithy/ONE-TALIBON-intra.office.system-STABLE-v1-10-18-2026",
+      "candidate_sha": "0c79eba15a470de0c47522c4353cd4c20d5eecc2"
     }
   },
   "expected_oracle": {

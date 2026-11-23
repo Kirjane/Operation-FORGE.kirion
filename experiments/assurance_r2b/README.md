@@ -1,10 +1,10 @@
-# Forge R2-B — Synthetic assurance-verifier experiment (isolated)
+# Forge R2-B — Synthetic-only claim verifier (R2 corrective candidate)
 
-**Status: WRITER CANDIDATE / NO INDEPENDENT REVIEW / NOT INTEGRATED / NOT A LIVE SECURITY OR RELEASE GATE.**
+**Status:** R1 independent review `FIX_REQUIRED`; R2 **writer-side corrected**, fresh nonauthor review required, draft PR only. **Not a live security, release or promotion gate.**
 
-This is the bounded response to [Forge Issue #19](https://github.com/Kirjane/Operation-FORGE.kirion/issues/19) and [Nox's R2-A exact-artifact design review](https://github.com/Kirjane/Operation-FORGE.kirion/issues/19#issuecomment-7115974127). It implements a *purely synthetic*, deterministic evaluator for one narrowly defined engineering claim at a time. It does **not** run other AI workers, execute source builds, verify actual GitHub Actions runs, fetch real reviewer identities, access Salryn/ONE TALIBON databases, operate installers, or grant any Forge approval/promotion.
+**Source:** [Forge Issue #19](https://github.com/Kirjane/Operation-FORGE.kirion/issues/19), [Nox requested changes (PR #20 review 6031088112)](https://github.com/Kirjane/Operation-FORGE.kirion/pull/20), and [Nox's review receipt](https://github.com/Kirjane/Operation-FORGE.kirion/issues/19#issuecomment-7116841568). The original, frozen R1 SHA is `6844a7c3c9fa7da12a4e754d3f625bb7d6444509`. R1 author-side 30/30 tests did **not** exercise four semantic false-result classes. This R2 candidate must receive its own exact-SHA review.
 
-## Run (from repository root)
+## Reproduce from the repository root
 
 ```bash
 python -m pip install 'jsonschema>=4.18,<5'
@@ -14,39 +14,28 @@ python -m experiments.assurance_r2b.cli
 python -m experiments.assurance_r2b.cli --mode live
 ```
 
-`--mode live` deliberately returns `CLAIM_UNVERIFIED/UNRESOLVED_AUTHORITY` for every scenario. It is not a partially working live resolver.
+Writer-side observed result after correction: **54/54 PASS** in normal Python and **54/54 PASS** under `-O`. Six original synthetic scenarios return their historical narrow verdicts; live mode returns six `CLAIM_UNVERIFIED / UNRESOLVED_AUTHORITY` results. These checks are **not** independently authenticated CI or project evidence.
 
-The six original R2-A-R2 synthetic fixtures and three example policies were copied **without edits** from the SHA-256-pinned R2-A R2 design archive (`66e1c1637b6831a39743b34a06c7e7498235c283f57ce30eed7790fee53ee19b`). Here they are scoped test cases, not historical product evidence. The source claim schema was also copied unchanged.
+## Four reproduced R1 defects and bounded R2 repairs
 
-## Boundaries
+| Nox finding | Old problem | R2 corrective behavior and tests |
+| --- | --- | --- |
+| **NXR2B-001** | A release-ready claim could be supported by device/signing receipts for a mock source tree if artifact digest matched. | Enforce separately hash-pinned *synthetic* policy constraints for per-gate target kind, environment, data authority, artifact digest, VHDX A/B/C device matrix, signing-policy ID and expected issuer. Full legitimate synthetic release positive + wrong-target/issuer/matrix/signing negatives. |
+| **NXR2B-002** | Positive source-content comparison ignored file path and linked evidence ID. | One complete repository/SHA/path/linked-offered-receipt Git comparator per claimed path (single-file or multi-path), with matching observed content scope. Wrong path, wrong ID/SHA, missing-path and missing-offer tests reject proof. |
+| **NXR2B-003** | The E1 source-review receipt issuer could be the author while separately declared reviewer differed. | Require synthetic reviewer-resolution binding, issuer ID matching resolved reviewer ID, reviewer distinct from resolved author, plus reject contradictory supplemental security_context. Valid review positive and collision/missing-resolution negatives. |
+| **NXR2B-004** | Irrelevant FAIL from CI smoke or low-level E1 could falsely contradict the Windows device requirement. | Apply issuer, type/level, offer, source and target scope checks **before any PASS or FAIL** counts. Unrelated FAIL → `CLAIM_UNVERIFIED`; correct-target E5 FAIL → `CLAIM_CONTRADICTED`. Former H12 oracle changed. |
 
-- **Untrusted source:** `untrusted_request` (worker-claimable). Strict Draft-2020-12 JSON Schema rejects source hash authority, new policy, fabricated mandatory gates, and authored expected verdicts.
-- **Synthetic evidence source:** `simulated_resolver_context` is a test fixture **only**. `evaluate_fixture` accepts that container in `synthetic` mode to test claim reasoning. A real worker must never be allowed to supply an arbitrary resolver container and obtain acceptance from it.
-- **Policy pin:** Synthetic policy content must match a hardcoded repository→file→digest mapping in code (not any digest or path supplied by the worker or mutated fixture). These are intentionally **not** approved live project policies.
-- **Trust checks:** Evidence must have a compatible simulated channel and provenance, nonempty issuer and `fixture://` reference. Author-only/self-reported receipts cannot satisfy `E4`/`E5` claims. In real mode these synthetic receipts are NEVER accepted.
-- **Evidence scope:** Enforce repo/candidate SHA, required gate membership, E-level/type, target/route, data authority, validation scope, source blob identity, and artifact hash. Release-ready aggregates different gate targets; source review does not need an installer artifact hash, but signing and device proof do.
-- **Reviewer/replay:** Optional **provider-owned synthetic security_context** tests independent identity collisions and a receipt's repo/SHA/claim/mission/claimant/nonce binding; in live work these values require independent provider resolution, which is currently absent.
-- **Result:** `CLAIM_SUPPORTED`, `CLAIM_CONTRADICTED`, or `CLAIM_UNVERIFIED` plus reasons, `actual_product_outcome=NOT_TESTED`, `synthetic=true`, `promotion_authorized=false` **for every result**. Supporting synthetic evidence is a property of the test scenario, not a real acceptance decision.
+## Exactly what changed versus R2-A / R1
 
-## Decisions and exceptional cases
+- `verifier.py`: implemented the four corrected semantic gates. All acceptance logic uses explicit branches and exceptions; no Python `assert` used for safety.
+- `policies/retail.json`: **changed** to add synthetic-only exact per-gate target and issuer constraints; its hardcoded SHA-256 pin in `verifier.py` was recalculated. **No real Retail policy authorization** is implied.
+- `fixtures/r2a-{red,green}-retail.json`: synthetic policy digest repinned and synthetic reviewer/author resolution provided separately from the untrusted claim. These are no longer byte-identical to the archived R2-A files.
+- `fixtures/r2a-red-talibon.json`: negative comparison explicitly declares repository and commit, and the comparison receipt is included among offered IDs so negative proof is actually linked. The historical-inspired expected verdict is unchanged.
+- `tests/test_verifier.py`: preserves the original 30 test methods (H12 oracle corrected) and adds 24 hostile and legitimate controls, including a fully supported **synthetic** release fixture and a two-file positive identity comparison.
+- The original R2-A untrusted-request schema and remaining fixtures/policies are unchanged.
 
-For one claim, a pin/mission authority mismatch blocks with `UNRESOLVED_AUTHORITY`. Evidence that demonstrably belongs to a different source SHA, artifact, or the *explicitly offered* wrong runtime entrypoint can contradict the **proof binding**, even though the requested actual runtime is not known to have failed. Trusted negative test results produce `REQUIRED_GATE_FAILED`; missing, blocked, not run, or unsupported authority produce `CLAIM_UNVERIFIED`. Inconsistent PASS/FAIL evidence holds instead of choosing PASS. A release gate can remain incomplete even when an E1 review at that SHA is valid.
+## Strict authority boundary
 
-The six R2-A sidecar expected oracles are independent test expectations and are **never read by the evaluator**. The Cafe red case additionally reports `REQUIRED_GATE_MISSING` because its actual installed gate is UNKNOWN; it still correctly produces the required `WRONG_EXECUTABLE_TARGET` contradiction. The test suite therefore checks expected reason subsets while asserting exact verdicts. All further tests inspect specific reason codes, not just pass counts.
+This module is a **simulator**. `untrusted_request` is claimant-authored; simulated resolver evidence, reviewer context and policy fixtures are *also locally supplied test data*, not independently obtained trustworthy events. A correct simulated verdict is not a real GitHub CI attestation, sign-off, C# operator workflow, installed host test, or business outcome. Every result includes `synthetic=true`, `promotion_authorized=false`, and `actual_product_outcome=NOT_TESTED`. A requested `live` mode always fails closed.
 
-## Test coverage
-
-- Six original historical-inspired fixtures: three RED and three narrow GREEN.
-- R2-A H01–H21 hostile/benign scenarios (Python unittest methods).
-- NXR2A-009: invalid authored gate rejected in ordinary Python and optimized `python -O` (no `assert`-dependent enforcement in verifier).
-- NXR2A-010: same-SHA replay across claimant/nonce and reviewer-author conflict, explicitly unverified.
-- NXR2A-011: cannot resolve actual project authority; `live` path always fails closed.
-- Policy hash corruption, empty required-gate receipt, unbacked PASS, forged author-only evidence, target/artifact/SHA mismatches, and exact-scope positives.
-
-These are **author-executed offline tests**, not CI acceptance or nonauthor QA. No network or installation credentials are used.
-
-## Deliberate limitations / must remain blocked
-
-The current `evaluate_fixture` verifies a *simulated resolver container,* not its real-world custody. No production issuer whitelist, approved project gate source, immutable live policy anchor, normalized GitHub API reviewer/run access, context-isolated operator proof, durable anti-replay database, or host capability parity is implemented. In particular, `security_context` is a test hook, not authenticated identity. Do not copy this code into production acceptance until those trust roots have their own explicit Engineer authorization, separate architecture review, and tests against real external APIs.
-
-Writer candidate changes stay under `experiments/assurance_r2b/` and are not imported into Forge's main execution/acceptance path. Review exact PR head SHA before any promotion decision. **Draft PR is NOT merge authorization.**
+Source reviews, policy pins and reviewer identities still require authenticated external trust roots under a **separately authorized** future stage. Existing Forge E0–E7 doctrine and Forge-vs-Brain authority remain unchanged. No merge, runtime installation, production signature, automatic PR acceptance or R2-C authority is granted by this writer-side test result.

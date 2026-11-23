@@ -85,7 +85,7 @@ class HostileAndBenignH01toH21(unittest.TestCase):
         g.update(observed_status="FAIL", evidence_ids=["windows-lab-failed"])
         e = copy.deepcopy(x["simulated_resolver_context"]["evidence_records"][1]);e.update(evidence_id="windows-lab-failed",evidence_level="E5", evidence_type="DEVICE", provenance="DIRECTLY_OBSERVED", result="FAIL")
         x["simulated_resolver_context"]["evidence_records"].append(e)
-        check(CONTRADICTED, x, "REQUIRED_GATE_FAILED")
+        check(UNVERIFIED, x, "MISSING_TARGET_EVIDENCE", "REQUIRED_GATE_BLOCKED")
 
     def test_H13_fail_and_not_run(self):
         x = case("r2a-red-retail")
@@ -198,6 +198,213 @@ class AdditionalCriticalSecurityCases(unittest.TestCase):
     def test_policy_paths_nonapproved_not_live(self):
         x=case("r2a-green-cafe")
         self.assertEqual(evaluate_fixture(x,mode="production").verdict,UNVERIFIED)
+
+
+# Independent Nox R1 6031088112 hostile cases, with valid-scope controls.
+# All receipt identities and targets remain SYNTHETIC test-harness inputs.
+def retail_release():
+    x = case("r2a-red-retail")
+    claim = x["untrusted_request"]
+    context = x["simulated_resolver_context"]
+    digest = claim["claim"]["target"]["artifact_digest_sha256"]
+    source = context["evidence_records"][0]
+    device = copy.deepcopy(source)
+    device.update(evidence_id="ret-windows-abc", evidence_level="E5", evidence_type="DEVICE",
+                  result="PASS", provenance="DIRECTLY_OBSERVED")
+    device["issuer_resolution"] = {"channel":"SIMULATED_REVIEWER_API", "issuer_id":"lab-test-operator",
+                                   "trust_class":"SIMULATED_RESOLVED_FIXTURE_ONLY"}
+    device["observed_target"] = {
+        "kind":"runtime-entrypoint", "environment":"synthetic Windows VHDX adversarial lab",
+        "data_authority":"installed-runtime", "entrypoint":"windows://retail-installed",
+        "validation_scope":"Windows VHDX ACL adversarial A/B/C", "artifact_digest_sha256":digest,
+        "device_matrix":["VHDX_A", "VHDX_B", "VHDX_C"],
+    }
+    signing = copy.deepcopy(source)
+    signing.update(evidence_id="ret-signing-policy", evidence_level="E4", evidence_type="BUILD",
+                   result="PASS", provenance="AUTOMATED")
+    signing["issuer_resolution"] = {"channel":"SIMULATED_GITHUB_ACTIONS", "issuer_id":"signing-fixture",
+                                    "trust_class":"SIMULATED_RESOLVED_FIXTURE_ONLY"}
+    signing["observed_target"] = {
+        "kind":"release-artifact", "environment":"synthetic signing authorization",
+        "data_authority":"not-applicable", "validation_scope":"installer signing authorization",
+        "artifact_digest_sha256":digest, "signing_policy_ref":"R2B_SYNTHETIC_SIGNING_POLICY",
+    }
+    context["evidence_records"] = [source, device, signing]
+    context["gate_observations"][1].update(observed_status="PASS", evidence_ids=["ret-windows-abc"])
+    context["gate_observations"][2].update(observed_status="PASS", evidence_ids=["ret-signing-policy"])
+    claim["offered_evidence_ids"] = ["ret-pr105-source-review", "ret-windows-abc", "ret-signing-policy"]
+    return x
+
+
+class NoxR1CorrectiveAdversarialTests(unittest.TestCase):
+    """Prove the corrected semantics, including legitimate positives/negatives."""
+
+    def test_NXR2B_001_complete_matching_release_accepted_as_synthetic_only(self):
+        check(SUPPORTED, retail_release(), "SCOPED_EVIDENCE_MATCH")
+
+    def test_NXR2B_001_source_tree_mock_device_and_signing_false_support(self):
+        x = retail_release()
+        for e in x["simulated_resolver_context"]["evidence_records"][1:]:
+            e["observed_target"].update(kind="source-tree", environment="mock browser", data_authority="mock-fixture")
+        check(UNVERIFIED, x, "MISSING_TARGET_EVIDENCE")
+
+    def test_NXR2B_001_wrong_device_target_only(self):
+        x = retail_release()
+        x["simulated_resolver_context"]["evidence_records"][1]["observed_target"]["kind"] = "source-tree"
+        check(UNVERIFIED, x, "MISSING_TARGET_EVIDENCE")
+
+    def test_NXR2B_001_wrong_signing_scope_only(self):
+        x = retail_release()
+        x["simulated_resolver_context"]["evidence_records"][2]["observed_target"]["validation_scope"] = "internal smoke"
+        check(UNVERIFIED, x, "MISSING_TARGET_EVIDENCE")
+
+    def test_NXR2B_001_device_missing_installer_digest(self):
+        x = retail_release()
+        del x["simulated_resolver_context"]["evidence_records"][1]["observed_target"]["artifact_digest_sha256"]
+        check(UNVERIFIED, x, "MISSING_TARGET_EVIDENCE")
+
+    def test_NXR2B_001_signing_issuer_substitution(self):
+        x = retail_release()
+        x["simulated_resolver_context"]["evidence_records"][2]["issuer_resolution"]["channel"] = "SIMULATED_REVIEWER_API"
+        check(UNVERIFIED, x, "UNTRUSTED_ATTESTATION")
+
+
+    def test_NXR2B_001_device_matrix_incomplete(self):
+        x = retail_release()
+        x["simulated_resolver_context"]["evidence_records"][1]["observed_target"]["device_matrix"] = ["VHDX_A"]
+        check(UNVERIFIED, x, "MISSING_TARGET_EVIDENCE")
+
+    def test_NXR2B_001_signing_policy_substitution(self):
+        x = retail_release()
+        x["simulated_resolver_context"]["evidence_records"][2]["observed_target"]["signing_policy_ref"] = "OTHER_POLICY"
+        check(UNVERIFIED, x, "MISSING_TARGET_EVIDENCE")
+
+    def test_NXR2B_001_wrong_digest_is_proof_binding_contradiction(self):
+        x = retail_release()
+        x["simulated_resolver_context"]["evidence_records"][1]["observed_target"]["artifact_digest_sha256"] = "1" * 64
+        check(CONTRADICTED, x, "EVIDENCE_ARTIFACT_MISMATCH")
+
+    def test_NXR2B_002_complete_matching_single_file_comparison(self):
+        x = case("r2a-red-talibon")
+        x["simulated_resolver_context"]["evidence_records"][1]["result"] = "PASS"
+        x["simulated_resolver_context"]["gate_observations"][0]["observed_status"] = "PASS"
+        comp = x["simulated_resolver_context"]["git_object_comparison"]
+        comp["observed_blob_sha"] = comp["approved_blob_sha"]
+        check(SUPPORTED, x, "SCOPED_EVIDENCE_MATCH")
+
+    def test_NXR2B_002_same_hash_unrelated_path_and_receipt(self):
+        x = case("r2a-red-talibon")
+        x["simulated_resolver_context"]["evidence_records"][1]["result"] = "PASS"
+        x["simulated_resolver_context"]["gate_observations"][0]["observed_status"] = "PASS"
+        comp = x["simulated_resolver_context"]["git_object_comparison"]
+        comp.update(path="unrelated/OtherController.php", linked_evidence_id="irrelevant-id",
+                    observed_blob_sha=comp["approved_blob_sha"])
+        check(UNVERIFIED, x, "MISSING_TARGET_EVIDENCE")
+
+    def test_NXR2B_002_same_hash_wrong_candidate_sha(self):
+        x = case("r2a-red-talibon")
+        x["simulated_resolver_context"]["evidence_records"][1]["result"] = "PASS"
+        x["simulated_resolver_context"]["gate_observations"][0]["observed_status"] = "PASS"
+        comp = x["simulated_resolver_context"]["git_object_comparison"]
+        comp.update(candidate_sha="f" * 40, observed_blob_sha=comp["approved_blob_sha"])
+        check(UNVERIFIED, x, "MISSING_TARGET_EVIDENCE")
+
+    def test_NXR2B_002_missing_offer_for_negative_comparison(self):
+        x = case("r2a-red-talibon")
+        x["untrusted_request"]["offered_evidence_ids"] = ["tal-path-only"]
+        check(UNVERIFIED, x, "MISSING_TARGET_EVIDENCE")
+
+    def test_NXR2B_002_multi_path_complete_positive(self):
+        x = case("r2a-red-talibon")
+        c = x["simulated_resolver_context"]
+        e = c["evidence_records"][1]
+        e["result"] = "PASS"
+        c["gate_observations"][0]["observed_status"] = "PASS"
+        e["observed_target"]["content_scope"].append("app/Http/Controllers/OtherController.php")
+        x["untrusted_request"]["claim"]["target"]["content_scope"].append("app/Http/Controllers/OtherController.php")
+        comp = c.pop("git_object_comparison")
+        comp["observed_blob_sha"] = comp["approved_blob_sha"]
+        second = copy.deepcopy(comp)
+        second["path"] = "app/Http/Controllers/OtherController.php"
+        c["git_object_comparisons"] = [comp, second]
+        check(SUPPORTED, x, "SCOPED_EVIDENCE_MATCH")
+
+    def test_NXR2B_002_multi_path_missing_one_comparison(self):
+        x = case("r2a-red-talibon")
+        c = x["simulated_resolver_context"]
+        e = c["evidence_records"][1]
+        e["result"] = "PASS"
+        c["gate_observations"][0]["observed_status"] = "PASS"
+        e["observed_target"]["content_scope"].append("app/Http/Controllers/OtherController.php")
+        x["untrusted_request"]["claim"]["target"]["content_scope"].append("app/Http/Controllers/OtherController.php")
+        comp = c.pop("git_object_comparison")
+        comp["observed_blob_sha"] = comp["approved_blob_sha"]
+        c["git_object_comparisons"] = [comp]
+        check(UNVERIFIED, x, "MISSING_TARGET_EVIDENCE")
+
+    def test_NXR2B_003_e1_receipt_issuer_is_author_not_review_reviewer(self):
+        x = case("r2a-green-retail")
+        x["simulated_resolver_context"]["evidence_records"][0]["issuer_resolution"]["issuer_id"] = "author-same-person"
+        check(UNVERIFIED, x, "REVIEWER_CONFLICT")
+        result = evaluate_fixture(x, security_context={
+            "author_identity":"author-same-person", "reviewer_identity":"independent-person"})
+        self.assertEqual(result.verdict, UNVERIFIED)
+        self.assertIn("REVIEWER_CONFLICT", result.reason_codes)
+
+    def test_NXR2B_003_absent_reviewer_resolution_fails_closed(self):
+        x = case("r2a-green-retail")
+        del x["simulated_resolver_context"]["reviewer_resolution"]
+        check(UNVERIFIED, x, "REVIEWER_CONFLICT")
+
+    def test_NXR2B_003_author_equals_resolved_reviewer(self):
+        x = case("r2a-green-retail")
+        x["simulated_resolver_context"]["reviewer_resolution"]["author_identity"] = "independent-fixture-reviewer"
+        check(UNVERIFIED, x, "REVIEWER_CONFLICT")
+
+    def test_NXR2B_003_valid_sec_identity_binding(self):
+        x = case("r2a-green-retail")
+        sec = {"author_identity":"retail-author-fixture", "reviewer_identity":"independent-fixture-reviewer"}
+        self.assertEqual(evaluate_fixture(x, security_context=sec).verdict, SUPPORTED)
+
+    def test_NXR2B_003_conflicting_sec_identity(self):
+        x = case("r2a-green-retail")
+        sec = {"author_identity":"retail-author-fixture", "reviewer_identity":"not-the-issuer"}
+        self.assertEqual(evaluate_fixture(x, security_context=sec).verdict, UNVERIFIED)
+
+    def test_NXR2B_004_low_level_source_fail_cannot_condemn_device_gate(self):
+        x = case("r2a-red-retail")
+        e = copy.deepcopy(x["simulated_resolver_context"]["evidence_records"][0])
+        e.update(evidence_id="source-review-fail-not-device", result="FAIL")
+        x["simulated_resolver_context"]["evidence_records"].append(e)
+        x["untrusted_request"]["offered_evidence_ids"].append(e["evidence_id"])
+        x["simulated_resolver_context"]["gate_observations"][1].update(
+            observed_status="FAIL", evidence_ids=[e["evidence_id"]])
+        check(UNVERIFIED, x, "MISSING_TARGET_EVIDENCE", "REQUIRED_GATE_BLOCKED")
+
+    def test_NXR2B_004_wrong_target_e5_fail_cannot_condemn_device_gate(self):
+        x = case("r2a-red-retail")
+        x["simulated_resolver_context"]["gate_observations"][1].update(
+            observed_status="FAIL", evidence_ids=["ret-internal-smoke"])
+        e = x["simulated_resolver_context"]["evidence_records"][1]
+        e.update(evidence_level="E5", evidence_type="DEVICE", provenance="DIRECTLY_OBSERVED", result="FAIL")
+        e["issuer_resolution"].update(channel="SIMULATED_REVIEWER_API", issuer_id="lab-test-operator")
+        check(UNVERIFIED, x, "MISSING_TARGET_EVIDENCE", "REQUIRED_GATE_BLOCKED")
+
+    def test_NXR2B_004_correct_target_e5_fail_may_contradict(self):
+        x = retail_release()
+        x["simulated_resolver_context"]["evidence_records"][1]["result"] = "FAIL"
+        x["simulated_resolver_context"]["gate_observations"][1]["observed_status"] = "FAIL"
+        check(CONTRADICTED, x, "REQUIRED_GATE_FAILED")
+
+    def test_NXR2B_004_true_dual_conflicting_receipts_hold(self):
+        x = retail_release()
+        e = copy.deepcopy(x["simulated_resolver_context"]["evidence_records"][1])
+        e["evidence_id"] = "ret-windows-abc-disagreement"
+        e["result"] = "FAIL"
+        x["simulated_resolver_context"]["evidence_records"].append(e)
+        x["simulated_resolver_context"]["gate_observations"][1]["evidence_ids"].append(e["evidence_id"])
+        x["untrusted_request"]["offered_evidence_ids"].append(e["evidence_id"])
+        check(UNVERIFIED, x, "INCONSISTENT_EVIDENCE")
 
 
 if __name__ == "__main__":

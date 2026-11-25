@@ -206,6 +206,8 @@ def assert_operation_allowed(
             f"formal_role='Reviewer' is read-only and cannot perform mutating operation {operation!r}."
         )
 
+    if packet.get("schema_version") == 2 and actor_persona is not None and actor_persona != packet.get("assigned_persona"):
+        raise PolicyViolationError("Contract actor override denied; no live delegation bridge.")
     persona = actor_persona or packet.get("assigned_persona", "")
     spec = PERSONA_PERMISSIONS.get(persona)
     if spec is None:
@@ -243,10 +245,18 @@ def assert_paths_within_ownership(
 
     for raw in changed_paths:
         norm = normalize_rel_path(raw)
+        if packet.get("schema_version") == 2 and (
+            raw != norm or any(char in norm for char in '<>:"|')
+            or any(segment.endswith((" ", ".")) for segment in norm.split("/"))
+            or any(ord(char) < 32 or ord(char) == 127 for char in norm)
+        ):
+            raise PolicyViolationError(f"Noncanonical contract path denied: {raw!r}")
         norm_low = norm.lower()
-        if not allow_protected_governance and is_protected_governance_path(norm):
+        if (not allow_protected_governance or packet.get("schema_version") == 2) and is_protected_governance_path(norm):
             raise PolicyViolationError(f"Protected governance file {norm!r} cannot be modified by worker.")
 
+        if packet.get("schema_version") == 2 and any(path_matches_prefix(norm, pref) for pref in packet["excluded_paths"]):
+            raise PolicyViolationError(f"Excluded path mutation denied: {norm!r}")
         if not any(path_matches_prefix(norm, pref) for pref in owned_prefixes):
             raise PolicyViolationError(
                 f"Out-of-scope file mutation denied: {norm!r} is not inside owned_paths {owned_prefixes}"

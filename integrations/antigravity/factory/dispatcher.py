@@ -337,27 +337,29 @@ class FleetDispatcher:
 
     def dispatch_worker(
         self,
-        packet: dict[str, Any],
-        handler: Any,
+        packet: dict[str, Any] | str | bytes,
+        handler: Any = None,
         *,
         worktree_path: Path | None = None,
+        journal: Any = None,
+        fixture_adapter: Any = None,
     ) -> dict[str, Any]:
-        verify_mission_packet(packet)
-        persona = packet["assigned_persona"]
-        formal_role = packet["formal_role"]
-        ctx = self.create_isolated_context(persona, formal_role)
-        isolated_input = json.loads(json.dumps(packet))
-        result = handler(isolated_input, ctx, worktree_path or self.repo_root)
-        record = {
-            "mission_id": packet["mission_id"],
-            "run_id": packet["run_id"],
-            "context_id": ctx["context_id"],
-            "persona": persona,
-            "formal_role": formal_role,
-            "native_type_name": ctx["native_type_name"],
-        }
-        self._dispatch_history.append(record)
-        return {"context": ctx, "result": result}
+        from .dispatch_preflight import ContractJournal, FixtureDispatchAdapter
+        from .mission_contract import parse_mission_packet
+
+        if isinstance(packet, dict):
+            # Legacy structure is still inspectable, but a v1 packet is not live authority.
+            verify_mission_packet(packet)
+            return {"status": "BLOCKED", "reason": "LEGACY_PACKET_NOT_DISPATCH_AUTHORITY"}
+        parsed = parse_mission_packet(packet)
+        if parsed["schema_version"] != 2:
+            return {"status": "BLOCKED", "reason": "LEGACY_PACKET_NOT_DISPATCH_AUTHORITY"}
+        if (type(journal) is not ContractJournal or type(fixture_adapter) is not FixtureDispatchAdapter
+                or handler is not None or worktree_path is not None):
+            if type(journal) is ContractJournal:
+                return journal.block_unavailable_bridge(packet)
+            return {"status": "BLOCKED", "reason": "TRUSTED_PREFLIGHT_BRIDGE_UNAVAILABLE"}
+        return journal.dispatch_fixture(packet, fixture_adapter)
 
     @property
     def dispatch_history(self) -> list[dict[str, Any]]:

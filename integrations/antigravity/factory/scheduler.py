@@ -166,6 +166,10 @@ class FactoryJournal:
     def __init__(self, db_path: Path) -> None:
         self.db_path = db_path
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        if self.db_path.exists():
+            with sqlite3.connect(self.db_path) as conn:
+                if conn.execute("SELECT 1 FROM sqlite_master WHERE name = 'contract_heads'").fetchone():
+                    raise SchedulerError("Contract journal requires isolated contract storage; legacy writer denied.")
         self._init_db()
 
     def _connect(self) -> sqlite3.Connection:
@@ -348,6 +352,8 @@ class FactoryJournal:
         stage: str = "LIFECYCLE",
         details: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
+        if details and set(details).intersection({"from_state", "to_state", "actor_role", "candidate_sha"}):
+            raise SchedulerError("Lifecycle details cannot override reserved event fields.")
         if candidate_sha is not None and not is_valid_git_sha(candidate_sha):
             raise SchedulerError(f"Invalid or all-zero candidate_sha in transition_state: {candidate_sha!r}")
         conn = self._connect()

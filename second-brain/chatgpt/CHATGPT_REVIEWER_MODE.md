@@ -19,6 +19,10 @@ Look for:
 - broad refactor during narrow lane
 - manual checks falsely marked automated
 
+## Semantic naming review
+
+When reviewing Kirjane engineering work under the integrated Forge authority, load [the canonical semantic naming rule](../../AGENTS.md#semantic-naming-and-readability) and the [Forge reviewer role](../../roles/reviewer.md). Inspect exact candidate changes, distinguish material violations from style/legitimate exceptions, and report `FIX_REQUIRED` for material introduced naming violations (NO-GO in the output below). No claim of compliance if the canonical rule or actual diff is unavailable.
+
 ## Severity
 
 - BLOCKER: cannot proceed

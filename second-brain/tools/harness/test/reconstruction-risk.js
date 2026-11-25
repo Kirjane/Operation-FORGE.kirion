@@ -91,5 +91,72 @@ test('T-C01 CLI and JSONL validate raw task controls before lossy intake',()=>{
     write('task.json',task({risk_overrides:{blast_radius:0}}));
     const good=spawnSync(process.execPath,[path.join(harness,'cli.js'),'route','--task','task.json'],options);
     assert.equal(good.status,0,good.stderr);assert.equal(JSON.parse(good.stdout).risk.mode,'CRITICAL');
+    // Exercise the actual exported runtime boundary with the same fixture as the transports.
+    const runtime=require(path.join(harness,'lib','runtime'));
+    const intent='Fix production security bug';
+    const invalid=[];
+    for(const field of ['signals','risk_overrides']){
+      for(const value of [0,false,true,'','bad',null,[]]) invalid.push({[field]:value});
+    }
+    for(const value of ['0',null,true,{},[],-1,5,1.5]) invalid.push({risk_overrides:{blast_radius:value}});
+    for(const value of ['false',0,null,{},[]]) invalid.push({signals:{security:value}});
+    // JSONL must reject the same JSON-representable controls without killing the stream.
+    const more=spawnSync(process.execPath,[path.join(harness,'agent.js')],{...options,input:[...invalid.map(request),request({})].map(x=>JSON.stringify(x)).join('\n')+'\n'});
+    assert.equal(more.status,0,more.stderr);
+    const results=more.stdout.trim().split('\n').map(JSON.parse);
+    assert.equal(results.length,invalid.length+1);
+    for(const [i,control] of invalid.entries()){
+      assert.equal(results[i].ok,false,JSON.stringify(control));
+      assert.match(results[i].error.message,new RegExp(Object.keys(control)[0]));
+    }
+    assert.equal(results.at(-1).ok,true);
+    assert.equal(results.at(-1).result.risk.mode,'CRITICAL');
+    for(const control of invalid){
+      assert.throws(()=>runtime.intake({intent,type:'BUG_FIX',...control},{root}),new RegExp(Object.keys(control)[0]));
+    }
+    for(const value of [NaN,Infinity]) assert.throws(()=>runtime.intake({intent,risk_overrides:{blast_radius:value}},{root}),/risk_overrides/);
+    for(const input of [intent,{intent},{intent,signals:{},risk_overrides:{}},{intent,signals:{security:false},risk_overrides:{blast_radius:0}}]){
+      const result=runtime.intake(input,{root});
+      assert.equal(result.risk.mode,'CRITICAL');
+      assert.equal(result.signals.security,true);
+    }
+    assert.equal(runtime.intake({intent,risk_overrides:{blast_radius:4}},{root}).risk.dimensions.blast_radius,4);
+    const ordinary=runtime.intake({intent:'Fix rendering bug',risk_overrides:{blast_radius:0}},{root});
+    assert.equal(ordinary.risk.mode,'LOW');assert.equal(ordinary.risk.dimensions.blast_radius,0);
+    const cliIntent=spawnSync(process.execPath,[path.join(harness,'cli.js'),'intake','--intent',intent],options);
+    assert.equal(cliIntent.status,0,cliIntent.stderr);
+    assert.equal(JSON.parse(cliIntent.stdout).risk.mode,'CRITICAL');
   }finally{fs.rmSync(root,{recursive:true,force:true});}
+});
+
+test('T-C01 R2 direct intake rejects malformed control containers',()=>{
+  const {intakeTask}=require('../lib/intake');
+  for(const field of ['signals','risk_overrides']){
+    for(const value of [0,false,true,'','bad',null,[],new Date(0)]){
+      assert.throws(()=>intakeTask({intent:'Fix production security bug',[field]:value}),new RegExp(field));
+    }
+  }
+});
+test('T-C01 R2 direct intake rejects malformed control values',()=>{
+  const {intakeTask}=require('../lib/intake');
+  for(const value of ['0',null,true,{},[],NaN,Infinity,-1,5,1.5]){
+    assert.throws(()=>intakeTask({intent:'Fix bug',risk_overrides:{blast_radius:value}}),/risk_overrides/);
+  }
+  for(const value of ['false',0,null,{},[]]){
+    assert.throws(()=>intakeTask({intent:'Fix bug',signals:{security:value}}),/signals/);
+  }
+});
+test('T-C01 R2 direct intake preserves string intent and valid controls',()=>{
+  const {intakeTask}=require('../lib/intake');
+  const intent='Fix rendering bug';
+  const plain=intakeTask(intent);
+  assert.deepEqual(plain,intakeTask({intent}));
+  assert.deepEqual(plain,intakeTask({intent,signals:{},risk_overrides:{}}));
+  assert.deepEqual(plain,intakeTask({intent,signals:undefined,risk_overrides:undefined}));
+  const signals=Object.assign(Object.create(null),{ui:false,security:true});
+  const risk_overrides=Object.assign(Object.create(null),{blast_radius:0});
+  const result=intakeTask({intent,signals,risk_overrides});
+  assert.deepEqual({...result.signals},{ui:false,security:true});
+  assert.deepEqual({...result.risk_overrides},{blast_radius:0});
+  assert.equal(intakeTask({intent,risk_overrides:{blast_radius:4}}).risk_overrides.blast_radius,4);
 });

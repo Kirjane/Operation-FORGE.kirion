@@ -1,4 +1,4 @@
-const {sha256}=require('./io');
+const {sha256,validateSignals,validateRiskOverrides}=require('./io');
 
 function intakeTask(input){
   if(typeof input==='string') input={intent:input};
@@ -9,8 +9,8 @@ function intakeTask(input){
     id:(input.id&&String(input.id).trim())||`task-${sha256(intent).slice(0,12)}`,
     intent,
     constraints:Array.isArray(input.constraints)?input.constraints.map(String):[],
-    signals:input.signals&&typeof input.signals==='object'?input.signals:{},
-    risk_overrides:input.risk_overrides&&typeof input.risk_overrides==='object'?input.risk_overrides:{},
+    signals:validateSignals(input.signals),
+    risk_overrides:validateRiskOverrides(input.risk_overrides),
     primary_journeys:Array.isArray(input.primary_journeys)?input.primary_journeys:[],
     repository:input.repository&&typeof input.repository==='object'?input.repository:{},
     acceptance:Array.isArray(input.acceptance)?input.acceptance.map(String):[]

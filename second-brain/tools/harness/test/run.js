@@ -298,8 +298,8 @@ test('truncated context is a WARN below CRITICAL rigor and a BLOCK at CRITICAL',
 });
 
 function assertCompleteShippedPack(c,route,root,label){
-  // Status must be checked FIRST. BLOCKED context omits truncated on some paths,
-  // so !c.truncated alone creates a false-positive regression.
+  // Status must be checked FIRST. BLOCKED context can explicitly report truncated=false,
+  // so truncation alone cannot establish completeness.
   assert.strictEqual(c.status,'RESOLVED',label+' status='+c.status+'; reason='+(c.reason||'none'));
   assert.strictEqual(c.truncated,false,label+' truncated at '+c.document_count+'/'+c.document_budget+' docs, '+c.total_bytes+'/'+c.byte_budget+' bytes');
   assert.deepStrictEqual(c.missing_required,[],label+' missing required sources');
@@ -318,11 +318,24 @@ function assertCompleteShippedPack(c,route,root,label){
 
 test('complete-pack assertion rejects BLOCKED missing-required context',()=>{
   const root=fs.mkdtempSync(path.join(os.tmpdir(),'fci-completeness-negative-'));
-  const route={rigor_mode:'LOW',control_roots:['mandatory-authority.md'],lanes:[]};
-  const c=compileContext(root,route,{context:{...cfg.manifest.context,ignored_directories:[],max_documents:4,max_bytes:128}});
-  assert.strictEqual(c.status,'BLOCKED');
-  assert.strictEqual(c.truncated,undefined);
-  assert.throws(()=>assertCompleteShippedPack(c,route,root,'negative fixture'),assert.AssertionError);
+  try{
+    fs.writeFileSync(path.join(root,'available-authority.md'),'# Available authority\n','utf8');
+    const route={rigor_mode:'LOW',control_roots:['available-authority.md','mandatory-authority.md'],lanes:[]};
+    const c=compileContext(root,route,{context:{...cfg.manifest.context,ignored_directories:[],max_documents:4,max_bytes:128}});
+    assert.strictEqual(c.status,'BLOCKED');
+    assert.strictEqual(c.reason,'required context sources missing');
+    assert.strictEqual(c.truncated,false);
+    assert.deepStrictEqual(c.missing_required,['mandatory-authority.md']);
+    assert.deepStrictEqual(c.required_not_loaded,['available-authority.md','mandatory-authority.md']);
+    assert.deepStrictEqual(c.documents,[]);
+    assert.strictEqual(c.document_count,0);
+    assert.strictEqual(c.total_bytes,0);
+    assert.strictEqual(c.document_budget,4);
+    assert.strictEqual(c.byte_budget,128);
+    assert.throws(()=>assertCompleteShippedPack(c,route,root,'negative fixture'),err=>
+      err instanceof assert.AssertionError && err.actual==='BLOCKED' && err.expected==='RESOLVED' &&
+      err.operator==='strictEqual' && err.message.includes('negative fixture status=BLOCKED; reason=required context sources missing'));
+  }finally{fs.rmSync(root,{recursive:true,force:true});}
 });
 
 test('no rigor mode or lifecycle stage truncates the compiled context for the shipped mesh',()=>{

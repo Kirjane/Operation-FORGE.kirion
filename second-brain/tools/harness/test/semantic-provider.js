@@ -26,3 +26,6 @@ test('tampered Notion semantic snapshot is rejected',()=>{const snapshot=makeSna
 test('stale Notion source SHA is rejected even with a valid snapshot digest',()=>{const snapshot=makeSnapshot();snapshot.documents[0].source_sha='0000000000000000000000000000000000000000';snapshot.snapshot_sha256=snapshotDigest(snapshot);const result=compile(writeSnapshot(snapshot));assert.equal(result.status,'BLOCKED');assert(result.reason.includes('source drift'));});
 test('stale route-pack fingerprint is rejected',()=>{const snapshot=makeSnapshot();snapshot.route_pack_sha256='0'.repeat(64);snapshot.snapshot_sha256=snapshotDigest(snapshot);const result=compile(writeSnapshot(snapshot));assert.equal(result.status,'BLOCKED');assert(result.errors.some(x=>x.includes('route-pack')));});
 console.log(`\n${count} semantic provider tests passed.`);
+
+// W3A regression: preserve all existing tests and execute the focused suite.
+require('./reconstruction-provider');

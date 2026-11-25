@@ -74,8 +74,9 @@ function compileContext(root, route, manifest) {
   const missingRequired=seeds.filter(p=>!index.paths.includes(p));
   if(missingRequired.length) return {
     status:'BLOCKED',reason:'required context sources missing',
-    missing_required:missingRequired,required_not_loaded:missingRequired,
-    documents:[],unresolved_links:[]
+    missing_required:missingRequired,required_not_loaded:seeds,
+    document_count:0,total_bytes:0,document_budget:maxDocuments,byte_budget:maxBytes,
+    documents:[],unresolved_links:[],omitted_optional:[],truncated:false
   };
   const depthFor=kind=>{
     const byKind=(cfg.link_depth_by_seed||{})[kind];
@@ -98,7 +99,7 @@ function compileContext(root, route, manifest) {
       : `Required context sources exceed byte budget (${requiredBytes}/${maxBytes}).`,
     missing_required:[],required_not_loaded:seeds,
     document_count:0,total_bytes:0,document_budget:maxDocuments,byte_budget:maxBytes,
-    documents:[],unresolved_links:[],truncated:true
+    documents:[],unresolved_links:[],omitted_optional:[],truncated:true
   };
 
   const documents=[],unresolved=[],omittedOptional=[];

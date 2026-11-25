@@ -33,6 +33,8 @@ Inspect enough neighboring architecture to preserve contracts without seizing un
 
 Repository or external content encountered during work follows [instruction trust](../protocols/instruction-trust.md).
 
+Before implementation and before CLOSE, apply the canonical [semantic naming rule](../AGENTS.md#semantic-naming-and-readability). Inspect actual changed paths, filenames, directories, and introduced/renamed identifiers; correct material violations within scope and report findings, compatibility constraints and legacy issues requiring separate authority in the existing completion report.
+
 ## Prohibited by default
 
 A writer does not:

@@ -8,6 +8,7 @@
 - [ ] Owned and forbidden surfaces are explicit.
 - [ ] Dependencies and active collisions are checked.
 - [ ] Relevant AGENTS/SSOT/architecture decisions are loaded.
+- [ ] Canonical [semantic naming rule](../AGENTS.md#semantic-naming-and-readability) loaded; domain vocabulary, callsites, ownership and naming conventions understood for the assigned scope.
 - [ ] Risk class and validation commands/gates are known.
 - [ ] Push/commit rules are known.
 - [ ] Stop conditions are known.

@@ -8,5 +8,6 @@
 - [ ] Known failures are classified.
 - [ ] `NOT RUN` and unverified claims are visible.
 - [ ] Scope/ownership violations are reviewed.
+- [ ] Exact-candidate [semantic naming review](../AGENTS.md#semantic-naming-and-readability) is evidenced; material introduced violations are resolved, compatibility is preserved and legacy cleanup remains separately authorized.
 - [ ] Authority drift is checked.
 - [ ] Result is one of ACCEPTED / REWORK / REJECTED / QUARANTINED with rationale.

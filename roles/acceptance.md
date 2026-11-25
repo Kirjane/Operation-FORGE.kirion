@@ -21,6 +21,8 @@ Acceptance may consider:
 - unresolved risks;
 - explicit product acceptance criteria.
 
+Apply the canonical [semantic naming rule](../AGENTS.md#semantic-naming-and-readability) and the [Acceptance Checklist](../checklists/acceptance.md) to the exact candidate. Unresolved material naming violations introduced by the candidate require REWORK; missing review evidence requires ADDITIONAL EVIDENCE REQUIRED. Do not infer runtime or product acceptance from naming compliance.
+
 ## Outcomes
 
 Possible outcomes include:

@@ -12,6 +12,7 @@ from typing import Any, Callable
 from . import EXPECTED_BROKER_LOGIN, EXPECTED_BROKER_USER_ID
 from .authority import is_valid_git_sha, verify_mission_packet
 from .evidence import redact_secrets
+from .scheduler import enable_wal, require_legacy_storage, SchedulerError
 from .ownership import parse_git_raw_z_diff
 from .policy import (
     PolicyViolationError,
@@ -71,14 +72,25 @@ class NairuDeliveryBroker:
 
     def _connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.db_path, timeout=15.0, isolation_level=None)
-        conn.row_factory = sqlite3.Row
-        conn.execute("PRAGMA journal_mode=WAL;")
-        return conn
+        try:
+            conn.row_factory = sqlite3.Row
+            enable_wal(conn)
+            return conn
+        except BaseException:
+            conn.close()
+            raise
 
     def _init_db(self) -> None:
-        conn = self._connect()
+        # Do not set WAL or create receipts until the storage is checked under
+        # the same SQLite write lock as DDL. Older unpatched brokers still
+        # require operational path segregation; this is a current-client guard.
+        conn = sqlite3.connect(self.db_path, timeout=15.0, isolation_level=None)
         try:
             conn.execute("BEGIN IMMEDIATE;")
+            try:
+                require_legacy_storage(conn)
+            except SchedulerError as exc:
+                raise DeliveryBrokerError(str(exc)) from exc
             conn.execute(
                 """
                 CREATE TABLE IF NOT EXISTS delivery_receipts (
@@ -97,6 +109,10 @@ class NairuDeliveryBroker:
                 """
             )
             conn.execute("COMMIT;")
+        except BaseException:
+            if conn.in_transaction:
+                conn.execute("ROLLBACK;")
+            raise
         finally:
             conn.close()
 

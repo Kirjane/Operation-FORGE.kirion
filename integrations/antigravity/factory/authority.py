@@ -204,20 +204,25 @@ def verify_mission_packet(
     observed_base_sha: str | None = None,
     trusted_verifiers: set[str] | None = None,
 ) -> dict[str, Any]:
-    """Fail-closed verification of a MissionPacket against schema, authority, ownership, risk-floor gates, and role invariants."""
-    from .policy import (
-        PERSONA_PERMISSIONS,
-        is_prohibited_branch,
-        is_protected_governance_path,
-        normalize_rel_path,
-    )
-    from .quality import (
-        GATE_CATALOG,
-        MANDATORY_NON_EXEMPTIBLE_GATES,
-        RISK_REQUIRED_GATES,
-    )
-
+    """Validate historical v1 packet structure and policy; never authenticate a grant."""
+    # Legacy callers (including delivery and recovery) must never gain v2 authority.
+    if not isinstance(packet, dict) or type(packet.get("schema_version")) is not int:
+        raise AuthorityError("Missing or invalid mission protocol version.")
+    if packet["schema_version"] != 1:
+        raise AuthorityError("Legacy mission path accepts historical protocol v1 only; v2 requires contract preflight.")
     validate_contract(packet, "mission-packet.schema.json")
+    return verify_packet_policy(packet, expected_repo=expected_repo,
+                                observed_base_sha=observed_base_sha,
+                                trusted_verifiers=trusted_verifiers)
+
+
+def verify_packet_policy(
+    packet: dict[str, Any], *, expected_repo: str | None = None,
+    observed_base_sha: str | None = None, trusted_verifiers: set[str] | None = None,
+) -> dict[str, Any]:
+    """Shared policy checks after version-specific structural validation; not authentication."""
+    from .policy import PERSONA_PERMISSIONS, is_prohibited_branch, is_protected_governance_path, normalize_rel_path
+    from .quality import GATE_CATALOG, MANDATORY_NON_EXEMPTIBLE_GATES, RISK_REQUIRED_GATES
 
     if not is_valid_git_sha(packet["base_sha"]):
         raise AuthorityError(f"Invalid or all-zero base_sha forbidden: {packet['base_sha']!r}")
@@ -244,7 +249,8 @@ def verify_mission_packet(
     if observed_base_sha is not None and packet["base_sha"] != observed_base_sha:
         raise AuthorityError(f"Stale base_sha: packet={packet['base_sha']} observed={observed_base_sha}")
 
-    allowed_verifiers = trusted_verifiers or {"Engineer:Kirch-Ivan-Balite", "Maintainer:Kirch-Nairu"}
+    allowed_verifiers = ({"Engineer:Kirch-Ivan-Balite", "Maintainer:Kirch-Nairu"}
+                         if trusted_verifiers is None else trusted_verifiers)
     if packet["verifier"] not in allowed_verifiers:
         raise AuthorityError(f"Untrusted authorization verifier: {packet['verifier']!r}")
 

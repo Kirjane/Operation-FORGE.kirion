@@ -115,6 +115,45 @@ def contract_projection(packet: dict[str, Any]) -> dict[str, Any]:
     return _normalize_sets({key: value for key, value in packet.items() if key != "run_id"})
 
 
+# These fields identify the independently resolved grant envelope, not the
+# substantive policy inherited from the predecessor. New policy fields default
+# to immutable until a revision mechanism explicitly supports them.
+_GRANT_ENVELOPE_FIELDS = frozenset({
+    "issuer_actor_id", "issuer_role", "directive_ref", "directive_sha256", "parent_grant_ref",
+})
+_REVISION_ENVELOPE_FIELDS = frozenset({
+    "revision", "previous_contract_sha256", "revision_reason", "authorization_ref",
+})
+
+
+def revision_changes(prior: dict[str, Any], successor: dict[str, Any]) -> set[str]:
+    """Compare authorized content, not provenance renewal.
+
+    Nested substantive authority is immutable in this protocol slice, including
+    source precedence, Brain requirements, revision permissions and verifier.
+    Grant scope may change only as the validated projection of allowed_operations;
+    that operation change still needs predecessor permission. Future nested
+    policy fields are not silently treated as envelope metadata.
+    """
+    before, after = contract_projection(prior), contract_projection(successor)
+    changes = {key for key in before.keys() | after.keys()
+               if key not in _REVISION_ENVELOPE_FIELDS and key != "authority"
+               and canonical_json(before.get(key)) != canonical_json(after.get(key))}
+    old_policy, new_policy = before["authority"], after["authority"]
+    for key in old_policy.keys() | new_policy.keys():
+        if key in _GRANT_ENVELOPE_FIELDS:
+            continue
+        if (key in old_policy and key in new_policy and
+                canonical_json(old_policy[key]) == canonical_json(new_policy[key])):
+            continue
+        if (key == "grant_scope" and "allowed_operations" in changes
+                and old_policy.get(key) == before["allowed_operations"]
+                and new_policy.get(key) == after["allowed_operations"]):
+            continue
+        changes.add("authority." + key)
+    return changes
+
+
 def contract_digest(packet: dict[str, Any]) -> str:
     return digest_json(contract_projection(packet))
 

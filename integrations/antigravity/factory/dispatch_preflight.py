@@ -17,9 +17,10 @@ from pathlib import Path
 from typing import Any, Callable
 
 from .authority import AuthorityError
-from .mission_contract import canonical_json, contract_digest, contract_projection, digest_json, parse_mission_packet
-from .policy import path_matches_prefix
-from .scheduler import FactoryJournal, SchedulerError, GENESIS_EVENT_HASH, _compute_event_chain_hash, enforce_wave_budget
+from .mission_contract import canonical_json, contract_digest, digest_json, parse_mission_packet, revision_changes
+from .policy import normalize_rel_path, path_matches_prefix
+from .scheduler import (FactoryJournal, SchedulerError, GENESIS_EVENT_HASH, _compute_event_chain_hash,
+                        enforce_wave_budget, storage_catalog)
 import hashlib
 
 
@@ -44,6 +45,24 @@ def _fresh(record: dict[str, Any], now: dt.datetime) -> bool:
 
 def _nonempty(value: Any) -> bool:
     return isinstance(value, str) and bool(value.strip())
+
+
+class _PreInvocationBlocked(SchedulerError):
+    """An explicit freshness or binding denial before the fixture callback."""
+
+
+_CONTRACT_STORAGE_CATALOG = {
+    "contract_heads": "table", "contract_revisions": "table",
+    "contract_attempts": "table", "contract_blockers": "table",
+    "contract_observations": "table", "journal_events": "table",
+    "missions": "view", "dispatches": "view",
+}
+
+
+def _require_contract_storage(conn: sqlite3.Connection) -> None:
+    objects = storage_catalog(conn)
+    if objects and objects != _CONTRACT_STORAGE_CATALOG:
+        raise SchedulerError("Not an isolated contract journal; no automatic migration.")
 
 
 class FixtureDispatchAdapter:
@@ -87,9 +106,12 @@ class FixtureDispatchAdapter:
     def observe(self, packet: dict[str, Any]) -> dict[str, Any]:
         return deepcopy(self._observe(deepcopy(packet)))
 
-    def invoke(self, packet: dict[str, Any]) -> dict[str, Any]:
-        # No repository/worktree, native agent or remote executor is passed.
-        return self._handler(deepcopy(packet))
+    def invoke(self, packet: dict[str, Any], *, before_invoke: Callable[[], None]) -> dict[str, Any]:
+        # Copy before the last validity check, not after it. No repository,
+        # worktree, native agent or remote executor is passed.
+        invocation_packet = deepcopy(packet)
+        before_invoke()
+        return self._handler(invocation_packet)
 
     def reconciliation(self, reservation_id: str) -> dict[str, Any] | None:
         return deepcopy(self._reconciliations.get(reservation_id))
@@ -109,13 +131,7 @@ class ContractJournal(FactoryJournal):
         # Inspect an existing file before any WAL pragma or migration.
         if self.db_path.exists():
             with closing(sqlite3.connect(self.db_path.resolve().as_uri() + "?mode=ro", uri=True)) as conn:
-                objects = dict(conn.execute("SELECT name, type FROM sqlite_master WHERE name NOT LIKE 'sqlite_%'"))
-                required = {"contract_heads": "table", "contract_revisions": "table",
-                            "contract_attempts": "table", "contract_blockers": "table",
-                            "contract_observations": "table", "journal_events": "table",
-                            "missions": "view", "dispatches": "view"}
-                if objects != required:
-                    raise SchedulerError("Not an isolated contract journal; no automatic migration.")
+                _require_contract_storage(conn)
         self._init_db()
 
     def _connect(self) -> sqlite3.Connection:
@@ -138,13 +154,13 @@ class ContractJournal(FactoryJournal):
             conn.close()
 
     def _init_db(self) -> None:
-        with self._transaction() as conn:
-            # Recheck inside the writer lock (a concurrent legacy initializer must
-            # not be allowed to create a mixed storage file).
-            objects = dict(conn.execute("SELECT name, type FROM sqlite_master WHERE name NOT LIKE 'sqlite_%'"))
-            if objects and (objects.get("missions") != "view" or objects.get("dispatches") != "view"
-                            or objects.get("contract_heads") != "table"):
-                raise SchedulerError("Legacy/mixed journal storage rejected.")
+        # No write pragma before the transactional compatibility check. A
+        # concurrent guarded legacy initializer either wins on empty storage or
+        # sees the committed contract catalog and is denied. Older unpatched
+        # brokers still need operational path segregation and access custody.
+        with closing(sqlite3.connect(self.db_path, timeout=15.0, isolation_level=None)) as conn, conn:
+            conn.execute("BEGIN IMMEDIATE")
+            _require_contract_storage(conn)
             statements = (
                 """CREATE TABLE IF NOT EXISTS contract_heads (
                     mission_id TEXT PRIMARY KEY, revision INTEGER NOT NULL,
@@ -242,11 +258,7 @@ class ContractJournal(FactoryJournal):
                                            (head["digest"],)).fetchone()[0])
             if packet["authority"]["parent_grant_ref"] != prior["authorization_ref"]:
                 return "UNBOUND_PARENT_GRANT"
-            before, after = contract_projection(prior), contract_projection(packet)
-            metadata = {"revision", "previous_contract_sha256", "revision_reason",
-                        "authority", "authorization_ref", "verifier"}
-            changes = {key for key in before.keys() | after.keys()
-                       if key not in metadata and before.get(key) != after.get(key)}
+            changes = revision_changes(prior, packet)
             if not changes <= set(prior["authority"]["permitted_revision_fields"]):
                 return "UNAUTHORIZED_REVISION_FIELDS"
             if not set(prior["required_gates"]) <= set(packet["required_gates"]):
@@ -265,9 +277,9 @@ class ContractJournal(FactoryJournal):
 
     def _prerequisites(self, conn, packet, digest, grant, observed, now):
         """Return only relevant material facts; timestamps and unrelated observations are not identity."""
-        failures, material = [], {}
+        failures, material, capability_expiries = [], {}, []
         if not isinstance(observed, dict):
-            return ["INVALID_OBSERVATION"], {}
+            return ["INVALID_OBSERVATION"], {}, []
         target = {key: packet[key] for key in ("repo_id", "repo_name", "base_sha",
                                                "permitted_branch", "delivery_destination")}
         supplied_target = observed.get("target")
@@ -295,6 +307,9 @@ class ContractJournal(FactoryJournal):
         if packet["depends_on"]:
             material["dependencies"] = sorted(packet["depends_on"])
             failures.append("DEPENDENCY_ACCEPTANCE_UNQUALIFIED")
+        # A mismatched observation envelope must not advance capability
+        # chronology, even when an individual capability appears well formed.
+        context_matches = not failures
         capabilities = observed.get("capabilities")
         material["capabilities"] = {}
         for requirement in packet["required_capabilities"]:
@@ -317,7 +332,8 @@ class ContractJournal(FactoryJournal):
                     fact["status"] = "MISMATCH"
                 else:
                     try:
-                        fact["scope_covered"] = all(any(path_matches_prefix(path, prefix) for prefix in scope)
+                        normalized_scope = [normalize_rel_path(prefix) for prefix in scope]
+                        fact["scope_covered"] = all(any(path_matches_prefix(path, prefix) for prefix in normalized_scope)
                                                     for path in requirement["scope"])
                         if not fact["scope_covered"]:
                             fact["status"] = "MISMATCH"
@@ -329,27 +345,47 @@ class ContractJournal(FactoryJournal):
                         len(cap["probe_sha256"]) != 64 or any(c not in "0123456789abcdef" for c in cap["probe_sha256"])
                         or cap["probe_sha256"] == "0" * 64):
                     fact["status"] = "MISMATCH"
-                if not _fresh(cap, now):
+                try:
+                    at = _timestamp(cap["observed_at_utc"])
+                    expiry = _timestamp(cap["valid_until_utc"])
+                    chronology_valid = at <= now and at < expiry
+                except (KeyError, AuthorityError, TypeError):
+                    chronology_valid = False
+                if not chronology_valid:
                     fact["status"] = "EXPIRED_OR_INVALID"
-                else:
-                    # A fresh timestamp by itself does not change the fingerprint.
-                    at = _timestamp(cap["observed_at_utc"]).isoformat()
-                    fact_digest = digest_json(fact)
+                elif (context_matches and fact["status"] in ("AVAILABLE", "UNAVAILABLE", "UNKNOWN")):
+                    # Record well-formed trusted observations even when already
+                    # expired. Compare UTC instants (not caller timestamp strings).
+                    # Expiry and probe provenance bind equal-time evidence but do
+                    # not change the material prerequisite fingerprint on renewal.
+                    fact_digest = digest_json({"fact": fact, "valid_until_utc": expiry.isoformat(),
+                                               "probe_ref": cap["probe_ref"], "probe_sha256": cap["probe_sha256"]})
                     prior = conn.execute("""SELECT observed_at,material_digest FROM contract_observations
                          WHERE digest=? AND capability_id=? AND worker_id=?""",
                          (digest, cid, grant["worker_id"])).fetchone()
-                    if prior and (at < prior["observed_at"] or
-                                  (at == prior["observed_at"] and fact_digest != prior["material_digest"])):
+                    previous_at = _timestamp(prior["observed_at"]) if prior else None
+                    if prior and at < previous_at:
+                        fact["status"] = "STALE_OBSERVATION"
+                    elif prior and at == previous_at and fact_digest != prior["material_digest"]:
+                        # A conflict at the same instant invalidates BOTH claims
+                        # until strictly newer trusted evidence is observed.
+                        conn.execute("""UPDATE contract_observations SET material_digest='CONFLICT'
+                            WHERE digest=? AND capability_id=? AND worker_id=?""",
+                            (digest, cid, grant["worker_id"]))
                         fact["status"] = "STALE_OBSERVATION"
                     else:
                         conn.execute("""INSERT INTO contract_observations VALUES (?,?,?,?,?)
                          ON CONFLICT(digest,capability_id,worker_id) DO UPDATE SET
                          observed_at=excluded.observed_at,material_digest=excluded.material_digest""",
-                         (digest, cid, grant["worker_id"], at, fact_digest))
+                         (digest, cid, grant["worker_id"], at.isoformat(), fact_digest))
+                        if now >= expiry:
+                            fact["status"] = "EXPIRED_OR_INVALID"
+                        elif fact["status"] == "AVAILABLE":
+                            capability_expiries.append(expiry)
             material["capabilities"][cid] = fact
             if fact["status"] != "AVAILABLE":
                 failures.append("CAPABILITY_" + cid + "_" + str(fact["status"]))
-        return sorted(failures), material
+        return sorted(failures), material, capability_expiries
 
     def block_unavailable_bridge(self, raw: str | bytes) -> dict[str, Any]:
         packet = parse_mission_packet(raw)
@@ -386,7 +422,7 @@ class ContractJournal(FactoryJournal):
             # Slot identity never contains worker, run ID, observation or fingerprint.
             prior = conn.execute("""SELECT * FROM contract_attempts WHERE mission_id=?
                      ORDER BY revision DESC, ordinal DESC LIMIT 1""", (mid,)).fetchone()
-            if prior and prior["status"] not in ("COMPLETED", "RECONCILED"):
+            if prior and prior["status"] not in ("COMPLETED", "RECONCILED", "NO_EFFECT"):
                 return self._blocked(conn, packet, digest, "PRIOR_EFFECT_UNRECONCILED", {})
             next_ordinal = prior["ordinal"] + 1 if prior and prior["revision"] == revision else 1
             maximum = 1 + min(packet["budget"]["max_identical_retries"], packet["budget"]["max_repair_cycles"])
@@ -394,7 +430,13 @@ class ContractJournal(FactoryJournal):
                 return self._blocked(conn, packet, digest, "ATTEMPT_NOT_AUTHORIZED_OR_BUDGET_EXHAUSTED", {})
             try:
                 observed = adapter.observe(packet)
-                failures, material = self._prerequisites(conn, packet, digest, grant, observed, now)
+                now = dt.datetime.now(dt.timezone.utc)
+                current_grant = adapter.resolve_grant(packet, digest, now)
+                if current_grant is None or digest_json(current_grant) != digest_json(grant):
+                    return self._blocked(conn, packet, digest, "GRANT_CHANGED_OR_EXPIRED_AFTER_OBSERVATION", {})
+                grant = current_grant
+                failures, material, capability_expiries = self._prerequisites(
+                    conn, packet, digest, grant, observed, now)
             except (AuthorityError, TypeError, ValueError, KeyError):
                 return self._blocked(conn, packet, digest, "INVALID_OBSERVATION", {})
             if failures:
@@ -408,6 +450,20 @@ class ContractJournal(FactoryJournal):
             except SchedulerError:
                 return self._blocked(conn, packet, digest, "WAVE_BUDGET_BLOCKED",
                                      sorted(contract_digest(item) for item in active_packets))
+            # Bound the claim to the earliest independently validated expiry.
+            # A slow budget check or transaction must not turn stale evidence
+            # into a new reservation. No caller-provided validity override.
+            grant_sha256 = digest_json(grant)
+            valid_until = min([_timestamp(grant["valid_until_utc"]), *capability_expiries])
+            now = dt.datetime.now(dt.timezone.utc)
+            current_grant = adapter.resolve_grant(packet, digest, now)
+            if current_grant is None or digest_json(current_grant) != grant_sha256:
+                return self._blocked(conn, packet, digest, "GRANT_CHANGED_OR_EXPIRED_BEFORE_RESERVATION", {})
+            now = dt.datetime.now(dt.timezone.utc)
+            if not _fresh(current_grant, now):
+                return self._blocked(conn, packet, digest, "GRANT_CHANGED_OR_EXPIRED_BEFORE_RESERVATION", {})
+            if now >= valid_until:
+                return self._blocked(conn, packet, digest, "CAPABILITY_EXPIRED_BEFORE_RESERVATION", material)
             fingerprint = digest_json({"contract": digest, "prerequisites": material})
             reservation = uuid.uuid4().hex
             conn.execute("""INSERT INTO contract_attempts VALUES (?,?,?,?,?,?,?,?,?,'RESERVED',NULL)""",
@@ -420,11 +476,13 @@ class ContractJournal(FactoryJournal):
             conn.execute("UPDATE contract_heads SET state='ACTIVE',state_version=state_version+1 WHERE mission_id=?", (mid,))
             self._event(conn, packet, digest, "DISPATCH_RESERVED",
                         {"reservation_id": reservation, "ordinal": ordinal, "prerequisite_fingerprint": fingerprint,
-                         "actor_id": grant["actor_id"], "worker_id": grant["worker_id"], "fixture_only": True})
+                         "actor_id": grant["actor_id"], "worker_id": grant["worker_id"],
+                         "host_id": grant["host_id"], "grant_sha256": grant_sha256,
+                         "valid_until_utc": valid_until.isoformat(), "fixture_only": True})
             return {"status": "RESERVED", "reservation_id": reservation, "ordinal": ordinal,
                     "contract_sha256": digest, "revision": revision, "cached": False, "fixture_only": True}
 
-    def _change_attempt(self, conn, packet, reservation, expected, next_status, result=None):
+    def _require_attempt(self, conn, packet, reservation, expected):
         digest = contract_digest(packet)
         mid = packet["mission_id"]
         head = conn.execute("SELECT * FROM contract_heads WHERE mission_id=?", (mid,)).fetchone()
@@ -435,6 +493,56 @@ class ContractJournal(FactoryJournal):
             or attempt["revision"] != packet["revision"] or attempt["run_id"] != packet["run_id"]
             or attempt["status"] not in expected):
             raise SchedulerError("Stale or mismatched dispatch reservation/completion.")
+        return attempt
+
+    def _reservation_binding(self, conn, packet, reservation, expected):
+        attempt = self._require_attempt(conn, packet, reservation, expected)
+        # The chained reservation event is the durable, trusted validity
+        # record. No schema migration or caller-owned claim metadata.
+        bindings = []
+        for row in conn.execute("""SELECT payload_json FROM journal_events
+                    WHERE mission_id=? AND run_id=? AND event_type='DISPATCH_RESERVED'""",
+                    (packet["mission_id"], packet["run_id"])):
+            binding = json.loads(row[0])
+            if binding.get("reservation_id") == reservation:
+                bindings.append(binding)
+        if len(bindings) != 1:
+            raise SchedulerError("Missing or ambiguous reservation binding.")
+        binding = bindings[0]
+        expected_binding = {"contract_sha256": attempt["digest"], "revision": attempt["revision"],
+                            "ordinal": attempt["ordinal"], "actor_id": attempt["actor_id"],
+                            "worker_id": attempt["worker_id"], "prerequisite_fingerprint": attempt["fingerprint"]}
+        if (any(binding.get(key) != value for key, value in expected_binding.items())
+                or not _nonempty(binding.get("host_id")) or not _nonempty(binding.get("grant_sha256"))):
+            raise SchedulerError("Missing or mismatched trusted reservation validity.")
+        _timestamp(binding.get("valid_until_utc"))
+        return attempt, binding
+
+    def _invocation_block_reason(self, packet, attempt, binding, adapter):
+        now = dt.datetime.now(dt.timezone.utc)
+        grant = adapter.resolve_grant(packet, attempt["digest"], now)
+        if (not grant or digest_json(grant) != binding["grant_sha256"]
+                or (grant["worker_id"], grant["actor_id"], grant["host_id"], grant["attempt_ordinal"])
+                != (attempt["worker_id"], attempt["actor_id"], binding["host_id"], attempt["ordinal"])):
+            return "GRANT_CHANGED_OR_EXPIRED_BEFORE_INVOCATION"
+        now = dt.datetime.now(dt.timezone.utc)
+        if not _fresh(grant, now):
+            return "GRANT_CHANGED_OR_EXPIRED_BEFORE_INVOCATION"
+        if now >= _timestamp(binding["valid_until_utc"]):
+            return "CAPABILITY_EXPIRED_BEFORE_INVOCATION"
+        return None
+
+    def _no_effect(self, conn, packet, reservation, expected, reason):
+        self._change_attempt(conn, packet, reservation, expected, "NO_EFFECT",
+                             {"effect": "NO_EFFECT", "reason": reason})
+        conn.execute("UPDATE contract_heads SET state='BLOCKED' WHERE mission_id=?", (packet["mission_id"],))
+        return {"status": "NO_EFFECT", "reason": reason, "reservation_id": reservation,
+                "cached": False, "fixture_only": True}
+
+    def _change_attempt(self, conn, packet, reservation, expected, next_status, result=None):
+        digest = contract_digest(packet)
+        mid = packet["mission_id"]
+        attempt = self._require_attempt(conn, packet, reservation, expected)
         serialized = canonical_json(result) if result is not None else None
         changed = conn.execute("""UPDATE contract_attempts SET status=?,result_json=?
                          WHERE reservation_id=? AND status=?""",
@@ -469,24 +577,55 @@ class ContractJournal(FactoryJournal):
             return claim
         reservation = claim["reservation_id"]
         with self._transaction() as conn:
+            self._assert_chain(conn)
+            attempt, binding = self._reservation_binding(conn, packet, reservation, {"RESERVED"})
+            reason = self._invocation_block_reason(packet, attempt, binding, adapter)
+            if reason:
+                return self._no_effect(conn, packet, reservation, {"RESERVED"}, reason)
             self._change_attempt(conn, packet, reservation, {"RESERVED"}, "RUNNING")
+
+        invocation_started = False
+
+        def before_invoke():
+            nonlocal invocation_started
+            with self._transaction() as conn:
+                self._assert_chain(conn)
+                attempt, binding = self._reservation_binding(conn, packet, reservation, {"RUNNING"})
+            # Resample after the transaction commit and packet copy, directly
+            # before entering the fixture callback. This is not native wall-clock
+            # fencing: a host pause after the final check remains outside scope.
+            reason = self._invocation_block_reason(packet, attempt, binding, adapter)
+            if reason:
+                raise _PreInvocationBlocked(reason)
+            invocation_started = True
+
         try:
-            result = adapter.invoke(packet)
+            result = adapter.invoke(packet, before_invoke=before_invoke)
             if not isinstance(result, dict):
                 raise AuthorityError("Fixture handler must return a JSON object.")
             self.complete_dispatch(raw, reservation, result, adapter)
-        except BaseException:
-            # A crash that prevents this transaction leaves RUNNING, which is
-            # equally non-replayable. No automatic recovery or exactly-once claim.
+        except BaseException as exc:
             with self._transaction() as conn:
+                self._assert_chain(conn)
+                if isinstance(exc, _PreInvocationBlocked) and not invocation_started:
+                    return self._no_effect(conn, packet, reservation, {"RUNNING"}, str(exc))
+                # Once callback entry is possible, failures remain uncertain.
+                # A crash before this transaction leaves a non-replayable RUNNING
+                # claim. Never infer host quiescence or automatically retry.
                 self._change_attempt(conn, packet, reservation, {"RUNNING"}, "UNKNOWN")
             raise
         return {"status": "COMPLETED", "fixture_only": True, "result": result,
                 "reservation_id": reservation, "contract_sha256": claim["contract_sha256"]}
 
     def reconcile_unknown(self, raw, reservation_id, adapter):
-        """Only a configured fixture reconciliation can close a stranded claim.
-        The operator must establish quiescence first; no native recovery is enabled.
+        """Only an UNKNOWN claim may use configured fixture reconciliation.
+
+        RESERVED/RUNNING can be actively owned by a dispatcher in any process,
+        including the pre-start gap. A fixture assertion cannot prove durable
+        quiescence, so these states remain blocked even after restart; an operator
+        must establish fencing through a separately authorized recovery procedure.
+        UNKNOWN is recorded only after callback exit/failure in this fixture path;
+        external effects still require operator-established quiescence.
         """
         if type(adapter) is not FixtureDispatchAdapter:
             raise SchedulerError("Trusted fixture reconciliation unavailable.")
@@ -501,7 +640,11 @@ class ContractJournal(FactoryJournal):
                 or evidence.get("quiescent") is not True or evidence.get("effect") not in ("NO_EFFECT", "EFFECT_OBSERVED")
                 or not _nonempty(evidence.get("evidence_ref"))):
                 raise SchedulerError("Unresolved effect; no replay permitted.")
-            self._change_attempt(conn, packet, reservation_id, {"RESERVED", "RUNNING", "UNKNOWN"},
+            attempt = self._require_attempt(conn, packet, reservation_id, {"UNKNOWN"})
+            if (grant["worker_id"], grant["actor_id"], grant["attempt_ordinal"]) != (
+                    attempt["worker_id"], attempt["actor_id"], attempt["ordinal"]):
+                raise SchedulerError("Reconciliation actor or authorized attempt mismatch.")
+            self._change_attempt(conn, packet, reservation_id, {"UNKNOWN"},
                                  "RECONCILED", {"effect": evidence["effect"], "evidence_ref": evidence["evidence_ref"]})
 
 

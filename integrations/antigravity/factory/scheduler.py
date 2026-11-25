@@ -5,8 +5,10 @@ import datetime as dt
 import hashlib
 import json
 import sqlite3
+import time
 import uuid
 from pathlib import Path
+from contextlib import closing
 from typing import Any
 
 from .authority import (
@@ -160,6 +162,44 @@ def enforce_wave_budget(packets: list[dict[str, Any]]) -> None:
         raise SchedulerError("Parallel ownership collision rejected: " + "; ".join(collisions))
 
 
+def storage_catalog(conn: sqlite3.Connection) -> dict[str, str]:
+    return dict(conn.execute("SELECT name,type FROM sqlite_master WHERE name NOT GLOB 'sqlite_*'"))
+
+
+def enable_wal(conn: sqlite3.Connection) -> None:
+    """Serialize first-use journal-mode contention; never retry a dispatch or effect."""
+    deadline = time.monotonic() + 15.0
+    while True:
+        try:
+            mode = conn.execute("PRAGMA journal_mode=WAL;").fetchone()[0]
+            if mode.lower() != "wal":
+                raise SchedulerError("Unable to establish SQLite WAL mode.")
+            return
+        except sqlite3.OperationalError as exc:
+            if (getattr(exc, "sqlite_errorcode", 0) & 255) not in (sqlite3.SQLITE_BUSY, sqlite3.SQLITE_LOCKED):
+                raise
+            if time.monotonic() >= deadline:
+                raise
+            time.sleep(0.01)
+
+
+def require_legacy_storage(conn: sqlite3.Connection) -> None:
+    """Current clients reject contract/mixed storage before DDL under the writer lock.
+
+    Historical journal, broker and other legacy tables may share a path. An
+    unpatched older SQLite writer cannot be fenced by this code; segregate
+    paths and retain operational access custody.
+    """
+    objects = {name.lower(): kind for name, kind in storage_catalog(conn).items()}
+    journal_names = {"missions", "dispatches", "journal_events"}
+    present = journal_names & objects.keys()
+    if (any(name.startswith("contract_") for name in objects)
+            or (present and present != journal_names)
+            or any(objects[name] != "table" for name in present)
+            or objects.get("delivery_receipts", "table") != "table"):
+        raise SchedulerError("Contract, partial or incompatible legacy journal storage; legacy writer denied.")
+
+
 class FactoryJournal:
     """Append-only SQLite WAL event stream with compare-and-set state version and idempotent dispatch."""
 
@@ -167,23 +207,29 @@ class FactoryJournal:
         self.db_path = db_path
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         if self.db_path.exists():
-            with sqlite3.connect(self.db_path) as conn:
-                if conn.execute("SELECT 1 FROM sqlite_master WHERE name = 'contract_heads'").fetchone():
-                    raise SchedulerError("Contract journal requires isolated contract storage; legacy writer denied.")
+            with closing(sqlite3.connect(self.db_path.resolve().as_uri() + "?mode=ro", uri=True)) as conn:
+                require_legacy_storage(conn)
         self._init_db()
 
     def _connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.db_path, timeout=15.0, isolation_level=None)
-        conn.row_factory = sqlite3.Row
-        conn.execute("PRAGMA journal_mode=WAL;")
-        conn.execute("PRAGMA foreign_keys=ON;")
-        conn.execute("PRAGMA synchronous=NORMAL;")
-        return conn
+        try:
+            conn.row_factory = sqlite3.Row
+            enable_wal(conn)
+            conn.execute("PRAGMA foreign_keys=ON;")
+            conn.execute("PRAGMA synchronous=NORMAL;")
+            return conn
+        except BaseException:
+            conn.close()
+            raise
 
     def _init_db(self) -> None:
-        conn = self._connect()
+        # Initial DDL uses the existing journal mode; normal connections enable
+        # WAL only after storage compatibility has been established.
+        conn = sqlite3.connect(self.db_path, timeout=15.0, isolation_level=None)
         try:
             conn.execute("BEGIN IMMEDIATE;")
+            require_legacy_storage(conn)
             conn.execute(
                 """
                 CREATE TABLE IF NOT EXISTS missions (
@@ -232,8 +278,9 @@ class FactoryJournal:
                 """
             )
             conn.execute("COMMIT;")
-        except Exception:
-            conn.execute("ROLLBACK;")
+        except BaseException:
+            if conn.in_transaction:
+                conn.execute("ROLLBACK;")
             raise
         finally:
             conn.close()

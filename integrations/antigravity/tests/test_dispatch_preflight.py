@@ -15,14 +15,16 @@ import tempfile
 import threading
 import unittest
 from concurrent.futures import ThreadPoolExecutor
-from contextlib import closing
+from contextlib import closing, contextmanager
+from unittest.mock import patch
 from pathlib import Path
 
 from integrations.antigravity.factory import WORKFLOWS_ROOT
 from integrations.antigravity.factory.authority import AuthorityError
 from integrations.antigravity.factory.dispatcher import FleetDispatcher
 from integrations.antigravity.factory.dispatch_preflight import ContractJournal, FixtureDispatchAdapter, archive_historical_journal
-from integrations.antigravity.factory.mission_contract import contract_digest
+from integrations.antigravity.factory.mission_contract import contract_digest, digest_json
+from integrations.antigravity.factory.delivery import NairuDeliveryBroker, DeliveryBrokerError
 from integrations.antigravity.factory.scheduler import FactoryJournal, SchedulerError
 from integrations.antigravity.tests.test_mission_contract import make_contract, historical_packet
 
@@ -61,6 +63,55 @@ def make_observation(packet, grant):
             "probe_sha256": "e" * 64, "observed_at_utc": timestamp(-1),
             "valid_until_utc": timestamp(3600)} for c in packet["required_capabilities"]},
     }
+
+
+class ControlledClock:
+    """Advance UTC explicitly; no wall-time sleeps are needed for expiry tests."""
+
+    def __init__(self):
+        self.current = dt.datetime(2030, 1, 1, tzinfo=dt.timezone.utc)
+
+    def advance(self, seconds):
+        self.current += dt.timedelta(seconds=seconds)
+
+    @contextmanager
+    def installed(self):
+        clock = self
+
+        class ClockedDatetime(dt.datetime):
+            @classmethod
+            def now(cls, tz=None):
+                return clock.current.astimezone(tz) if tz else clock.current.replace(tzinfo=None)
+
+        with patch.object(dt, "datetime", ClockedDatetime):
+            yield self
+
+
+def successor_contract(prior):
+    successor = copy.deepcopy(prior)
+    successor.update(revision=prior["revision"] + 1, previous_contract_sha256=contract_digest(prior),
+                     revision_reason="Explicit successor", run_id="run-successor",
+                     authorization_ref="FORGE-AUTH-successor")
+    successor["authority"].update(parent_grant_ref=prior["authorization_ref"],
+                                  directive_ref=successor["authorization_ref"])
+    return successor
+
+
+def review_contract():
+    packet = make_contract()
+    packet.update(assigned_persona="Antigravity-Nox", formal_role="Reviewer",
+                  allowed_operations=["REVIEW_READONLY"])
+    packet["authority"]["grant_scope"] = ["REVIEW_READONLY"]
+    packet["required_capabilities"] = [{"capability_id": "independent_review_context",
+        "operation": "REVIEW_READONLY", "scope": ["docs"], "environment": "fixture",
+        "independence_required": True}]
+    return packet
+
+
+def add_read_scope(packet):
+    packet["allowed_operations"].append("READ")
+    packet["authority"]["grant_scope"].append("READ")
+    packet["required_capabilities"].append(make_contract()["required_capabilities"][0])
 
 
 class DispatchPreflightTests(unittest.TestCase):
@@ -310,11 +361,19 @@ class DispatchPreflightTests(unittest.TestCase):
             FactoryJournal(self.journal.db_path)
         self.dispatch(self.adapter())
         current = self.journal.list_events()
-        # Bypass the new constructor only to emulate the exact unchanged old
-        # initialization and write methods; do not rely on the new startup guard.
+        # Current initialization is guarded under the writer lock as well.
         legacy = object.__new__(FactoryJournal)
         legacy.db_path = self.journal.db_path
-        legacy._init_db()
+        with self.assertRaises(SchedulerError):
+            legacy._init_db()
+        # Reproduce the historical unpatched journal DDL directly, then test
+        # its unchanged write methods without relying on the startup guard.
+        with closing(sqlite3.connect(original.db_path)) as source:
+            historical_ddl = [row[0] for row in source.execute(
+                "SELECT sql FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")]
+        with closing(sqlite3.connect(self.journal.db_path)) as target, target:
+            for ddl in historical_ddl:
+                target.execute(ddl.replace("CREATE TABLE ", "CREATE TABLE IF NOT EXISTS ", 1))
         with self.assertRaises(sqlite3.OperationalError):
             legacy.register_mission(packet)
         with self.assertRaises(sqlite3.OperationalError):
@@ -324,6 +383,317 @@ class DispatchPreflightTests(unittest.TestCase):
         self.assertEqual(self.journal.list_events(), current)
         self.assertTrue(ContractJournal(self.journal.db_path).verify_hash_chain())
         self.assertEqual(original.list_events(), old_events)
+
+
+    def test_nested_revision_policy_is_not_grant_envelope(self):
+        prior = self.packet
+        second = copy.deepcopy(prior["source_authorities"][0])
+        second.update(source_id="presentation", authority_kind="PRESENTATION")
+        prior["source_authorities"].append(second)
+        prior["authority"].update(source_precedence=["contract", "presentation"], brain_required=True)
+        prior["cognition_hash"] = "f" * 64
+        prior["cognition"] = {"mode": "INHERITED", "brain_run_id": "brain-fixture",
+            "context_sha256": "f" * 64, "manifest_ref": "fixture-manifest",
+            "target_binding": digest_json({key: prior[key] for key in
+                ("repo_id", "repo_name", "base_sha", "permitted_branch")}), "reason": None}
+        self.assertEqual(self.dispatch(self.adapter(prior), prior)["status"], "COMPLETED")
+        for field, value in (("source_precedence", ["presentation", "contract"]),
+                             ("brain_required", False),
+                             ("permitted_revision_fields", ["objective", "source_authorities"])):
+            with self.subTest(field=field):
+                changed = successor_contract(prior)
+                changed["authority"][field] = value
+                # Each changed packet receives its own otherwise valid exact-digest grant.
+                outcome = self.dispatch(self.adapter(changed), changed)
+                self.assertEqual(outcome["status"], "BLOCKED")
+                self.assertIn("UNAUTHORIZED_REVISION_FIELDS", outcome["reason"])
+                self.assertEqual(self.journal.get_mission(prior["mission_id"])["digest"], contract_digest(prior))
+                self.assertEqual(len(self.calls), 1)
+        unknown = successor_contract(prior)
+        unknown["authority"]["unknown_policy"] = True
+        with self.assertRaises(AuthorityError):
+            self.dispatch(self.adapter(prior), unknown)
+        self.assertEqual(self.journal.get_mission(prior["mission_id"])["revision"], 1)
+        allowed = successor_contract(prior)
+        allowed["authority"].update(issuer_actor_id=456, issuer_role="Maintainer", directive_sha256="e" * 64)
+        allowed["objective"]["statement"] = "Authorized objective renewal"
+        self.assertEqual(self.dispatch(self.adapter(allowed), allowed)["status"], "COMPLETED")
+        self.assertEqual(len(self.calls), 2)
+        self.assertEqual(self.journal.get_mission(prior["mission_id"])["revision"], 2)
+        self.assertTrue(self.journal.verify_hash_chain())
+
+    def test_scope_revision_requires_predecessor_operation_permission(self):
+        for permitted in (False, True):
+            with self.subTest(permitted=permitted):
+                journal = ContractJournal(self.root / ("scope-permitted.sqlite" if permitted else "scope-denied.sqlite"))
+                prior = review_contract()
+                if permitted:
+                    prior["authority"]["permitted_revision_fields"] += ["allowed_operations", "required_capabilities"]
+                self.assertEqual(self.dispatch(self.adapter(prior), prior, journal)["status"], "COMPLETED")
+                successor = successor_contract(prior)
+                add_read_scope(successor)
+                outcome = self.dispatch(self.adapter(successor), successor, journal)
+                self.assertEqual(outcome["status"], "COMPLETED" if permitted else "BLOCKED")
+                if not permitted:
+                    self.assertIn("UNAUTHORIZED_REVISION_FIELDS", outcome["reason"])
+                self.assertEqual(journal.get_mission(prior["mission_id"])["revision"], 2 if permitted else 1)
+                self.assertTrue(journal.verify_hash_chain())
+
+    def test_delayed_probe_crosses_capability_expiry(self):
+        with ControlledClock().installed() as clock:
+            grant = make_grant(self.packet)
+            observed = make_observation(self.packet, grant)
+            observed["capabilities"]["repository_read"]["valid_until_utc"] = timestamp(1)
+            def delayed(_packet):
+                clock.advance(2)
+                return observed
+            outcome = self.dispatch(self.adapter(grant=grant, observe=delayed))
+            self.assertEqual(outcome["status"], "BLOCKED")
+            self.assertIn("EXPIRED", outcome["reason"])
+            self.assertEqual(self.calls, [])
+
+    def test_fresh_observation_generated_during_probe(self):
+        with ControlledClock().installed() as clock:
+            grant = make_grant(self.packet)
+            def observe(packet):
+                clock.advance(5)
+                return make_observation(packet, grant)
+            self.assertEqual(self.dispatch(self.adapter(grant=grant, observe=observe))["status"], "COMPLETED")
+            self.assertEqual(len(self.calls), 1)
+
+    def test_grant_expires_during_probe_independently(self):
+        with ControlledClock().installed() as clock:
+            grant = make_grant(self.packet)
+            grant["valid_until_utc"] = timestamp(1)
+            observed = make_observation(self.packet, grant)
+            def delayed(_packet):
+                clock.advance(2)
+                return observed
+            outcome = self.dispatch(self.adapter(grant=grant, observe=delayed))
+            self.assertEqual(outcome["status"], "BLOCKED")
+            self.assertIn("GRANT", outcome["reason"])
+            self.assertEqual(self.calls, [])
+
+    def test_reserved_claim_expiry_consumes_slot_without_effect(self):
+        with ControlledClock().installed() as clock:
+            grant = make_grant(self.packet)
+            observed = make_observation(self.packet, grant)
+            observed["capabilities"]["repository_read"]["valid_until_utc"] = timestamp(1)
+            reserve = self.journal.reserve_dispatch
+            def delayed_reserve(*args, **kwargs):
+                claim = reserve(*args, **kwargs)
+                clock.advance(2)
+                return claim
+            with patch.object(self.journal, "reserve_dispatch", side_effect=delayed_reserve):
+                outcome = self.dispatch(self.adapter(grant=grant, observe=lambda p: observed))
+            self.assertEqual(outcome["status"], "NO_EFFECT")
+            self.assertIn("CAPABILITY_EXPIRED", outcome["reason"])
+            self.assertEqual(self.calls, [])
+            reopened = ContractJournal(self.journal.db_path)
+            other = {**self.packet, "run_id": "retry-without-authority"}
+            self.assertEqual(self.dispatch(self.adapter(), other, reopened)["status"], "NO_EFFECT")
+            self.assertEqual(self.calls, [])
+            self.assertEqual(self.dispatch(self.adapter(ordinal=3), other, reopened)["status"], "BLOCKED")
+            self.assertEqual(self.dispatch(self.adapter(ordinal=2), other, reopened)["status"], "COMPLETED")
+            self.assertEqual(self.calls, [other["run_id"]])
+            with closing(sqlite3.connect(reopened.db_path)) as conn:
+                self.assertEqual(conn.execute("SELECT ordinal,status FROM contract_attempts ORDER BY ordinal").fetchall(),
+                                 [(1, "NO_EFFECT"), (2, "COMPLETED")])
+            self.assertTrue(reopened.verify_hash_chain())
+
+    def test_expiry_after_running_before_callback(self):
+        for expiring in ("capability", "grant"):
+            with self.subTest(expiring=expiring), ControlledClock().installed() as clock:
+                journal = ContractJournal(self.root / (expiring + ".sqlite"))
+                grant = make_grant(self.packet)
+                observed = make_observation(self.packet, grant)
+                if expiring == "grant":
+                    grant["valid_until_utc"] = timestamp(1)
+                else:
+                    observed["capabilities"]["repository_read"]["valid_until_utc"] = timestamp(1)
+                adapter = self.adapter(grant=grant, observe=lambda p: observed)
+                invoke = adapter.invoke
+                def delayed_invoke(*args, **kwargs):
+                    clock.advance(2)
+                    return invoke(*args, **kwargs)
+                with patch.object(adapter, "invoke", side_effect=delayed_invoke):
+                    outcome = self.dispatch(adapter, journal=journal)
+                self.assertEqual(outcome["status"], "NO_EFFECT")
+                self.assertIn(expiring.upper(), outcome["reason"])
+                self.assertEqual(self.calls, [])
+                events = journal.list_events()
+                self.assertTrue(any(e["event_type"] == "DISPATCH_RUNNING" for e in events))
+                self.assertTrue(any(e["event_type"] == "DISPATCH_NO_EFFECT" for e in events))
+                self.assertTrue(journal.verify_hash_chain())
+
+    def test_newer_expired_observation_invalidates_older_available(self):
+        with ControlledClock().installed() as clock:
+            grant = make_grant(self.packet)
+            older = make_observation(self.packet, grant)
+            older["capabilities"]["repository_read"]["observed_at_utc"] = timestamp(-30)
+            newer = copy.deepcopy(older)
+            newer["capabilities"]["repository_read"].update(
+                observed_at_utc=timestamp(-10), valid_until_utc=timestamp(-5))
+            self.assertEqual(self.dispatch(self.adapter(grant=grant, observe=lambda p: newer))["status"], "BLOCKED")
+            outcome = self.dispatch(self.adapter(grant=grant, observe=lambda p: older))
+            self.assertEqual(outcome["status"], "BLOCKED")
+            self.assertIn("STALE_OBSERVATION", outcome["reason"])
+            self.assertEqual(self.calls, [])
+            clock.advance(2)
+            self.assertEqual(self.dispatch(self.adapter(grant=grant))["status"], "COMPLETED")
+            self.assertEqual(len(self.calls), 1)
+
+    def test_invalid_observations_do_not_poison_chronology(self):
+        with ControlledClock().installed():
+            grant = make_grant(self.packet)
+            older = make_observation(self.packet, grant)
+            older["capabilities"]["repository_read"]["observed_at_utc"] = timestamp(-30)
+            for field, value in (("observed_at_utc", timestamp(20)), ("observed_at_utc", "invalid"),
+                                 ("worker_id", "wrong-worker"), ("probe_sha256", "0" * 64),
+                                 ("scope", ["docs", "../escape"])):
+                invalid = make_observation(self.packet, grant)
+                invalid["capabilities"]["repository_read"][field] = value
+                self.assertEqual(self.dispatch(self.adapter(grant=grant, observe=lambda p: invalid))["status"], "BLOCKED")
+            mismatched = make_observation(self.packet, grant)
+            mismatched["target"]["repo_id"] = 999
+            self.assertEqual(self.dispatch(self.adapter(grant=grant, observe=lambda p: mismatched))["status"], "BLOCKED")
+            self.assertEqual(self.calls, [])
+            self.assertEqual(self.dispatch(self.adapter(grant=grant, observe=lambda p: older))["status"], "COMPLETED")
+
+    def test_equal_time_conflict_requires_strictly_newer_evidence(self):
+        with ControlledClock().installed() as clock:
+            grant = make_grant(self.packet)
+            unavailable = make_observation(self.packet, grant)
+            unavailable["capabilities"]["repository_read"]["status"] = "UNAVAILABLE"
+            conflicting = copy.deepcopy(unavailable)
+            conflicting["capabilities"]["repository_read"]["status"] = "AVAILABLE"
+            # Same instant represented by equivalent UTC spellings.
+            conflicting["capabilities"]["repository_read"]["observed_at_utc"] = (
+                conflicting["capabilities"]["repository_read"]["observed_at_utc"].replace("+00:00", "Z"))
+            self.assertEqual(self.dispatch(self.adapter(grant=grant, observe=lambda p: unavailable))["status"], "BLOCKED")
+            for observation in (conflicting, unavailable, conflicting):
+                outcome = self.dispatch(self.adapter(grant=grant, observe=lambda p: observation))
+                self.assertIn("STALE_OBSERVATION", outcome["reason"])
+            self.assertEqual(self.calls, [])
+            clock.advance(2)
+            self.assertEqual(self.dispatch(self.adapter(grant=grant))["status"], "COMPLETED")
+
+    def test_active_reservation_and_running_reject_recovery(self):
+        reserved, start, entered, release = (threading.Event() for _ in range(4))
+        claim_info = {}
+        reserve = self.journal.reserve_dispatch
+        def held_reserve(*args, **kwargs):
+            claim = reserve(*args, **kwargs)
+            claim_info.update(claim)
+            reserved.set()
+            if not start.wait(5):
+                raise RuntimeError("Fixture start timeout")
+            return claim
+        def handler(packet):
+            self.calls.append(packet["run_id"])
+            entered.set()
+            if not release.wait(5):
+                raise RuntimeError("Fixture completion timeout")
+            return {"checked": True}
+        with patch.object(self.journal, "reserve_dispatch", side_effect=held_reserve):
+            with ThreadPoolExecutor(max_workers=1) as pool:
+                future = pool.submit(self.dispatch, self.adapter(handler=handler))
+                try:
+                    self.assertTrue(reserved.wait(5))
+                    reservation = claim_info["reservation_id"]
+                    raw = json.dumps(self.packet)
+                    evidence = {reservation: {"contract_sha256": contract_digest(self.packet),
+                        "reservation_id": reservation, "quiescent": True, "effect": "NO_EFFECT",
+                        "evidence_ref": "unproven-fixture-quiescence"}}
+                    reopened = ContractJournal(self.journal.db_path)
+                    recovery = self.adapter(reconciliations=evidence)
+                    with self.assertRaises(SchedulerError):
+                        reopened.reconcile_unknown(raw, reservation, recovery)
+                    self.assertEqual(self.dispatch(self.adapter(ordinal=2), journal=reopened)["status"], "BLOCKED")
+                    self.assertEqual(self.calls, [])
+                    start.set()
+                    self.assertTrue(entered.wait(5))
+                    with self.assertRaises(SchedulerError):
+                        reopened.reconcile_unknown(raw, reservation, recovery)
+                    competing = {**self.packet, "run_id": "competing-run"}
+                    self.assertEqual(self.dispatch(self.adapter(worker="other"), competing, reopened)["status"], "RUNNING")
+                    self.assertEqual(self.dispatch(self.adapter(ordinal=2), competing, reopened)["status"], "BLOCKED")
+                finally:
+                    start.set()
+                    release.set()
+                self.assertEqual(future.result(timeout=5)["status"], "COMPLETED")
+        self.assertEqual(self.dispatch(self.adapter(), journal=reopened)["status"], "COMPLETED")
+        with self.assertRaises(SchedulerError):
+            reopened.complete_dispatch(raw, reservation, {"late": True}, self.adapter())
+        self.assertEqual(len(self.calls), 1)
+        self.assertTrue(reopened.verify_hash_chain())
+
+    def test_current_broker_cannot_change_contract_storage(self):
+        self.assertEqual(self.dispatch(self.adapter())["status"], "COMPLETED")
+        with closing(sqlite3.connect(self.journal.db_path)) as conn:
+            before = list(conn.iterdump())
+            mode = conn.execute("PRAGMA journal_mode").fetchone()
+        actors = []
+        with self.assertRaises(DeliveryBrokerError):
+            NairuDeliveryBroker(self.journal.db_path, actor_verifier=lambda: actors.append("called"))
+        self.assertEqual(actors, [])
+        with closing(sqlite3.connect(self.journal.db_path)) as conn:
+            self.assertEqual(list(conn.iterdump()), before)
+            self.assertEqual(conn.execute("PRAGMA journal_mode").fetchone(), mode)
+        self.assertTrue(ContractJournal(self.journal.db_path).verify_hash_chain())
+
+    def test_historical_shared_storage_and_backup_in_both_orders(self):
+        for broker_first in (True, False):
+            with self.subTest(broker_first=broker_first):
+                db = self.root / ("broker-first.sqlite" if broker_first else "journal-first.sqlite")
+                if broker_first:
+                    NairuDeliveryBroker(db)
+                journal = FactoryJournal(db)
+                if not broker_first:
+                    NairuDeliveryBroker(db)
+                journal.register_mission(historical_packet())
+                with closing(sqlite3.connect(db)) as conn, conn:
+                    conn.execute("INSERT INTO delivery_receipts VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                        ("delivery-key", "fixture-mission", "feat/fixture", "a"*40, "b"*40,
+                         "Kirch-Nairu", 291564617, "RECORDED", "DRAFT", "fixture receipt", timestamp()))
+                backup = db.with_suffix(".backup")
+                archive_historical_journal(db, backup)
+                self.assertTrue(FactoryJournal(db).verify_hash_chain())
+                self.assertTrue(FactoryJournal(backup).verify_hash_chain())
+                NairuDeliveryBroker(backup)
+                with closing(sqlite3.connect(db)) as conn, closing(sqlite3.connect(backup)) as copied:
+                    self.assertEqual(conn.execute("SELECT * FROM delivery_receipts").fetchall(),
+                                     copied.execute("SELECT * FROM delivery_receipts").fetchall())
+                with self.assertRaises(SchedulerError):
+                    ContractJournal(db)
+
+    def test_concurrent_contract_and_legacy_initialization_do_not_mix(self):
+        db = self.root / "concurrent-storage.sqlite"
+        barrier = threading.Barrier(2)
+        def initialize(kind):
+            barrier.wait(timeout=5)
+            try:
+                if kind == "contract":
+                    ContractJournal(db)
+                else:
+                    NairuDeliveryBroker(db)
+                return kind
+            except (SchedulerError, DeliveryBrokerError):
+                return "denied"
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            outcomes = list(pool.map(initialize, ["contract", "broker"]))
+        self.assertEqual(outcomes.count("denied"), 1)
+        with closing(sqlite3.connect(db)) as conn:
+            names = {row[0] for row in conn.execute("SELECT name FROM sqlite_master")}
+        if "contract" in outcomes:
+            self.assertNotIn("delivery_receipts", names)
+            self.assertTrue(ContractJournal(db).verify_hash_chain())
+        else:
+            self.assertIn("delivery_receipts", names)
+            self.assertNotIn("contract_heads", names)
+            FactoryJournal(db)
+            with self.assertRaises(SchedulerError):
+                ContractJournal(db)
 
 
 class NativeWorkflowPreflightTests(unittest.TestCase):

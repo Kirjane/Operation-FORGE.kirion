@@ -399,3 +399,6 @@ test('observed runtime failure produces review-only learning candidate',()=>{
 });
 
 console.log(`\n${count} harness tests passed.`);
+
+// W3A regression: preserve all existing tests and execute the focused suite.
+require('./reconstruction-risk');

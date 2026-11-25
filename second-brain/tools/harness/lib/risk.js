@@ -1,3 +1,5 @@
+const {validateRiskOverrides} = require('./io');
+
 const MODE_ORDER = ['LOW','MEDIUM','HIGH','CRITICAL'];
 
 function modeAtLeast(a,b) { return MODE_ORDER.indexOf(a) >= MODE_ORDER.indexOf(b); }
@@ -16,13 +18,21 @@ function triggerMatches(trigger, type, signals, dimensions) {
 function scoreRisk(task, type, signals, cfg) {
   if (!type || !cfg.base[type]) throw new Error(`No risk baseline for task type ${type}`);
   const dimensions = { ...cfg.base[type] };
+  const mandatoryMinimums = {};
   for (const [signal, minimums] of Object.entries(cfg.signal_minimums || {})) {
     if (!signals[signal]) continue;
-    for (const [dim, min] of Object.entries(minimums)) dimensions[dim] = Math.max(dimensions[dim] || 0, min);
+    for (const [dim, min] of Object.entries(minimums)) {
+      mandatoryMinimums[dim] = Math.max(mandatoryMinimums[dim] || 0, min);
+      dimensions[dim] = Math.max(dimensions[dim] || 0, min);
+    }
   }
-  for (const [dim, value] of Object.entries(task.risk_overrides || {})) {
+  // Preserve already-applicable critical triggers as well as those reached
+  // by upward calibration; ordinary input is not exception authority.
+  const triggers = cfg.critical_triggers || [];
+  const firedBefore = new Set(triggers.filter(t => triggerMatches(t, type, signals, dimensions)));
+  for (const [dim, value] of Object.entries(validateRiskOverrides(task.risk_overrides))) {
     if (!cfg.dimensions.includes(dim)) throw new Error(`Unknown risk override dimension: ${dim}`);
-    dimensions[dim] = clamp(value);
+    dimensions[dim] = Math.max(value, mandatoryMinimums[dim] || 0);
   }
   let weighted = 0, weight = 0;
   for (const dim of cfg.dimensions) {
@@ -36,7 +46,7 @@ function scoreRisk(task, type, signals, cfg) {
     : score <= cfg.thresholds.MEDIUM ? 'MEDIUM'
     : score <= cfg.thresholds.HIGH ? 'HIGH' : 'CRITICAL';
   mode = maxMode(mode, cfg.type_floors[type] || 'LOW');
-  const fired = (cfg.critical_triggers || []).filter(t => triggerMatches(t, type, signals, dimensions));
+  const fired = triggers.filter(t => firedBefore.has(t) || triggerMatches(t, type, signals, dimensions));
   if (fired.length) mode = 'CRITICAL';
   return { mode, score:Number(score.toFixed(3)), dimensions, type_floor:cfg.type_floors[type] || 'LOW', critical_triggers_fired:fired.length };
 }

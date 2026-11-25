@@ -1,3 +1,5 @@
+const {validateSignals} = require('./io');
+
 const SIGNAL_KEYWORDS = {
   ui: ['ui','frontend','browser','page','screen','dashboard','interface'],
   data: ['database','data','state','record','asset','ledger','postgres','sql'],
@@ -21,13 +23,27 @@ const SIGNAL_KEYWORDS = {
   financial: ['payment','money','financial','payroll','billing']
 };
 
+// Inferred signals that activate safety minima, critical triggers, or
+// safety/authority lanes cannot be removed by ordinary caller input. Other
+// signals retain their existing explicit false calibration semantics.
+const PROTECTED_SIGNALS = new Set([
+  'data','auth','security','privacy','supply_chain','distributed','deployment',
+  'network','ai','incident','compliance','recovery','migration',
+  'external_dependency','offline','production','financial'
+]);
+
 function inferSignals(task) {
   const text = ` ${[task.intent, ...(task.constraints || []), ...(task.acceptance || [])].join(' ').toLowerCase()} `;
   const derived = {};
   for (const [signal, words] of Object.entries(SIGNAL_KEYWORDS)) {
     derived[signal] = words.some(w => text.includes(w));
   }
-  return { ...derived, ...(task.signals || {}) };
+  const supplied = validateSignals(task.signals);
+  const result = { ...derived, ...supplied };
+  for (const signal of PROTECTED_SIGNALS) {
+    if (derived[signal]) result[signal] = true;
+  }
+  return result;
 }
 
 function classifyTask(task, cfg) {

@@ -19,6 +19,8 @@ from .policy import (
     path_matches_prefix,
 )
 
+from .scheduler import SchedulerError, enable_wal, require_legacy_storage
+
 SENSITIVE_ENV_PREFIXES = (
     "GITHUB_TOKEN",
     "GH_TOKEN",
@@ -154,14 +156,23 @@ class LeaseManager:
 
     def _connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.db_path, timeout=15.0, isolation_level=None)
-        conn.row_factory = sqlite3.Row
-        conn.execute("PRAGMA journal_mode=WAL;")
-        return conn
+        try:
+            conn.row_factory = sqlite3.Row
+            enable_wal(conn)
+            return conn
+        except BaseException:
+            conn.close()
+            raise
 
     def _init_db(self) -> None:
-        conn = self._connect()
+        # Check compatibility under the same writer lock as DDL, before WAL.
+        conn = sqlite3.connect(self.db_path, timeout=15.0, isolation_level=None)
         try:
             conn.execute("BEGIN IMMEDIATE;")
+            try:
+                require_legacy_storage(conn)
+            except SchedulerError as exc:
+                raise LeaseConflictError(str(exc)) from exc
             conn.execute(
                 """
                 CREATE TABLE IF NOT EXISTS leases (
@@ -178,6 +189,10 @@ class LeaseManager:
                 """
             )
             conn.execute("COMMIT;")
+        except BaseException:
+            if conn.in_transaction:
+                conn.execute("ROLLBACK;")
+            raise
         finally:
             conn.close()
 

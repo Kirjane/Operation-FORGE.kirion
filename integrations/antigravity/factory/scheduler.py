@@ -196,7 +196,8 @@ def require_legacy_storage(conn: sqlite3.Connection) -> None:
     if (any(name.startswith("contract_") for name in objects)
             or (present and present != journal_names)
             or any(objects[name] != "table" for name in present)
-            or objects.get("delivery_receipts", "table") != "table"):
+            or objects.get("delivery_receipts", "table") != "table"
+            or objects.get("leases", "table") != "table"):
         raise SchedulerError("Contract, partial or incompatible legacy journal storage; legacy writer denied.")
 
 

@@ -16,6 +16,7 @@ import threading
 import unittest
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import closing, contextmanager
+from itertools import permutations
 from unittest.mock import patch
 from pathlib import Path
 
@@ -25,7 +26,8 @@ from integrations.antigravity.factory.dispatcher import FleetDispatcher
 from integrations.antigravity.factory.dispatch_preflight import ContractJournal, FixtureDispatchAdapter, archive_historical_journal
 from integrations.antigravity.factory.mission_contract import contract_digest, digest_json
 from integrations.antigravity.factory.delivery import NairuDeliveryBroker, DeliveryBrokerError
-from integrations.antigravity.factory.scheduler import FactoryJournal, SchedulerError
+from integrations.antigravity.factory.scheduler import FactoryJournal, SchedulerError, storage_catalog
+from integrations.antigravity.factory.ownership import LeaseManager, LeaseConflictError
 from integrations.antigravity.tests.test_mission_contract import make_contract, historical_packet
 
 
@@ -694,6 +696,135 @@ class DispatchPreflightTests(unittest.TestCase):
             FactoryJournal(db)
             with self.assertRaises(SchedulerError):
                 ContractJournal(db)
+
+
+class OwnershipStorageIsolationTests(unittest.TestCase):
+    def setUp(self):
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        self.root = Path(temp.name)
+
+    def snapshot(self, db):
+        with closing(sqlite3.connect(db.resolve().as_uri() + "?mode=ro", uri=True)) as conn:
+            return (storage_catalog(conn), list(conn.iterdump()),
+                    conn.execute("PRAGMA journal_mode").fetchone())
+
+    def exercise_lease_lifecycle(self, leases):
+        packet = historical_packet()
+        acquired = leases.acquire_leases(packet, "fixture-worker", ttl_seconds=60, now_epoch=100)
+        self.assertEqual(len(acquired), 1)
+        lease = acquired[0]
+        self.assertEqual((lease["version"], lease["expires_at_epoch"]), (1, 160))
+        with self.assertRaises(LeaseConflictError):
+            leases.acquire_leases(packet, "competitor", now_epoch=101)
+        beat = leases.heartbeat(lease["lease_id"], worker_id="fixture-worker", expected_version=1,
+                                ttl_seconds=60, now_epoch=110)
+        self.assertEqual((beat["version"], beat["expires_at_epoch"]), (2, 170))
+        with self.assertRaises(LeaseConflictError):
+            leases.heartbeat(lease["lease_id"], worker_id="fixture-worker", expected_version=1, now_epoch=111)
+        self.assertEqual(leases.release_worker_leases(packet["mission_id"], "fixture-worker"), 1)
+        self.assertEqual(leases.release_worker_leases(packet["mission_id"], "fixture-worker"), 0)
+        with self.assertRaises(LeaseConflictError):
+            leases.heartbeat(lease["lease_id"], worker_id="fixture-worker", expected_version=3, now_epoch=112)
+        again = leases.acquire_leases(packet, "competitor", ttl_seconds=60, now_epoch=120)
+        self.assertEqual((again[0]["version"], again[0]["expires_at_epoch"]), (4, 180))
+        self.assertEqual(leases.release_worker_leases(packet["mission_id"], "competitor"), 1)
+
+    def test_contract_first_rejects_lease_without_wal_or_catalog_mutation(self):
+        for populated in (False, True):
+            with self.subTest(populated=populated):
+                db = self.root / ("populated.sqlite" if populated else "fresh.sqlite")
+                journal = ContractJournal(db)
+                if populated:
+                    packet = make_contract()
+                    grant = make_grant(packet)
+                    adapter = FixtureDispatchAdapter(grants={contract_digest(packet): grant},
+                        trusted_verifiers={packet["verifier"]}, observe=lambda p: make_observation(p, grant),
+                        handler=lambda p: {"checked": True})
+                    self.assertEqual(journal.dispatch_fixture(json.dumps(packet), adapter)["status"], "COMPLETED")
+                before = self.snapshot(db)
+                # Fresh contract storage has not enabled WAL; denial must not enable it.
+                if not populated:
+                    self.assertEqual(before[2], ("delete",))
+                with self.assertRaises(LeaseConflictError) as error:
+                    LeaseManager(db)
+                self.assertIsInstance(error.exception.__cause__, SchedulerError)
+                self.assertEqual(self.snapshot(db), before)
+                self.assertNotIn("leases", before[0])
+                self.assertTrue(ContractJournal(db).verify_hash_chain())
+
+    def test_lease_first_rejects_contract_and_preserves_lease_operations(self):
+        db = self.root / "lease-only.sqlite"
+        leases = LeaseManager(db)
+        self.exercise_lease_lifecycle(leases)
+        before = self.snapshot(db)
+        self.assertEqual(before[0], {"leases": "table"})
+        with self.assertRaises(SchedulerError):
+            ContractJournal(db)
+        self.assertEqual(self.snapshot(db), before)
+        self.assertEqual(self.snapshot(LeaseManager(db).db_path), before)
+
+    def test_historical_three_way_storage_all_initialization_orders(self):
+        constructors = {"journal": FactoryJournal, "broker": NairuDeliveryBroker, "lease": LeaseManager}
+        for order in permutations(constructors):
+            with self.subTest(order=order):
+                db = self.root / ("-".join(order) + ".sqlite")
+                instances = {name: constructors[name](db) for name in order}
+                journal = instances["journal"]
+                journal.register_mission(historical_packet())
+                self.exercise_lease_lifecycle(instances["lease"])
+                with closing(sqlite3.connect(db)) as conn, conn:
+                    conn.execute("INSERT INTO delivery_receipts VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                        ("delivery-key", "fixture-mission", "feat/fixture", "a"*40, "b"*40,
+                         "Kirch-Nairu", 291564617, "RECORDED", "DRAFT", "fixture receipt", timestamp()))
+                before = self.snapshot(db)
+                self.assertEqual(set(before[0]), {"missions", "dispatches", "journal_events",
+                                                  "delivery_receipts", "leases"})
+                for name in reversed(order):
+                    constructors[name](db)
+                with self.assertRaises(SchedulerError):
+                    ContractJournal(db)
+                self.assertEqual(self.snapshot(db), before)
+                self.assertTrue(journal.verify_hash_chain())
+
+    def test_concurrent_contract_and_lease_initialization_do_not_mix(self):
+        db = self.root / "competing.sqlite"
+        barrier = threading.Barrier(2)
+        def initialize(kind):
+            barrier.wait(timeout=5)
+            try:
+                (ContractJournal if kind == "contract" else LeaseManager)(db)
+                return kind
+            except (SchedulerError, LeaseConflictError):
+                return "denied"
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            outcomes = list(pool.map(initialize, ("contract", "lease")))
+        self.assertEqual(outcomes.count("denied"), 1)
+        before = self.snapshot(db)
+        if "contract" in outcomes:
+            self.assertNotIn("leases", before[0])
+            with self.assertRaises(LeaseConflictError):
+                LeaseManager(db)
+            self.assertEqual(self.snapshot(db), before)
+            self.assertTrue(ContractJournal(db).verify_hash_chain())
+        else:
+            self.assertEqual(before[0], {"leases": "table"})
+            with self.assertRaises(SchedulerError):
+                ContractJournal(db)
+            self.assertEqual(self.snapshot(db), before)
+            self.exercise_lease_lifecycle(LeaseManager(db))
+
+    def test_incompatible_legacy_leases_view_denied_before_mutation(self):
+        for constructor, error in ((LeaseManager, LeaseConflictError), (FactoryJournal, SchedulerError),
+                                   (NairuDeliveryBroker, DeliveryBrokerError), (ContractJournal, SchedulerError)):
+            with self.subTest(constructor=constructor.__name__):
+                db = self.root / (constructor.__name__ + ".sqlite")
+                with closing(sqlite3.connect(db)) as conn, conn:
+                    conn.execute("CREATE VIEW leases AS SELECT 1 AS lease_id")
+                before = self.snapshot(db)
+                with self.assertRaises(error):
+                    constructor(db)
+                self.assertEqual(self.snapshot(db), before)
 
 
 class NativeWorkflowPreflightTests(unittest.TestCase):

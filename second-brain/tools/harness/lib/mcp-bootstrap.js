@@ -20,7 +20,15 @@ function buildBootstrapToolResponse(run,includeContext=true){
     ', truncated='+(truncated?'YES':'NO')+
     ', omitted_optional='+omitted.length+'.'
   ];
-  if(truncated){
+  if(ctx.document_budget!==undefined&&ctx.byte_budget!==undefined){
+    summary.push('Context budgets: '+(ctx.document_count??0)+'/'+ctx.document_budget+
+      ' documents, '+(ctx.total_bytes??0)+'/'+ctx.byte_budget+' bytes.');
+  }
+  if(ctx.coverage){
+    summary.push('Provider coverage: '+ctx.coverage+'; optional graph expansion: '+
+      ctx.optional_graph_expansion+'. Do not infer claims from unlisted sources.');
+  }
+  if(omitted.length>0||(truncated&&ctx.status==='RESOLVED')){
     const examples=omitted.slice(0,8).map(x=>JSON.stringify(x.path)+' ('+x.reason+')');
     summary.push('WARNING: NOT LOADED optional context sources'+
       (examples.length?': '+examples.join(', '):' (paths unavailable)')+
@@ -31,7 +39,7 @@ function buildBootstrapToolResponse(run,includeContext=true){
     const missing=[...new Set([...(ctx.missing_required||[]),...(ctx.required_not_loaded||[])])];
     summary.push('BLOCKED: REQUIRED CONTEXT NOT LOADED'+
       (missing.length?': '+missing.slice(0,8).map(x=>JSON.stringify(x)).join(', '):'')+
-      '. Do not proceed with context-dependent actions.');
+      (ctx.reason?'; '+ctx.reason:'')+'. Do not proceed with context-dependent actions.');
   }
   return {content:[{type:'text',text:summary.join(' ')}],structuredContent:data};
 }

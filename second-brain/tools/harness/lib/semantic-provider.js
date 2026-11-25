@@ -95,11 +95,25 @@ function readSnapshot(root,controlPlane,routePack,options={}){
 }
 
 function compileNotionSnapshot(root,route,manifest,controlPlane,routePack,options={}){
+  const required=requiredSemanticPaths(route,routePack);
+  const maxDocuments=documentBudget(manifest.context,route.rigor_mode);
+  const maxBytes=byteBudget(manifest.context,route.rigor_mode);
+  // The route pack is mandatory, not a graph-expansion algorithm. Report its
+  // narrower coverage separately from budget truncation, even when it fits.
+  const limits={document_budget:maxDocuments,byte_budget:maxBytes,max_depth:0,
+    coverage:'REQUIRED_ROUTE_PACK_ONLY',optional_graph_expansion:'NOT_PERFORMED',
+    omitted_optional:[],unresolved_links:[]};
   const loaded=readSnapshot(root,controlPlane,routePack,options);
-  if(loaded.status!=='RESOLVED') return {...loaded,documents:[],unresolved_links:[],missing_required:[]};
-  const required=requiredSemanticPaths(route,routePack),byPath=new Map(loaded.snapshot.documents.map(d=>[d.source_path,d]));
+  const base={provider:PROVIDERS.NOTION_SNAPSHOT,snapshot_path:loaded.snapshot_path,...limits};
+  function blocked(reason,errors,missing=[],truncated=false){
+    return {...base,status:'BLOCKED',reason,errors,missing_required:missing,
+      required_not_loaded:required,documents:[],document_count:0,total_bytes:0,truncated};
+  }
+  // Do not expose unvalidated snapshot contents as compiled context.
+  if(loaded.status!=='RESOLVED') return blocked(loaded.reason,loaded.errors||[loaded.reason]);
+  const byPath=new Map(loaded.snapshot.documents.map(d=>[d.source_path,d]));
   const missing=required.filter(p=>!byPath.has(p));
-  if(missing.length) return {status:'BLOCKED',provider:PROVIDERS.NOTION_SNAPSHOT,reason:'required semantic sources missing from snapshot',snapshot_path:loaded.snapshot_path,missing_required:missing,documents:[],unresolved_links:[],errors:missing.map(p=>`Missing snapshot source: ${p}`)};
+  if(missing.length) return blocked('required semantic sources missing from snapshot',missing.map(p=>`Missing snapshot source: ${p}`),missing);
   const errors=[],documents=[];
   let bytes=0;
   for(const sourcePath of required){
@@ -110,11 +124,12 @@ function compileNotionSnapshot(root,route,manifest,controlPlane,routePack,option
     bytes+=size;
     documents.push({path:sourcePath,sha256:doc.content_sha256,bytes:size,depth:0,source:'NOTION_SNAPSHOT',provider:PROVIDERS.NOTION_SNAPSHOT,source_sha:doc.source_sha,notion_page_id:doc.page_id,notion_url:doc.notion_url,title:doc.title,content:doc.content});
   }
-  if(errors.length) return {status:'BLOCKED',provider:PROVIDERS.NOTION_SNAPSHOT,reason:'semantic snapshot source drift',snapshot_path:loaded.snapshot_path,missing_required:[],documents:[],unresolved_links:[],errors};
-  const budget=documentBudget(manifest.context,route.rigor_mode);
-  if(documents.length>budget) return {status:'BLOCKED',provider:PROVIDERS.NOTION_SNAPSHOT,reason:'required semantic snapshot exceeds document budget',snapshot_path:loaded.snapshot_path,missing_required:[],documents:[],unresolved_links:[],errors:[`Required ${documents.length} documents, budget is ${budget}`]};
-  if(bytes>(manifest.context.max_bytes||Infinity)) return {status:'BLOCKED',provider:PROVIDERS.NOTION_SNAPSHOT,reason:'required semantic snapshot exceeds byte budget',snapshot_path:loaded.snapshot_path,missing_required:[],documents:[],unresolved_links:[],errors:[`Required ${bytes} bytes, budget is ${manifest.context.max_bytes}`]};
-  return {status:'RESOLVED',provider:PROVIDERS.NOTION_SNAPSHOT,snapshot_path:loaded.snapshot_path,snapshot_sha256:loaded.snapshot.snapshot_sha256,snapshot_generated_at:loaded.snapshot.generated_at,missing_required:[],document_count:documents.length,total_bytes:bytes,max_depth:0,truncated:false,documents,unresolved_links:[],errors:[]};
+  if(errors.length) return blocked('semantic snapshot source drift',errors);
+  if(documents.length>maxDocuments) return blocked('required semantic snapshot exceeds document budget',[`Required ${documents.length} documents, budget is ${maxDocuments}`],[],true);
+  if(bytes>maxBytes) return blocked('required semantic snapshot exceeds byte budget',[`Required ${bytes} bytes, budget is ${maxBytes}`],[],true);
+  return {...base,status:'RESOLVED',snapshot_sha256:loaded.snapshot.snapshot_sha256,
+    snapshot_generated_at:loaded.snapshot.generated_at,missing_required:[],required_not_loaded:[],
+    document_count:documents.length,total_bytes:bytes,truncated:false,documents,errors:[]};
 }
 
 function compileSemanticContext(root,route,manifest,options={}){

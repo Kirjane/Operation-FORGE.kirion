@@ -1,12 +1,19 @@
 const {doctor,intake,buildTask,bootstrapTask,evaluateTask,learningCandidate}=require('./runtime');
 const {createSession,advanceSession,refreshTarget}=require('./lifecycle');
+const {validateRiskOverrides,validateSignals}=require('./io');
 
 function compactBuild(run){return {task:run.task,classification:run.classification,signals:run.signals,risk:run.risk,route:run.route,context_status:run.context.status,gates:run.gates,harness_git:run.harness_git,target_repository:run.target_repository};}
 function handleRequest(request,options={}){
   if(!request||typeof request!=='object') throw new Error('request must be an object');
   const op=request.operation;if(!op) throw new Error('operation is required');const root=options.root;
   if(op==='doctor') return doctor(root);
-  if(op==='intake') return intake(request.input||request,{root,taskBaseDir:request.task_base_dir});
+  if(op==='intake'){
+    const input=request.input||request;
+    // Intake constructs a task and may discard malformed non-object controls.
+    // Validate the original transport payload before that conversion.
+    validateRiskOverrides(input.risk_overrides);validateSignals(input.signals);
+    return intake(input,{root,taskBaseDir:request.task_base_dir});
+  }
   if(op==='classify'){const run=buildTask(request.task,{root,taskBaseDir:request.task_base_dir});return {classification:run.classification,signals:run.signals};}
   if(op==='route') return compactBuild(buildTask(request.task,{root,taskBaseDir:request.task_base_dir}));
   if(op==='bootstrap'){

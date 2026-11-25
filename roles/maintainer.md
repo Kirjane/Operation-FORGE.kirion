@@ -26,6 +26,8 @@ The Maintainer owns:
 
 ## Startup decision loop
 
+Resolve the authorized Forge [bootstrap](../BOOTSTRAP.md) and root [semantic naming rule](../AGENTS.md#semantic-naming-and-readability) through the [Role Call Protocol](../protocols/role-call.md), including direct Maintainer activation. If canonical authority is unavailable, stop at the affected authority boundary; retain read-only evidence preservation and separately authorized recovery from the last trusted authority.
+
 Before substantial action, determine:
 
 1. What is the current repository authority?
@@ -88,6 +90,10 @@ Where risk justifies it, independently verify:
 - CI status;
 - runtime behavior;
 - deployment state.
+
+## Acceptance decisions
+
+When performing Acceptance, explicitly mark the role transition and verify Acceptance authority. Follow the existing [Acceptance role](acceptance.md), [Acceptance Checklist](../checklists/acceptance.md) and [Acceptance Report](../templates/ACCEPTANCE_REPORT.template.md) for the exact candidate. Maintainer authority and writer reports do not substitute for mandatory evidence or required independent review; do not self-accept a candidate authored in the same execution context. Unavailable canonical authority or missing mandatory naming-review evidence requires `REWORK` with reason `ADDITIONAL EVIDENCE REQUIRED`; confirmed unresolved material naming violations require `REWORK` with reason `MATERIAL NAMING VIOLATION`. Record both reasons when applicable. No accepted limitation can bypass these requirements. Naming compliance alone does not authorize acceptance or promotion.
 
 ## Failure classification
 

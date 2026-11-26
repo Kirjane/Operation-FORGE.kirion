@@ -279,7 +279,8 @@ def _frontend_root(norm: str) -> str | None:
     ):
         roots.extend(f"apps/{parts[1]}/{p}" for p in ("src", "assets", "public", "tests", "e2e"))
     # Native presentation folders, not entire Android/iOS applications.
-    if len(parts) >= 5 and parts[0] in {"android", "ios", "app", "apps"}:
+    if len(parts) >= 5 and (parts[0] in {"android", "ios"} or
+                            parts[:3] == ["app", "src", "main"]):
         for i, part in enumerate(parts[:-1]):
             if i >= 2 and part in {"ui", "screens", "views", "presentation"}:
                 roots.append("/".join(parts[:i + 1]))
@@ -298,6 +299,13 @@ def _frontend_path_allowed(packet: dict[str, Any], norm: str) -> bool:
     root = _frontend_root(norm)
     name = PurePosixPath(norm).name.lower()
     if root is None or name in FRONTEND_DENIED_NAMES:
+        return False
+    parts = norm.lower().split("/")
+    # Framework server routes/actions can live inside apparently client trees.
+    if (any(p in {"pages", "routes", "app"} and i + 1 < len(parts) and parts[i + 1] == "api"
+            for i, p in enumerate(parts))
+            or ".server." in name or name in {"route.ts", "route.js", "server.ts", "server.js"}
+            or name.startswith(("middleware.", "server.", "auth.config."))):
         return False
     if name.startswith(("vite.config.", "next.config.", "webpack.config.", "rollup.config.",
                         "tsconfig.", "eslint.config.", "babel.config.", "metro.config.",
@@ -320,6 +328,7 @@ def assert_frontend_actor_binding(
         raise PolicyViolationError("Frontend mutation requires protocol v2.")
     if packet.get("formal_role") != "Code Writer" or packet.get("assigned_persona") not in FRONTEND_PERSONAS:
         raise PolicyViolationError("Frontend mutation requires assigned Code Writer.")
+    assert_operation_allowed(packet, "WRITE_OWNED")
     if not isinstance(trusted_grant, dict) or not isinstance(observed_actor, dict):
         raise PolicyViolationError("Trusted frontend actor binding unavailable.")
     # Import lazily to avoid the existing mission_contract -> policy import cycle.
@@ -369,6 +378,8 @@ def _assert_frontend_write_path(
         return
     if persona not in FRONTEND_PERSONAS:
         return
+    if any(part.startswith(".") or part in FRONTEND_DENIED_SEGMENTS for part in low.split("/")):
+        raise PolicyViolationError("Protected frontend path segment denied.")
     if packet.get("formal_role") != "Code Writer":
         raise PolicyViolationError("Frontend persona is read-only without Code Writer authority.")
     if type(packet.get("schema_version")) is int and packet["schema_version"] == 1:
@@ -416,7 +427,8 @@ def assert_paths_within_ownership(
         ):
             raise PolicyViolationError(f"Noncanonical contract path denied: {raw!r}")
         norm_low = norm.lower()
-        if (not allow_protected_governance or packet.get("schema_version") == 2) and is_protected_governance_path(norm):
+        if (not allow_protected_governance or packet.get("schema_version") == 2
+                or persona in FRONTEND_PERSONAS) and is_protected_governance_path(norm):
             raise PolicyViolationError(f"Protected governance file {norm!r} cannot be modified by worker.")
 
         if packet.get("schema_version") == 2 and any(path_matches_prefix(norm, pref) for pref in packet["excluded_paths"]):

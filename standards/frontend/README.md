@@ -30,3 +30,6 @@ At authorized frontend mission start, resolve product, role, owned paths, exact 
 7. Keep skills selective and provenance pinned. Full qualification and host activation require separate authority.
 
 Sources: [evidence register](provenance.md) (OT, SC, F); principles D1–D3, V1–V3, I1–I3, A1–A3, P1–P4, R1–R2, W1, E1–E2 in domain documents. Existing Second Brain is conceptual knowledge; this package operationalizes it, not replaces it.
+
+## Lane B runtime declaration
+`activation.json` is the machine-readable frontend-specific declaration. Both personas use the same mandatory entrypoint and evidence domain; explicit domain IDs select only relevant documents in declared order. The generic loader owns source/digest verification, actual byte limits, required coverage and load receipts. Native execution owns observed identity and grant custody. This branch adds policy and declarations, not installed activation. The original authorship candidate remains frozen. Only active Lucien may modify canonical standard under a separately authorized mission.

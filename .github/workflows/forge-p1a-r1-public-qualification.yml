@@ -27,6 +27,61 @@ jobs:
           grep -Ex 'deeeddd95c785b7d23ef7af6e75d165beff99634 [0-9]{10}' "$D/release"
           test "$(wc -l < "$D/release")" = 1
           cat "$D/release"
+          # A text marker alone is insufficient. Authenticate the actual public review
+          # and reject stale or superseded verdicts before any candidate import.
+          python3 -I -B - "$D/release" <<'PY'
+          import json, pathlib, re, sys, urllib.request
+          API="https://api.github.com/repos/Kirjane/Operation-FORGE.kirion"
+          C="deeeddd95c785b7d23ef7af6e75d165beff99634"
+          reviewer=339503629
+          def require(ok,msg):
+              if not ok: raise RuntimeError("FAIL_CLOSED: "+msg)
+          def get(path):
+              req=urllib.request.Request(API+path,headers={"Accept":"application/vnd.github+json","User-Agent":"FORGE-public-review-gate"})
+              with urllib.request.urlopen(req,timeout=20) as r:
+                  return json.load(r)
+          def validate(comment,comment_id):
+              require(comment.get("id")==comment_id,"receipt identity")
+              require(comment.get("user",{}).get("id")==reviewer,"independent reviewer identity")
+              require(comment.get("issue_url")==API+"/issues/37","governing issue")
+              lines=comment.get("body","").splitlines()
+              require(lines.count("FORGE_STATIC_VERDICT=STATIC_PREQUALIFICATION_READY")==1,"explicit static readiness")
+              require(lines.count("FORGE_CANDIDATE="+C)==1,"exact candidate")
+              require(len([line for line in lines if line.startswith("FORGE_STATIC_VERDICT=")])==1,"ambiguous disposition")
+              require(len([line for line in lines if line.startswith("FORGE_CANDIDATE=")])==1,"ambiguous candidate")
+          # Self-check the gate's critical negative controls without network or candidate code.
+          fixture={"id":1,"user":{"id":reviewer},"issue_url":API+"/issues/37","body":"FORGE_STATIC_VERDICT=STATIC_PREQUALIFICATION_READY\nFORGE_CANDIDATE="+C}
+          validate(fixture,1)
+          for changed in [
+              {"id":2},{"user":{"id":335897759}},{"issue_url":API+"/issues/38"},
+              {"body":fixture["body"].replace(C,"0"*40)},
+              {"body":fixture["body"].replace("STATIC_PREQUALIFICATION_READY","FIX_REQUIRED")},
+              {"body":fixture["body"]+"\nFORGE_STATIC_VERDICT=FIX_REQUIRED"}
+          ]:
+              try: validate(dict(fixture,**changed),1)
+              except RuntimeError: pass
+              else: raise RuntimeError("gate negative control failed")
+          print("RELEASE_GATE_SELFTEST 6/6")
+          candidate,receipt=pathlib.Path(sys.argv[1]).read_text().strip().split()
+          require(candidate==C and re.fullmatch(r"[0-9]{10}",receipt) is not None,"marker")
+          receipt_id=int(receipt)
+          comment=get("/issues/comments/"+receipt)
+          validate(comment,receipt_id)
+          # A newer Nox comment on this candidate must be reconciled first.
+          # Ascending pagination after the receipt's creation; fail closed on overflow.
+          from urllib.parse import quote
+          since=quote(comment["created_at"],safe="")
+          for page in range(1,11):
+              batch=get("/issues/37/comments?since="+since+"&per_page=100&page="+str(page))
+              require(isinstance(batch,list),"comment pagination")
+              for later in batch:
+                  if later.get("id",0)>receipt_id and later.get("user",{}).get("id")==reviewer:
+                      require(C not in later.get("body",""),"newer candidate review requires reconciliation")
+              if len(batch)<100: break
+          else: raise RuntimeError("review pagination exceeded")
+          require(get("/branches/experiment/forge-p1a-contract-compatibility")["commit"]["sha"]==C,"candidate branch drift")
+          print("AUTHENTICATED_STATIC_RELEASE",receipt_id,C)
+          PY
           F=928d08edc691dfaeccd4929d2a6566d1f3a3a789
           C=deeeddd95c785b7d23ef7af6e75d165beff99634
           git -C "$D/repo" fetch --quiet --no-tags --depth=2 https://github.com/Kirjane/Operation-FORGE.kirion.git "$C"

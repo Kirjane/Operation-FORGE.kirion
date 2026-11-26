@@ -28,5 +28,17 @@
     "Explicit loading, empty, validation-error, server-error, and denied states",
     "prefers-reduced-motion compliance",
     "Truthful separation of static showcase simulations from live backend authority"
-  ]
+  ],
+  "eligible_frontend_personas": [
+    "Antigravity-Lucien",
+    "Antigravity-Iris"
+  ],
+  "frontend_standard": {
+    "declaration_path": "standards/frontend/activation.json",
+    "entrypoint": "standards/frontend/README.md",
+    "required": true,
+    "selection": "explicit_domain_ids",
+    "source": "mission-pinned authorized source",
+    "receipt": "actual consumption required; missing mandatory source or unsupported consumer blocks live activation"
+  }
 }

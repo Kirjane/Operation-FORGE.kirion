@@ -47,3 +47,6 @@ python -m unittest discover -s integrations/antigravity/tests -v
 
 ## 6. Tests & Qualification Evidence
 - Verified in Benchmark C (`UI-320PX-OVERFLOW`, `UI-KEYBOARD-FOCUS`, `UI-SIMULATED-LIVE-CLAIM`).
+
+## 7. Canonical design craft
+Use the frontend_web declaration at the authorized pin. For new visual work load design, for navigation/forms/overlays/motion load interaction, for structural migration load architecture, and for live state or money load integration; evidence is always required. Use civic/transactional case studies when the domain warrants them. Build a representative visual specimen and actual mounted vertical slice, compare hierarchy, typography, rhythm, density and states against approved references, then scale. Accessibility checks do not substitute for aesthetic quality or actual product outcomes. Record unresolved visual and runtime gaps. No full-library injection, no external skill installation, no runtime activation claim.

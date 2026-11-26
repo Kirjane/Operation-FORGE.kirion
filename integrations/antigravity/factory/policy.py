@@ -225,19 +225,205 @@ def assert_operation_allowed(
         raise PolicyViolationError(f"Operation {operation!r} is not authorized in MissionPacket.allowed_operations")
 
 
+
+# Lane B: these are eligibility constraints, not an authentication provider.
+# The native boundary must supply an independently resolved grant and observation.
+FRONTEND_PERSONAS = frozenset({"Antigravity-Lucien", "Antigravity-Iris"})
+CANONICAL_FRONTEND_REPO_ID = 1377058358
+CANONICAL_FRONTEND_REPO = "Kirjane/Operation-FORGE.kirion"
+LUCIEN_GITHUB_ID = "359299805"
+SUSPENDED_LUCIEN_GITHUB_ID = "339001004"
+FRONTEND_SUFFIXES = (".tsx", ".ts", ".jsx", ".js", ".mjs", ".css", ".scss",
+                     ".sass", ".less", ".html", ".vue", ".svelte", ".razor",
+                     ".cshtml", ".blade.php", ".svg", ".png", ".jpg", ".jpeg",
+                     ".webp", ".avif", ".ico", ".woff", ".woff2", ".json", ".md",
+                     ".kt", ".swift", ".xml", ".dart", ".xaml")
+# Reject protected/operational segments even when nested inside a UI tree.
+FRONTEND_DENIED_SEGMENTS = frozenset({
+    "backend", "server", "controllers", "middleware", "migrations", "database",
+    "secrets", "credentials", "security", "policies", "governance", "infra",
+    "infrastructure", "deploy", "deployment", "scripts", "node_modules",
+    "vendor", ".github", ".forge", ".agents", ".git", "dist", "build",
+})
+FRONTEND_DENIED_NAMES = frozenset({
+    "package.json", "package-lock.json", "pnpm-lock.yaml", "yarn.lock",
+    "composer.json", "composer.lock", "tsconfig.json", "vite.config.ts",
+    "vite.config.js", "next.config.js", "next.config.ts", "firebase.json",
+    "google-services.json", "googleservice-info.plist", "androidmanifest.xml",
+    "agents.md", "dockerfile", "web.config", "appsettings.json",
+})
+# Approved structural conventions. New conventions require explicit policy review;
+# a generic src/, app/, apps/ or repository-wide ownership is not a UI grant.
+FRONTEND_ROOTS = (
+    "frontend", "web", "client", "ui", "src/frontend", "src/client", "src/ui",
+    "src/components", "src/pages", "src/features", "src/styles", "src/assets",
+    "src/routes", "src/screens", "src/navigation", "src/hooks", "src/lib/ui",
+    "src/lib/client", "src/services/client",
+    "resources/js", "resources/css", "resources/views", "public/assets",
+    "views", "pages", "components", "wwwroot/css", "wwwroot/js", "wwwroot/images",
+    "tests/frontend", "tests/e2e", "tests/browser", "e2e", "playwright",
+)
+FRONTEND_EXACT_ENTRYPOINTS = frozenset({
+    "src/app.tsx", "src/app.jsx", "src/main.tsx", "src/main.jsx", "src/main.ts",
+    "src/index.tsx", "src/index.jsx", "src/app.vue", "src/app.svelte", "index.html",
+    "src/api/client.ts", "src/api/hostclient.ts",
+})
+ARCHITECTURE_ROOTS = ("docs/architecture", "docs/adr", "architecture", "adr",
+                      "integrations/antigravity/adr", "integrations/antigravity/schemas")
+
+
+def _frontend_root(norm: str) -> str | None:
+    low = norm.lower()
+    parts = low.split("/")
+    if any(p.startswith(".") or p in FRONTEND_DENIED_SEGMENTS for p in parts):
+        return None
+    # Explicitly named frontend application under a monorepo, not arbitrary apps/.
+    roots = list(FRONTEND_ROOTS)
+    if len(parts) >= 3 and parts[0] == "apps" and (
+        parts[1] in {"web", "frontend", "client", "mobile"} or
+        parts[1].endswith(("-web", "-frontend", "-client", "-mobile"))
+    ):
+        roots.extend(f"apps/{parts[1]}/{p}" for p in ("src", "assets", "public", "tests", "e2e"))
+    # Native presentation folders, not entire Android/iOS applications.
+    if len(parts) >= 5 and (parts[0] in {"android", "ios"} or
+                            parts[:3] == ["app", "src", "main"]):
+        for i, part in enumerate(parts[:-1]):
+            if i >= 2 and part in {"ui", "screens", "views", "presentation"}:
+                roots.append("/".join(parts[:i + 1]))
+    return next((root for root in sorted(roots, key=len, reverse=True)
+                 if low.startswith(root + "/")), None)
+
+
+def _explicit_owned_file(packet: dict[str, Any], norm: str, root: str) -> bool:
+    # Require the actual ownership prefix to be within the frontend/architecture
+    # root, rather than relying on an overbroad parent grant.
+    return any(path_matches_prefix(prefix, root) and path_matches_prefix(norm, prefix)
+               for prefix in packet.get("owned_paths", []))
+
+
+def _frontend_path_allowed(packet: dict[str, Any], norm: str) -> bool:
+    root = _frontend_root(norm)
+    name = PurePosixPath(norm).name.lower()
+    if name in FRONTEND_DENIED_NAMES:
+        return False
+    if norm.lower() in FRONTEND_EXACT_ENTRYPOINTS:
+        return any(normalize_rel_path(prefix).lower() == norm.lower()
+                   for prefix in packet.get("owned_paths", []))
+    if root is None:
+        return False
+    parts = norm.lower().split("/")
+    # Framework server routes/actions can live inside apparently client trees.
+    if (any(p in {"pages", "routes", "app"} and i + 1 < len(parts) and parts[i + 1] == "api"
+            for i, p in enumerate(parts))
+            or ".server." in name or name in {"route.ts", "route.js", "server.ts", "server.js"}
+            or name.startswith(("middleware.", "server.", "auth.config."))):
+        return False
+    if name.startswith(("vite.config.", "next.config.", "webpack.config.", "rollup.config.",
+                        "tsconfig.", "eslint.config.", "babel.config.", "metro.config.",
+                        "playwright.config.", "appsettings.", "secret", "credential")):
+        return False
+    return norm.lower().endswith(FRONTEND_SUFFIXES) and _explicit_owned_file(packet, norm, root)
+
+
+def assert_frontend_actor_binding(
+    packet: dict[str, Any], *, trusted_grant: dict[str, Any] | None,
+    observed_actor: dict[str, Any] | None,
+) -> None:
+    """Check a frontend writer's host-observed identity against a resolved grant.
+
+    Inputs MUST originate outside packet ingress, in the trusted native boundary;
+    this pure check does not establish that trust or validate grant freshness.
+    No default, packet fallback, or caller-provided persona string is authority.
+    """
+    if type(packet.get("schema_version")) is not int or packet["schema_version"] != 2:
+        raise PolicyViolationError("Frontend mutation requires protocol v2.")
+    if packet.get("formal_role") != "Code Writer" or packet.get("assigned_persona") not in FRONTEND_PERSONAS:
+        raise PolicyViolationError("Frontend mutation requires assigned Code Writer.")
+    assert_operation_allowed(packet, "WRITE_OWNED")
+    if not isinstance(trusted_grant, dict) or not isinstance(observed_actor, dict):
+        raise PolicyViolationError("Trusted frontend actor binding unavailable.")
+    # Import lazily to avoid the existing mission_contract -> policy import cycle.
+    from .mission_contract import contract_digest
+    expected = {"contract_sha256": contract_digest(packet), "revision": packet.get("revision"),
+                "persona": packet["assigned_persona"], "formal_role": "Code Writer"}
+    if any(type(trusted_grant.get(k)) is not type(v) or trusted_grant.get(k) != v
+           for k, v in expected.items()):
+        raise PolicyViolationError("Frontend actor grant contract binding mismatch.")
+    keys = ("actor_id", "worker_id", "host_id", "identity_provider")
+    for key in keys:
+        val = trusted_grant.get(key)
+        if not isinstance(val, str) or not val or val != val.strip() or observed_actor.get(key) != val:
+            raise PolicyViolationError("Frontend actor observation mismatch.")
+    if observed_actor.get("persona") != packet["assigned_persona"] or observed_actor.get("formal_role") != "Code Writer":
+        raise PolicyViolationError("Frontend actor persona or role mismatch.")
+    actor_id = trusted_grant["actor_id"]
+    provider = trusted_grant["identity_provider"]
+    if actor_id == SUSPENDED_LUCIEN_GITHUB_ID or actor_id == "github:" + SUSPENDED_LUCIEN_GITHUB_ID:
+        raise PolicyViolationError("Suspended Lucien identity denied.")
+    if provider == "github":
+        if packet["assigned_persona"] != "Antigravity-Lucien" or actor_id != LUCIEN_GITHUB_ID:
+            raise PolicyViolationError("No matching approved frontend GitHub identity.")
+    elif provider == "native":
+        if not actor_id.startswith("native:") or len(actor_id) <= len("native:"):
+            raise PolicyViolationError("Native frontend identity must be host-namespaced.")
+    else:
+        raise PolicyViolationError("Unknown frontend identity provider.")
+
+
+def _assert_frontend_write_path(
+    packet: dict[str, Any], norm: str, *, trusted_grant: dict[str, Any] | None,
+    observed_actor: dict[str, Any] | None,
+) -> None:
+    persona = packet.get("assigned_persona")
+    low = norm.lower()
+    standard = low == "standards/frontend" or low.startswith("standards/frontend/")
+    if standard:
+        if (persona != "Antigravity-Lucien" or packet.get("repo_id") != CANONICAL_FRONTEND_REPO_ID
+                or packet.get("repo_name") != CANONICAL_FRONTEND_REPO
+                or not low.endswith((".md", ".json"))
+                or not _explicit_owned_file(packet, norm, "standards/frontend")):
+            raise PolicyViolationError("Canonical frontend standard is reserved to authorized Lucien.")
+        assert_frontend_actor_binding(packet, trusted_grant=trusted_grant, observed_actor=observed_actor)
+        if trusted_grant.get("identity_provider") != "github" or trusted_grant.get("actor_id") != LUCIEN_GITHUB_ID:
+            raise PolicyViolationError("Canonical standard authorship requires active Lucien GitHub identity.")
+        return
+    if persona not in FRONTEND_PERSONAS:
+        return
+    if any(part.startswith(".") or part in FRONTEND_DENIED_SEGMENTS for part in low.split("/")):
+        raise PolicyViolationError("Protected frontend path segment denied.")
+    if packet.get("formal_role") != "Code Writer":
+        raise PolicyViolationError("Frontend persona is read-only without Code Writer authority.")
+    if type(packet.get("schema_version")) is int and packet["schema_version"] == 1:
+        # Historical Lucien architecture receipts remain inspectable. Do not
+        # expand v1 to new UI writes or use it as live dispatch authority.
+        if persona == "Antigravity-Lucien" and low.endswith((".md", ".json")):
+            return
+        raise PolicyViolationError("Historical protocol cannot authorize new frontend mutation.")
+    assert_frontend_actor_binding(packet, trusted_grant=trusted_grant, observed_actor=observed_actor)
+    if _frontend_path_allowed(packet, norm):
+        return
+    if persona == "Antigravity-Lucien" and low.endswith((".md", ".schema.json")):
+        if any(low.startswith(root + "/") and _explicit_owned_file(packet, norm, root)
+               for root in ARCHITECTURE_ROOTS):
+            return
+    raise PolicyViolationError(f"Path {norm!r} is not within an explicit frontend or authorized architecture scope.")
+
+
 def assert_paths_within_ownership(
     packet: dict[str, Any],
     changed_paths: list[str],
     *,
     allow_protected_governance: bool = False,
     require_write_operation: bool = True,
+    trusted_grant: dict[str, Any] | None = None,
+    observed_actor: dict[str, Any] | None = None,
 ) -> list[str]:
     """Verify every touched file is inside MissionPacket.owned_paths and respects persona path restrictions."""
     if packet.get("formal_role") == "Reviewer":
         raise PolicyViolationError(
             f"formal_role='Reviewer' ({packet.get('assigned_persona')!r}) is read-only and cannot mutate repository paths."
         )
-    if require_write_operation:
+    if require_write_operation or packet.get("assigned_persona") in FRONTEND_PERSONAS:
         assert_operation_allowed(packet, "WRITE_OWNED")
     owned_prefixes = packet.get("owned_paths", [])
     persona = packet.get("assigned_persona", "")
@@ -252,7 +438,8 @@ def assert_paths_within_ownership(
         ):
             raise PolicyViolationError(f"Noncanonical contract path denied: {raw!r}")
         norm_low = norm.lower()
-        if (not allow_protected_governance or packet.get("schema_version") == 2) and is_protected_governance_path(norm):
+        if (not allow_protected_governance or packet.get("schema_version") == 2
+                or persona in FRONTEND_PERSONAS) and is_protected_governance_path(norm):
             raise PolicyViolationError(f"Protected governance file {norm!r} cannot be modified by worker.")
 
         if packet.get("schema_version") == 2 and any(path_matches_prefix(norm, pref) for pref in packet["excluded_paths"]):
@@ -265,13 +452,8 @@ def assert_paths_within_ownership(
         if persona == "Antigravity-Scribe" and not norm_low.endswith((".md", ".json", ".txt")):
             raise PolicyViolationError(f"Antigravity-Scribe is restricted to documentation/capsule files (.md/.json/.txt), denied: {norm!r}")
 
-        if persona == "Antigravity-Lucien":
-            if packet.get("formal_role") != "Code Writer":
-                raise PolicyViolationError(
-                    "Antigravity-Lucien is read-only by default and requires explicit Code Writer role transition to write files."
-                )
-            if not norm_low.endswith((".md", ".schema.json", ".json")):
-                raise PolicyViolationError(f"Antigravity-Lucien is restricted to architecture/ADR/schema files (.md/.json), denied: {norm!r}")
+        _assert_frontend_write_path(packet, norm, trusted_grant=trusted_grant,
+                                    observed_actor=observed_actor)
 
         if persona == "Antigravity-QA":
             if packet.get("formal_role") != "Code Writer":

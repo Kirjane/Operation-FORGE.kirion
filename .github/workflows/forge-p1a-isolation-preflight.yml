@@ -30,6 +30,7 @@ jobs:
               if not ok: raise RuntimeError("FAIL_CLOSED: "+str(msg))
           opt,mode=sys.argv[1:]
           require(opt in ("0","1") and sys.flags.optimize==int(opt),"optimization")
+          require(os.getuid()==65534 and os.geteuid()==65534 and os.getgid()==65534 and not os.getgroups(),"dedicated unprivileged identity")
           require(sys.flags.isolated and sys.flags.no_site and sys.dont_write_bytecode,"python flags")
           require(set(os.environ)<= {"PATH","LANG","LC_CTYPE"},"environment")
           require(all(not P(p).exists() for p in ["/home","/root","/run","/mnt","/var","/etc","/proc/self"]),"host mounts")
@@ -116,6 +117,7 @@ jobs:
             mount --bind "$D/$n" "$R/$n"
             mount -o remount,bind,ro,nosuid,nodev,noexec "$R/$n"
           done
+          chown 65534:65534 "$D/output"; chmod 0700 "$D/output"
           mount --bind "$D/output" "$R/scratch"; mount -o remount,bind,rw,nosuid,nodev,noexec "$R/scratch"
           mount -o remount,ro,nosuid,nodev "$R"
           links=$(ip -brief link); echo "$links"
@@ -133,7 +135,7 @@ jobs:
           args=(); if test "$opt" = 1; then args+=(-O); fi
           ulimit -n 1024
           exec 77</dev/null
-          exec chroot "$R" /usr/bin/setpriv --no-new-privs --bounding-set=-all --inh-caps=-all --ambient-caps=-all /usr/bin/env -i PATH=/usr/bin LANG=C /usr/bin/python3 "${args[@]}" -I -B -S -X pycache_prefix=/probe/nonexistent-cache /probe/launcher.py "$opt" "$mode"
+          exec chroot "$R" /usr/bin/setpriv --reuid=65534 --regid=65534 --clear-groups --no-new-privs --bounding-set=-all --inh-caps=-all --ambient-caps=-all /usr/bin/env -i PATH=/usr/bin LANG=C /usr/bin/python3 "${args[@]}" -I -B -S -X pycache_prefix=/probe/nonexistent-cache /probe/launcher.py "$opt" "$mode"
           SH
           sha256sum "$D/source/sentinel.txt" "$D/probe/"* 
       - name: Measure isolated normal and optimized benign dispatch

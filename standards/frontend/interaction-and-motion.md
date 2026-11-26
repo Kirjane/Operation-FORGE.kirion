@@ -1,0 +1,15 @@
+# Interaction and motion
+Sources I1–I3. Read for any workflow with repeated actions, overlays, navigation, or asynchronous feedback.
+
+## I1 — Choose presentation by task and content (SHOULD)
+Map each interaction as trigger → context → input → commit/cancel → outcome → return. Preserve selection, filters, scroll and navigation where expected; URL-backed state for shareable or deep-linkable views when safe. For quick inspection of one record in a wide register, use a drawer if it preserves table context; for a multi-column dossier use a wide modal or dedicated route; for sustained editing, linked or complex work use a page. Inline split is useful on sufficiently wide workstations with independent scrolling; not when it crushes columns or places detail after hundreds of rows. A drawer is not mandatory.
+
+Use a coherent overlay primitive: semantic name/description, initial focus appropriate to risk, inert modal background, Escape and close control, focus restoration, scroll containment, visible footer, correct top layer, safe destructive dismissal behavior. Native dialog/popover MAY help if actual browser/WebView supports needed behavior. Test reset CSS, nesting, keyboard, outside click, viewport width and fallback; nonmodal popovers should not trap focus like dialogs. No redundant ARIA on native semantics. A custom primitive must meet equivalent behavior, not just appearance. Document preview can have subdued matte and true paper view; never modify official bytes or imply unapproved data.
+
+## I2 — Motion is communication (SHOULD)
+Use motion to explain hierarchy, state change or navigation, not delay the primary task. Choose duration/easing by distance and intent; short hover/press responses, modest overlay entry, no unnecessary layout shifts. Prefer transform/opacity where appropriate, avoid motion on every row. Provide reduced-motion and keyboard parity; don't make meaning depend on animation. Check slow device and interrupted animation, exit/cancel, focus timing, rapid toggles. Editorial/marketing motion MAY be more expressive when the product warrants it and performance/accessibility remain intact.
+
+## I3 — Operator fluency (MUST for critical actions)
+Design repeated touch/keyboard flows around the real sequence: discovery, choice, modifier/quantity, review, confirmed outcome. Keep consequential totals and actions visible; avoid accidental neighboring taps; use status text + icon/color, actionable errors, explicit confirmation proportional to irreversibility. Do not obscure a confirmation state during background refresh. For date/time pickers retain input semantics, locale/timezone, typed entry, validation and reachable calendar if needed. For a command palette, filter destinations by server-projected navigation and check direct-route denial; shortcuts are optional, discoverable and never sole access.
+
+Acceptance: complete task with touch and keyboard, rapid double-action, cancellation, reopen/restore focus, reduced motion, long content and small screens. Verify destructive action cannot appear confirmed prematurely. Record actual interaction outcome, not just screenshot.

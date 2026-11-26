@@ -322,13 +322,15 @@ def _record_links(r,index):
         p=b['previous_ref']; require((p is None and r['revision']==1) or (p is not None and p['revision']+1==r['revision']),'DECISION_REVISION')
 
 
-def graph_index(graph):
+def graph_index(graph,seen=None):
     require(type(graph) is list and len(graph)<=256,'GRAPH_COUNT')
     index={}; total=0; decision_ids=set()
     # Share identity tracking across records, but reset each record's depth and
     # node budget. Identity comparisons, not value equality: independently
     # decoded equal containers are valid. The root list is also tracked.
-    seen=[graph]
+    if seen is None: seen=[]
+    require(not any(graph is a for a in seen),'CYCLE_OR_MUTABLE_ALIAS')
+    seen.append(graph)
     for r in graph:
         primitive(r,seen=seen)
         structural(r); total+=len(canonical_bytes(r)); require(total<=MAX_GRAPH,'GRAPH_BYTES')
@@ -388,8 +390,13 @@ def _transition(event,prior,index):
         require(state in ('APPROVED','EXPIRED') and same and target==prior_ref,'REVOKE_TRANSITION')
 
 
+def _decision_identity(index):
+    return {key[:4]:event for key,event in index.items() if event['kind']=='decision'}
+
+
 def _snapshot(snapshot,tick,index):
     primitive(snapshot); shape(snapshot,SNAPSHOT); shape(tick,INT)
+    identities=_decision_identity(index)
     events={}; ids=set(); scope=None
     for e in snapshot['events']:
         structural(e); require(e['kind']=='decision','SNAPSHOT_KIND')
@@ -403,7 +410,8 @@ def _snapshot(snapshot,tick,index):
         predecessor=e['body']['previous_ref']
         prior=None if predecessor is None else _resolve(events,predecessor)
         _transition(e,prior,combined)
-        existing=index.get(_key(e)); require(existing is None or existing==e,'SNAPSHOT_CONFLICT')
+        existing=identities.get(_key(e)[:4]); require(existing is None or existing==e,'SNAPSHOT_CONFLICT')
+        identities[_key(e)[:4]]=e
         events[_key(e)]=e
     head=snapshot['head_ref']; current=None if head is None else _resolve(events,head)
     chain=[]; cursor=current
@@ -431,27 +439,36 @@ def reduce_decision(graph,snapshot,submitted_event,evaluation_tick,stage_only=Fa
     except Invalid:
         pass
     try:
-        index=graph_index(graph); head,chain,combined=_snapshot(snapshot,tick,index)
+        seen=[]; index=graph_index(graph,seen); primitive(snapshot,seen=seen)
+        head,chain,combined=_snapshot(snapshot,tick,index)
     except Invalid as exc:
         return _reducer('MODEL_UNKNOWN',sr,None,None,None,'UNKNOWN',tick,str(exc)),None
     previous=snapshot['head_ref']; state=_state(head,tick); unchanged=json.loads(canonical_bytes(snapshot))
     try:
         require(sr is not None and type(stage_only) is bool,'SUBMISSION')
+        primitive(submitted_event,seen=seen)
         require(not snapshot['events'] or submitted_event['scope']==snapshot['events'][0]['scope'],'SUBMISSION_SCOPE')
         matching=[e for e in snapshot['events'] if e['record_id']==submitted_event['record_id']]
-        require(not matching or matching[0]==submitted_event,'EVENT_ID_COLLISION')
+        existing=_decision_identity(combined).get(_key(submitted_event)[:4])
+        require(existing is None or existing==submitted_event,'EVENT_ID_COLLISION')
         if submitted_event in chain:
             return _reducer('MODEL_ALREADY_COMMITTED',sr,sr,previous,previous,state,tick),unchanged
         b=submitted_event['body']; creation=b['creation_tick']
-        require(creation<=tick and (head is None or creation>=head['body']['creation_tick'] or bool(matching)),'DECISION_CHRONOLOGY')
+        require(creation<=tick,'DECISION_CHRONOLOGY')
+        predecessor=b['previous_ref']
+        prior=None if predecessor is None else _resolve(combined,predecessor)
+        _record_links(submitted_event,combined); _transition(submitted_event,prior,combined)
         if b['previous_ref']!=previous or (matching and creation!=tick):
             return _reducer('MODEL_CONFLICT',sr,None,previous,previous,state,tick,'STALE_HEAD_OR_TICK'),unchanged
-        require(creation==tick,'PUBLICATION_TICK'); _record_links(submitted_event,combined); _transition(submitted_event,head,combined)
-        if not matching: unchanged['events'].append(json.loads(canonical_bytes(submitted_event)))
+        require(creation==tick,'PUBLICATION_TICK')
+        candidate=json.loads(canonical_bytes(unchanged))
+        if not matching: candidate['events'].append(json.loads(canonical_bytes(submitted_event)))
+        if not stage_only: candidate['head_ref']=json.loads(canonical_bytes(sr))
+        # A returned stage or winner must itself be a consumable snapshot.
+        _snapshot(candidate,tick,index)
         if stage_only:
-            return _reducer('MODEL_UNKNOWN',sr,None,previous,previous,state,tick,'STAGED_NOT_COMMITTED'),unchanged
-        unchanged['head_ref']=json.loads(canonical_bytes(sr))
-        return _reducer('MODEL_COMMITTED',sr,sr,previous,sr,_state(submitted_event,tick),tick),unchanged
+            return _reducer('MODEL_UNKNOWN',sr,None,previous,previous,state,tick,'STAGED_NOT_COMMITTED'),candidate
+        return _reducer('MODEL_COMMITTED',sr,sr,previous,sr,_state(submitted_event,tick),tick),candidate
     except Invalid as exc:
         return _reducer('MODEL_REJECTED',sr,None,previous,previous,state,tick,str(exc)),unchanged
 
@@ -535,25 +552,29 @@ def _grant(grant,contract,index,snapshot,tick,floor,canonical):
 
 def _attempt_grant(record,index,snapshot,tick,floor,canonical):
     b=record['body']; _canonical_resource(b,canonical)
+    require(record['revision']==1,'ATTEMPT_REVISION')
     contract=_resolve(index,b['contract_ref']); grant=_resolve(index,b['grant_ref'])
     require(grant['scope']==record['scope']==contract['scope'],'ATTEMPT_SCOPE')
     index=_grant(grant,contract,index,snapshot,tick,floor,canonical)
     g=grant['body']; c=contract['body']
     require(all(b[k]==g[k]==c[k] for k in ('resource_id','operation_family_id')),'ATTEMPT_RESOURCE')
     require(b['requested_effect_class'] in g['allowed_effect_classes'] and b['requested_effect_class'] in c['allowed_effect_classes'],'ATTEMPT_EFFECT')
+    principal=_resolve(index,c['principal_ref'])['body']
+    require(principal['role']!='REVIEWER' or b['requested_effect_class']=='READ','REVIEWER_EFFECT')
     return index
 
 
-def _submission_index(graph,record,kind):
-    structural(record); require(record['kind']==kind,'SUBMISSION_KIND'); index=graph_index(graph)
+def _submission_index(graph,record,kind,seen=None):
+    structural(record); require(record['kind']==kind,'SUBMISSION_KIND'); index=graph_index(graph,seen)
+    if seen is not None: primitive(record,seen=seen)
     # Graph validation remains strict, even if an invalid evidence record was
     # supplied as a graph member. A proposal is not an admitted graph record.
     existing=index.get(_key(record)); require(existing is None or existing==record,'GRAPH_SUBMISSION_CONFLICT')
     return index
 
 
-def _semantic_record(graph,record,kind):
-    index=_submission_index(graph,record,kind)
+def _semantic_record(graph,record,kind,seen=None):
+    index=_submission_index(graph,record,kind,seen)
     _record_links(record,index)
     return index
 
@@ -580,7 +601,8 @@ def _applicability_links(record,index):
 def evaluate_context(graph,context,expected_context_floor):
     d=None
     try:
-        d=digest(context); index=_semantic_record(graph,context,'context'); _context(context,index,expected_context_floor); return _result('MODEL_CONSISTENT',d)
+        seen=[]; d=digest(context); index=_semantic_record(graph,context,'context',seen)
+        primitive(expected_context_floor,seen=seen); _context(context,index,expected_context_floor); return _result('MODEL_CONSISTENT',d)
     except Unknown as exc: return _result('MODEL_UNKNOWN',d,str(exc))
     except Invalid as exc: return _result('MODEL_REJECTED',d,str(exc))
 
@@ -589,18 +611,21 @@ COMMAND_AUX = {'evaluation_tick':INT,'decision_snapshot':SNAPSHOT,'expected_cont
 ASSURANCE_AUX = dict(COMMAND_AUX,expected_cases=arr(CASE,True),logical_index=arr(INDEX,True))
 
 
-def _aux(aux,spec):
-    # Large snapshots are bounded record-by-record, not a single record budget.
-    require(type(aux) is dict and all(type(k) is str for k in aux) and set(aux)==set(spec),'AUX_KEYS')
-    seen=[aux]
+def _aux(aux,spec,seen,history=False):
+    # Optional assurance history reuses the attempt input shapes and budgets.
+    optional={'historical_context_floors','historical_decision_snapshots'} if history else set()
+    require(type(aux) is dict and all(type(k) is str for k in aux) and set(spec)<=set(aux)<=set(spec)|optional,'AUX_KEYS')
+    require(not any(aux is a for a in seen),'CYCLE_OR_MUTABLE_ALIAS'); seen.append(aux)
     for k in spec:
         primitive(aux[k],seen=seen); shape(aux[k],spec[k])
+    if history:
+        return _history_inputs(aux.get('historical_context_floors',[]),aux.get('historical_decision_snapshots',[]),seen)
 
 
 def evaluate_command(graph,command,auxiliary):
     d=None
     try:
-        d=digest(command); index=_semantic_record(graph,command,'command'); _aux(auxiliary,COMMAND_AUX); a=auxiliary; b=command['body']
+        seen=[]; d=digest(command); index=_semantic_record(graph,command,'command',seen); _aux(auxiliary,COMMAND_AUX,seen); a=auxiliary; b=command['body']
         aliases=_registry(a['canonical_ids'],a['alias_registry']); canonical=a['canonical_ids']['COMMAND']
         name=aliases.get(('COMMAND',b['command_id']),b['command_id']); require(name in canonical,'COMMAND_UNKNOWN')
         _current(index,a['decision_snapshot'],a['evaluation_tick'],b['expected_decision_ref'],b['intent_ref'])
@@ -620,48 +645,67 @@ def _logical(body):
     return tuple(body[k] for k in ('resource_id','operation_family_id','business_operation_id'))
 
 
-def _history_inputs(index,floors,snapshots):
+def _history_inputs(floors,snapshots,seen):
     require(type(floors) is list and len(floors)<=256 and type(snapshots) is list and len(snapshots)<=256,'HISTORY_INPUTS')
-    require(floors is not snapshots,'HISTORY_MUTABLE_ALIAS')
-    fm={}; sm={}; seen=[floors,snapshots]
+    for root in (floors,snapshots):
+        require(not any(root is a for a in seen),'CYCLE_OR_MUTABLE_ALIAS'); seen.append(root)
+    fm={}; sm={}
     for f in floors:
         primitive(f,seen=seen); shape(f,FLOOR); k=canonical_bytes(f['intent_ref']); require(k not in fm,'DUPLICATE_HISTORY_FLOOR'); fm[k]=f
-        _resolve(index,f['intent_ref'])
     for s in snapshots:
         primitive(s,seen=seen); shape(s,SNAPSHOT); require(s['head_ref'] is not None,'HISTORY_HEAD'); k=canonical_bytes(s['head_ref']); require(k not in sm,'DUPLICATE_HISTORY_HEAD'); sm[k]=s
     return fm,sm
 
 
+def _validated_chains(index,rows,canonical,repo_id,keys=None,resource_family=None):
+    by_key={_logical(row):row for row in rows}
+    require(len(by_key)==len(rows),'INDEX_DUPLICATE')
+    chains={}
+    for r in index.values():
+        if r['kind']!='attempt' or r['scope']['repo_id']!=repo_id: continue
+        b=r['body']; key=_logical(b)
+        if (keys is not None and key not in keys) or (resource_family is not None and key[:2]!=resource_family): continue
+        _canonical_resource(b,canonical); chain=chains.setdefault(key,[])
+        require(r['revision']==1,'HISTORICAL_ATTEMPT_REVISION')
+        require(b['attempt_ordinal']==len(chain)+1 and b['predecessor_attempt_ref']==(record_ref(chain[-1]) if chain else None),'PRIOR_CHAIN_FORK_OR_GAP')
+        require(all(x['body']['attempt_id']!=b['attempt_id'] for x in chain),'ATTEMPT_ID_DUPLICATE')
+        if chain:
+            require(chain[-1]['body']['observation_state']=='NO_EFFECT' and chain[-1]['body']['quiesced'],'INVALID_HISTORICAL_SUCCESSOR')
+        chain.append(r)
+    for key,chain in chains.items():
+        known(key in by_key,'INDEX_MISSING')
+        require(by_key[key]['tip_attempt_ref']==record_ref(chain[-1]),'INDEX_TIP')
+    for key,row in by_key.items():
+        if (keys is not None and key not in keys) or (resource_family is not None and key[:2]!=resource_family): continue
+        _canonical_resource(row,canonical)
+        require(row['tip_attempt_ref']==(record_ref(chains[key][-1]) if key in chains else None),'INDEX_TIP')
+    return by_key,chains
+
+
+def _validate_historical(chain,index,canonical,floor,snapshot,fm,sm):
+    for r in chain:
+        rb=r['body']; c=_resolve(index,rb['contract_ref'])['body']; g=_resolve(index,rb['grant_ref'])['body']
+        f=fm.get(canonical_bytes(c['intent_ref'])); s=sm.get(canonical_bytes(c['approved_decision_ref']))
+        if f is None and floor['intent_ref']==c['intent_ref']: f=floor
+        if s is None and snapshot['head_ref']==c['approved_decision_ref']: s=snapshot
+        known(f is not None and s is not None,'HISTORICAL_AUTHORITY_MISSING')
+        _attempt_grant(r,index,s,g['valid_from_tick'],f,canonical)
+
+
 def evaluate_attempt(graph,proposed_attempt,logical_index,evaluation_tick,current_decision_snapshot,canonical_ids,alias_registry,expected_context_floor,historical_context_floors,historical_decision_snapshots):
     d=None
     try:
-        d=digest(proposed_attempt); index=_semantic_record(graph,proposed_attempt,'attempt'); b=proposed_attempt['body']; shape(evaluation_tick,INT)
+        seen=[]; d=digest(proposed_attempt); index=_semantic_record(graph,proposed_attempt,'attempt',seen); b=proposed_attempt['body']; shape(evaluation_tick,INT)
+        for value in (logical_index,current_decision_snapshot,canonical_ids,alias_registry,expected_context_floor): primitive(value,seen=seen)
         _registry(canonical_ids,alias_registry); _canonical_resource(b,canonical_ids); primitive(expected_context_floor); shape(expected_context_floor,FLOOR); primitive(current_decision_snapshot); shape(current_decision_snapshot,SNAPSHOT); primitive(logical_index); shape(logical_index,arr(INDEX,True))
         require(proposed_attempt['revision']==1,'NEW_ATTEMPT_REVISION')
         require(_key(proposed_attempt) not in index,'ATTEMPT_ALREADY_PRESENT')
         rows={_logical(r):r for r in logical_index}; require(len(rows)==len(logical_index),'INDEX_DUPLICATE')
         known(_logical(b) in rows,'UNREGISTERED_OPERATION')
-        fm,sm=_history_inputs(index,historical_context_floors,historical_decision_snapshots)
-        chains={}
-        for r in graph:
-            if r['kind']!='attempt': continue
-            rb=r['body']; k=_logical(rb); _canonical_resource(rb,canonical_ids); chain=chains.setdefault(k,[])
-            require(rb['attempt_ordinal']==len(chain)+1 and rb['predecessor_attempt_ref']==(record_ref(chain[-1]) if chain else None),'PRIOR_CHAIN_FORK_OR_GAP')
-            require(all(x['body']['attempt_id']!=rb['attempt_id'] for x in chain),'ATTEMPT_ID_DUPLICATE')
-            if chain:
-                require(chain[-1]['body']['observation_state']=='NO_EFFECT' and chain[-1]['body']['quiesced'],'INVALID_HISTORICAL_SUCCESSOR')
-            c=_resolve(index,rb['contract_ref'])['body']; g=_resolve(index,rb['grant_ref'])['body']; f=fm.get(canonical_bytes(c['intent_ref'])); s=sm.get(canonical_bytes(c['approved_decision_ref']))
-            # Current lineage can also appear in the prior chain. Historical use
-            # is checked at the grant's modeled start tick, not today's expiry.
-            if f is None and expected_context_floor['intent_ref']==c['intent_ref']: f=expected_context_floor
-            if s is None and current_decision_snapshot['head_ref']==c['approved_decision_ref']: s=current_decision_snapshot
-            known(f is not None and s is not None,'HISTORICAL_AUTHORITY_MISSING')
-            _attempt_grant(r,index,s,g['valid_from_tick'],f,canonical_ids); chain.append(r)
-        for k,chain in chains.items():
-            require(k in rows and rows[k]['tip_attempt_ref']==record_ref(chain[-1]),'INDEX_TRUNCATION')
-        for k,row in rows.items():
-            _canonical_resource(row,canonical_ids)
-            require(row['tip_attempt_ref']==(record_ref(chains[k][-1]) if k in chains else None),'INDEX_TIP')
+        fm,sm=_history_inputs(historical_context_floors,historical_decision_snapshots,seen)
+        rows,chains=_validated_chains(index,logical_index,canonical_ids,proposed_attempt['scope']['repo_id'],resource_family=_logical(b)[:2])
+        for chain in chains.values():
+            _validate_historical(chain,index,canonical_ids,expected_context_floor,current_decision_snapshot,fm,sm)
         k=_logical(b); known(k in rows,'UNREGISTERED_OPERATION'); chain=chains.get(k,[]); tip=rows[k]['tip_attempt_ref']
         require(b['predecessor_attempt_ref']==tip and b['attempt_ordinal']==len(chain)+1,'ATTEMPT_PREDECESSOR_OR_ORDINAL')
         require(all(x['body']['attempt_id']!=b['attempt_id'] for x in chain),'ATTEMPT_ID_DUPLICATE')
@@ -677,46 +721,43 @@ def _covered(intent):
     return [o for o in intent['outcomes'] if intent['partial_policy']=='NONE' or o['outcome_id'] in intent['partial_outcome_ids']]
 
 
-def _assurance_index(index,rows,canonical):
-    by_key={_logical(row):row for row in rows}
-    require(len(by_key)==len(rows),'INDEX_DUPLICATE')
-    chains={}
-    for r in index.values():
-        if r['kind']!='attempt': continue
-        b=r['body']; key=_logical(b); _canonical_resource(b,canonical); chain=chains.setdefault(key,[])
-        require(b['attempt_ordinal']==len(chain)+1 and b['predecessor_attempt_ref']==(record_ref(chain[-1]) if chain else None),'PRIOR_CHAIN_FORK_OR_GAP')
-        require(all(x['body']['attempt_id']!=b['attempt_id'] for x in chain),'ATTEMPT_ID_DUPLICATE')
-        if chain:
-            require(chain[-1]['body']['observation_state']=='NO_EFFECT' and chain[-1]['body']['quiesced'],'INVALID_HISTORICAL_SUCCESSOR')
-        chain.append(r)
-    require(set(chains)<=set(by_key),'INDEX_MISSING')
-    for key,row in by_key.items():
-        _canonical_resource(row,canonical)
-        require(row['tip_attempt_ref']==(record_ref(chains[key][-1]) if key in chains else None),'INDEX_TIP')
-
-
-def _cases(contract,index,a,artifact=None):
+def _cases(contract,index,a,history,artifact=None):
     c=contract['body']; cref=record_ref(contract)
-    _assurance_index(index,a['logical_index'],a['canonical_ids'])
     _,intent=_contract(contract,index,a['decision_snapshot'],a['evaluation_tick'],a['expected_context_floor'],a['canonical_ids'])
     outcomes={o['outcome_id']:o for o in _covered(intent)}; rows={}; expected={}
     writer=_resolve(index,c['principal_ref'])['body']
     for row in a['expected_cases']:
         key=(canonical_bytes(row['contract_ref']),canonical_bytes(row['attempt_ref']),canonical_bytes(row['oracle_ref']),row['control_case'])
         require(key not in rows,'EXPECTED_CASE_COLLISION'); rows[key]=row
-        # Validate every row's typed refs. Another contract is not evidence for this one.
-        for field in ('contract_ref','attempt_ref','oracle_ref','expected_issuer_ref'): _resolve(index,row[field])
+    for row in rows.values():
+        # Strict row shape and key uniqueness are independent of applicability.
         if row['contract_ref']!=cref: continue
+        try:
+            for field in ('contract_ref','attempt_ref','oracle_ref','expected_issuer_ref'): _resolve(index,row[field])
+        except Invalid as exc:
+            raise Unknown('EXPECTED_BINDING_UNKNOWN') from exc
         o=outcomes.get(row['outcome_id']); known(o is not None and row['oracle_ref']==o['oracle_ref'],'EXPECTED_OUTCOME')
         attempt=_resolve(index,row['attempt_ref']); oracle=_resolve(index,row['oracle_ref'])['body']; issuer=_resolve(index,row['expected_issuer_ref'])['body']
         known(attempt['body']['contract_ref']==cref and row['target_id']==o['target_id']==oracle['target_id']==c['resource_id']==attempt['body']['resource_id'],'EXPECTED_TARGET')
         known(row['expected_issuer_ref']==oracle['custodian_ref'] and _eligible(issuer,writer),'EXPECTED_ISSUER')
         known(not oracle['readback_required'] or row['expected_readback_digest'] is not None,'EXPECTED_READBACK')
-        _attempt_grant(attempt,index,a['decision_snapshot'],a['evaluation_tick'],a['expected_context_floor'],a['canonical_ids'])
         if artifact is not None: known(row['artifact_digest']==artifact,'EXPECTED_ARTIFACT')
         casekey=(row['outcome_id'],row['control_case']); require(casekey not in expected,'EXPECTED_CASE_DUPLICATE'); expected[casekey]=row
     known(set(expected)=={(o,c) for o in outcomes for c in ('POSITIVE','DISCONFIRMING')},'EXPECTED_CASE_COVERAGE')
     known(len({r['artifact_digest'] for r in expected.values()})==1,'EXPECTED_ARTIFACT')
+    # Only chains applicable to the selected contract's exact expected attempts.
+    selected=[_resolve(index,row['attempt_ref']) for row in expected.values()]
+    keys={_logical(r['body']) for r in selected}
+    by_key,chains=_validated_chains(index,a['logical_index'],a['canonical_ids'],contract['scope']['repo_id'],keys)
+    for key in keys:
+        known(key in by_key and key in chains,'INDEX_MISSING')
+        last=max(r['body']['attempt_ordinal'] for r in selected if _logical(r['body'])==key)
+        _validate_historical(chains[key][:last],index,a['canonical_ids'],a['expected_context_floor'],a['decision_snapshot'],*history)
+    for attempt in selected:
+        try:
+            _attempt_grant(attempt,index,a['decision_snapshot'],a['evaluation_tick'],a['expected_context_floor'],a['canonical_ids'])
+        except Invalid as exc:
+            raise Unknown('EXPECTED_ATTEMPT_BINDING') from exc
     return rows,expected
 
 
@@ -737,14 +778,14 @@ def _evidence(record,contract,index,rows):
 def evaluate_evidence(graph,evidence,auxiliary):
     d=None
     try:
-        d=digest(evidence); index=_submission_index(graph,evidence,'evidence'); _aux(auxiliary,ASSURANCE_AUX); a=auxiliary
+        seen=[]; d=digest(evidence); index=_submission_index(graph,evidence,'evidence',seen); history=_aux(auxiliary,ASSURANCE_AUX,seen,True); a=auxiliary
         _registry(a['canonical_ids'],a['alias_registry']); _applicability_links(evidence,index)
         b=evidence['body']; attempt=_resolve(index,b['attempt_ref']); contract=_resolve(index,attempt['body']['contract_ref'])
         # An unrelated attempt must not select a different contract and turn
         # its failed current-approval check into an applicable failure.
         cref=record_ref(contract)
         known(any(row['contract_ref']==cref and row['attempt_ref']==b['attempt_ref'] and row['oracle_ref']==b['oracle_ref'] and row['control_case']==b['control_case'] for row in a['expected_cases']),'INAPPLICABLE_CASE')
-        rows,_=_cases(contract,index,a)
+        rows,_=_cases(contract,index,a,history)
         code,_,reason=_evidence(evidence,contract,index,rows); return _result(code,d,reason)
     except Unknown as exc: return _result('MODEL_UNKNOWN',d,str(exc))
     except Invalid as exc: return _result('MODEL_REJECTED',d,str(exc))
@@ -753,17 +794,18 @@ def evaluate_evidence(graph,evidence,auxiliary):
 def evaluate_acceptance(graph,acceptance,auxiliary):
     d=None
     try:
-        d=digest(acceptance); index=_submission_index(graph,acceptance,'acceptance'); _aux(auxiliary,ASSURANCE_AUX); a=auxiliary; b=acceptance['body']
+        seen=[]; d=digest(acceptance); index=_submission_index(graph,acceptance,'acceptance',seen); history=_aux(auxiliary,ASSURANCE_AUX,seen,True); a=auxiliary; b=acceptance['body']
         _applicability_links(acceptance,index)
         _registry(a['canonical_ids'],a['alias_registry']); contract=_resolve(index,b['contract_ref']); c=contract['body']; require(b['decision_ref']==c['approved_decision_ref'],'ACCEPTANCE_DECISION')
         writer=_resolve(index,c['principal_ref'])['body']; reviewer=_resolve(index,b['reviewer_ref'])['body']; known(_eligible(reviewer,writer),'REVIEWER_INELIGIBLE')
-        rows,expected=_cases(contract,index,a,b['artifact_digest']); observed={}; failure=False
+        rows,expected=_cases(contract,index,a,history,b['artifact_digest']); observed={}; failure=False
         for r in b['evidence_refs']:
             evidence=_resolve(index,r); code,key,_=_evidence(evidence,contract,index,rows)
             if key is None: continue
             observed.setdefault(key,[]).append(code)
             if code=='MODEL_REJECTED': failure=True
-        if failure: derived='MODEL_REJECTED'
+        if any(len(codes)>1 for codes in observed.values()): derived='MODEL_UNKNOWN'
+        elif failure: derived='MODEL_REJECTED'
         elif any(observed.get(k)!=['MODEL_CONSISTENT'] for k in expected): derived='MODEL_UNKNOWN'
         else: derived='MODEL_CONSISTENT'
         if b['verdict']!=derived: return _result('MODEL_REJECTED',d,'CLAIM_MISMATCH')

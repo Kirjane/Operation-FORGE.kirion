@@ -11,6 +11,13 @@ PUBLIC_SHA = 'c4cdbf36c9ded8ef8d54ef692c63ef4ef0dc454be7130859e59feb6656781ab3'
 COMMON = {'domain','fixture_only','authority_granted','promotion_authorized','result_kind','result_code','reason_codes'}
 VALIDATION = COMMON | {'record_digest'}
 REDUCER = COMMON | {'submitted_event_ref','committed_event_ref','previous_head_ref','current_head_ref','current_state','evaluation_tick','submitted_event_is_current_approval'}
+# Exact independent R4 D1 constants, not candidate-owned enums.
+R4_VALID = ('STRUCTURALLY_VALID','MODEL_CONSISTENT','MODEL_REJECTED','MODEL_UNKNOWN')
+R4_REDUCE = ('MODEL_COMMITTED','MODEL_ALREADY_COMMITTED','MODEL_CONFLICT','MODEL_REJECTED','MODEL_UNKNOWN')
+R4_STATES = ('EMPTY','APPROVED','REJECTED','SUPERSEDED_PENDING','REVOKED','EXPIRED','UNKNOWN')
+R4_MAX_INT = 9007199254740991
+ID_PATTERN = r'[A-Za-z0-9][A-Za-z0-9._:-]{0,127}'
+HEX_PATTERN = r'[0-9a-f]{64}'
 
 
 def hashed(raw):
@@ -40,12 +47,15 @@ class PublicOracleTests(unittest.TestCase):
         self.assertIs(result['fixture_only'],True)
         self.assertIs(result['authority_granted'],False)
         self.assertIs(result['promotion_authorized'],False)
-        self.assertIn(result['result_code'], model.REDUCE if reducer else model.VALID)
+        self.assertEqual(result['result_kind'],expected['result_kind'])
+        self.assertIs(type(result['result_code']),str)
+        self.assertIn(result['result_code'], R4_REDUCE if reducer else R4_VALID)
         reasons=result['reason_codes']
         self.assertEqual(type(reasons),list)
         self.assertEqual(len(reasons),len(set(reasons)))
         for reason in reasons:
-            self.assertRegex(reason,r'^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$')
+            self.assertIs(type(reason),str)
+            self.assertIsNotNone(re.fullmatch(ID_PATTERN,reason))
         if result['result_code'] in ('MODEL_REJECTED','MODEL_UNKNOWN','MODEL_CONFLICT'):
             self.assertTrue(reasons)
         if 'required_reason_code' in expected:
@@ -56,16 +66,36 @@ class PublicOracleTests(unittest.TestCase):
             self.assertNotEqual(result['result_code'],'MODEL_CONSISTENT')
         if not reducer:
             if result['record_digest'] is not None:
-                self.assertRegex(result['record_digest'],r'^[0-9a-f]{64}$')
+                self.assertIs(type(result['record_digest']),str)
+                self.assertIsNotNone(re.fullmatch(HEX_PATTERN,result['record_digest']))
             if 'digest_if_structurally_hashed' in expected:
                 self.assertEqual(result['record_digest'],expected['digest_if_structurally_hashed'])
         else:
             for k in ('submitted_event_ref','committed_event_ref','previous_head_ref','current_head_ref'):
                 if result[k] is not None:
-                    self.assertEqual(set(result[k]),{'kind','record_id','scope','revision','digest'})
-                    self.assertEqual(result[k]['kind'],'decision')
-            self.assertIn(result['current_state'],model.STATE)
-            self.assertEqual(type(result['submitted_event_is_current_approval']),bool)
+                    rr=result[k]; self.assertIs(type(rr),dict)
+                    self.assertEqual(set(rr),{'kind','record_id','scope','revision','digest'})
+                    self.assertEqual(rr['kind'],'decision')
+                    self.assertIs(type(rr['record_id']),str); self.assertIsNotNone(re.fullmatch(ID_PATTERN,rr['record_id']))
+                    self.assertIs(type(rr['scope']),dict); self.assertEqual(set(rr['scope']),{'repo_id','lineage_id'})
+                    for v in rr['scope'].values():
+                        self.assertIs(type(v),str); self.assertIsNotNone(re.fullmatch(ID_PATTERN,v)); self.assertTrue(v.startswith('fixture:') and len(v)>8)
+                    self.assertIs(type(rr['revision']),int); self.assertTrue(1<=rr['revision']<=R4_MAX_INT)
+                    self.assertIs(type(rr['digest']),str); self.assertIsNotNone(re.fullmatch(HEX_PATTERN,rr['digest']))
+            self.assertIn(result['current_state'],R4_STATES)
+            tick=result['evaluation_tick']
+            if tick is not None:
+                self.assertIs(type(tick),int); self.assertTrue(0<=tick<=R4_MAX_INT)
+            code=result['result_code']; committed=result['committed_event_ref']; current=result['current_head_ref']; previous=result['previous_head_ref']
+            if code in ('MODEL_COMMITTED','MODEL_ALREADY_COMMITTED'):
+                self.assertIsNotNone(committed); self.assertEqual(committed,result['submitted_event_ref'])
+            else: self.assertIsNone(committed)
+            if code=='MODEL_COMMITTED': self.assertEqual(current,committed)
+            else: self.assertEqual(current,previous)
+            if result['current_state']=='UNKNOWN': self.assertIsNone(current); self.assertIsNone(previous)
+            if result['current_state']=='EMPTY': self.assertIsNone(current)
+            self.assertIs(type(result['submitted_event_is_current_approval']),bool)
+            self.assertIs(result['submitted_event_is_current_approval'],committed is not None and committed==current and result['current_state']=='APPROVED' and code in ('MODEL_COMMITTED','MODEL_ALREADY_COMMITTED'))
 
     def test_public_inventory(self):
         raw=self.public['raw_vectors']; semantic=self.public['semantic_cases']
@@ -268,3 +298,253 @@ class PublicOracleTests(unittest.TestCase):
         linked=snapshot['events'][0]['body']['intent_ref']
         self.assertEqual(floor['intent_ref'],linked); floor['intent_ref']=linked
         self._writer_result(self._attempt_result(i),'MODEL_REJECTED',reason='CYCLE_OR_MUTABLE_ALIAS')
+
+
+    # R2 writer-authored witnesses; never alter the frozen public oracle.
+    def _copy(self,v):
+        return json.loads(json.dumps(v))
+
+    def _ordered(self,rows):
+        return sorted(rows,key=model.canonical_bytes)
+
+    def _reduce(self,i):
+        return model.reduce_decision(i['graph'],i['snapshot'],i['submitted_event'],i['evaluation_tick'],i.get('stage_only',False))
+
+    def _accept(self,i):
+        return model.evaluate_acceptance(i['graph'],i['acceptance'],i['auxiliary'])
+
+    def _receipt(self,i):
+        return model.evaluate_evidence(i['graph'],i['evidence'],i['auxiliary'])
+
+    def _rewrite_refs(self,value,changes):
+        if type(value) is dict:
+            if set(value)=={'kind','record_id','scope','revision','digest'}:
+                return self._copy(changes.get(model.canonical_bytes(value),value))
+            result={k:self._rewrite_refs(v,changes) for k,v in value.items()}
+            for k in ('evidence_refs','oracle_refs','expected_cases','logical_index'):
+                if k in result: result[k]=self._ordered(result[k])
+            return result
+        if type(value) is list: return [self._rewrite_refs(v,changes) for v in value]
+        return value
+
+    def _mutate_graph(self,i,change):
+        # Rebuild all downstream exact refs in topological order; no stale
+        # digest is allowed to accidentally satisfy a negative test.
+        changes={}; graph=[]
+        for old in i['graph']:
+            r=self._rewrite_refs(old,changes)
+            change(r)
+            changes[model.canonical_bytes(model.record_ref(old))]=model.record_ref(r)
+            graph.append(r)
+        result={k:self._rewrite_refs(v,changes) for k,v in i.items() if k!='graph'}
+        result['graph']=graph
+        return result
+
+    def test_r2_n1_graph_snapshot_submission_identity(self):
+        i=self._writer_input('fresh-approval'); event=self._copy(i['submitted_event'])
+        i['graph'].append(event)
+        self._writer_result(self._reduce(i)[0],'MODEL_COMMITTED','DECISION_REDUCER')
+        i['submitted_event']['body']['reason']='distinct event bytes'
+        result,next_snapshot=self._reduce(i)
+        self._writer_result(result,'MODEL_REJECTED','DECISION_REDUCER','EVENT_ID_COLLISION')
+        self.assertEqual(next_snapshot,i['snapshot'])
+        i['submitted_event']['revision']=2
+        self._writer_result(self._reduce(i)[0],'MODEL_REJECTED','DECISION_REDUCER','EVENT_ID_COLLISION')
+        i['snapshot']['events']=[self._copy(i['submitted_event'])]
+        i['snapshot']['head_ref']=model.record_ref(i['submitted_event'])
+        self._writer_result(self._reduce(i)[0],'MODEL_UNKNOWN','DECISION_REDUCER')
+
+    def test_r2_n2_output_capacity_and_consumability(self):
+        for n in (157,158):
+            for stage in (False,True):
+                with self.subTest(events=n,stage=stage):
+                    i=self._writer_input('fresh-approval'); i['stage_only']=stage
+                    for k in range(n):
+                        event=self._copy(i['submitted_event']); event['record_id']='fixture:r2-capacity-'+str(k)
+                        i['snapshot']['events'].append(event)
+                    before=self._copy(i)
+                    result,next_snapshot=self._reduce(i)
+                    if n==158:
+                        self._writer_result(result,'MODEL_REJECTED','DECISION_REDUCER','PRIMITIVE_LIMIT')
+                        self.assertEqual(next_snapshot,before['snapshot'])
+                    else:
+                        self._writer_result(result,'MODEL_UNKNOWN' if stage else 'MODEL_COMMITTED','DECISION_REDUCER')
+                        self.assertEqual(len(next_snapshot['events']),n+1)
+                        i['snapshot']=next_snapshot; i['stage_only']=False
+                        result2,_=self._reduce(i)
+                        self._writer_result(result2,'MODEL_COMMITTED' if stage else 'MODEL_ALREADY_COMMITTED','DECISION_REDUCER')
+                    self.assertEqual(i['graph'],before['graph'])
+                    self.assertEqual(i['submitted_event'],before['submitted_event'])
+        # The primitive array ceiling is independent of the tighter event-node
+        # limit. A 256-event snapshot cannot reach that ceiling with valid records.
+        self.assertEqual(len(model.canonical_bytes([0]*256)),513)
+        with self.assertRaises(ValueError): model.canonical_bytes([0]*257)
+
+    def test_r2_n3_stale_predecessor_chronology(self):
+        i=self._writer_input('stale-orphan'); del i['snapshot']['events'][1]
+        winner=i['snapshot']['events'][-1]; winner['body']['creation_tick']=3
+        i['snapshot']['head_ref']=model.record_ref(winner); i['evaluation_tick']=3
+        result,snapshot=self._reduce(i)
+        self._writer_result(result,'MODEL_CONFLICT','DECISION_REDUCER')
+        self.assertEqual(result['current_state'],'REVOKED'); self.assertEqual(snapshot,i['snapshot'])
+        i['submitted_event']['body']['creation_tick']=0
+        self._writer_result(self._reduce(i)[0],'MODEL_REJECTED','DECISION_REDUCER','DECISION_CHRONOLOGY')
+
+    def test_r2_n4_historical_local_revision(self):
+        def change(r):
+            if r['kind']=='attempt': r['revision']=2
+        i=self._writer_input('cross-lineage-successor')
+        self._writer_result(self._attempt_result(i),'MODEL_CONSISTENT')
+        i=self._mutate_graph(i,change)
+        self._writer_result(self._attempt_result(i),'MODEL_REJECTED',reason='HISTORICAL_ATTEMPT_REVISION')
+        a=self._writer_input('both-controls')
+        self._writer_result(self._accept(a),'MODEL_CONSISTENT')
+        a=self._mutate_graph(a,change)
+        self._writer_result(self._accept(a),'MODEL_REJECTED',reason='HISTORICAL_ATTEMPT_REVISION')
+
+    def _two_attempt_assurance(self,invalid_prior):
+        i=self._writer_input('both-controls'); old=next(r for r in i['graph'] if r['kind']=='attempt')
+        old_ref=model.record_ref(old); first=self._copy(old); second=self._copy(old)
+        if invalid_prior: first['body']['requested_effect_class']='SOURCE_WRITE'
+        second['record_id']='fixture:r2-attempt-two'; second['body']['attempt_id']='fixture:r2-attempt-two'
+        second['body']['attempt_ordinal']=2; second['body']['predecessor_attempt_ref']=model.record_ref(first)
+        changes={model.canonical_bytes(old_ref):model.record_ref(second)}
+        graph=[]
+        for r in i['graph']:
+            if r['kind']=='attempt': graph.extend((first,second)); continue
+            if r['kind']=='acceptance': continue
+            new=self._rewrite_refs(r,changes)
+            changes[model.canonical_bytes(model.record_ref(r))]=model.record_ref(new)
+            graph.append(new)
+        i['graph']=graph
+        i['auxiliary']=self._rewrite_refs(i['auxiliary'],changes)
+        i['acceptance']=self._rewrite_refs(i['acceptance'],changes)
+        return i
+
+    def test_r2_n5_assurance_validates_historical_grant(self):
+        self._writer_result(self._accept(self._two_attempt_assurance(False)),'MODEL_CONSISTENT')
+        self._writer_result(self._accept(self._two_attempt_assurance(True)),'MODEL_REJECTED',reason='ATTEMPT_EFFECT')
+
+    def test_r2_n5_missing_historical_authority(self):
+        i=self._writer_input('cross-lineage-successor')
+        self._writer_result(self._attempt_result(i),'MODEL_CONSISTENT')
+        i['historical_context_floors']=[]
+        self._writer_result(self._attempt_result(i),'MODEL_UNKNOWN',reason='HISTORICAL_AUTHORITY_MISSING')
+        i=self._writer_input('cross-lineage-successor'); i['historical_decision_snapshots']=[]
+        self._writer_result(self._attempt_result(i),'MODEL_UNKNOWN',reason='HISTORICAL_AUTHORITY_MISSING')
+
+    def test_r2_n5_assurance_cross_lineage_history(self):
+        # A separately supplied historical A floor/snapshot must be available
+        # when the selected B control attempt follows A.
+        src=self._writer_input('cross-lineage-successor'); a=self._writer_input('both-controls')
+        graph=src['graph']; second=src['proposed_attempt']; graph.append(second)
+        lineage=second['scope']['lineage_id']
+        b={r['kind']:r for r in graph if r['scope']['lineage_id']==lineage and r['kind'] not in ('principal',)}
+        reviewer=next(r for r in graph if r['scope']['lineage_id']==lineage and r['record_id']=='fixture:b-reviewer')
+        aux=a['auxiliary']; aux['decision_snapshot']=self._copy(src['current_decision_snapshot'])
+        aux['expected_context_floor']=self._copy(src['expected_context_floor'])
+        aux['evaluation_tick']=src['evaluation_tick']; aux['canonical_ids']=self._copy(src['canonical_ids'])
+        aux['logical_index'][0]['tip_attempt_ref']=model.record_ref(second)
+        evidence_refs=[]
+        for row in aux['expected_cases']:
+            row['contract_ref']=model.record_ref(b['contract']); row['attempt_ref']=model.record_ref(second)
+            row['oracle_ref']=model.record_ref(b['oracle']); row['expected_issuer_ref']=self._copy(b['oracle']['body']['custodian_ref'])
+            row['outcome_id']=b['oracle']['body']['outcome_id']; row['target_id']=b['oracle']['body']['target_id']
+            e=self._copy(next(r for r in a['graph'] if r['kind']=='evidence' and r['body']['control_case']==row['control_case']))
+            e['record_id']='fixture:r2-b-'+row['control_case']; e['scope']=dict(second['scope'])
+            e['body']['attempt_ref']=model.record_ref(second); e['body']['oracle_ref']=model.record_ref(b['oracle'])
+            e['body']['issuer_ref']=self._copy(row['expected_issuer_ref']); e['body']['observed_target_id']=row['target_id']
+            positive=row['control_case']=='POSITIVE'; oracle=b['oracle']['body']
+            e['body']['observation']=oracle['positive_observation' if positive else 'negative_observation']
+            e['body']['observed_error']=oracle['expected_error' if positive else 'negative_expected_error']
+            graph.append(e); evidence_refs.append(model.record_ref(e))
+        aux['expected_cases']=self._ordered(aux['expected_cases'])
+        acceptance=a['acceptance']; acceptance['record_id']='fixture:r2-b-acceptance'; acceptance['scope']=dict(second['scope'])
+        acceptance['body']['contract_ref']=model.record_ref(b['contract']); acceptance['body']['decision_ref']=model.record_ref(b['decision'])
+        acceptance['body']['reviewer_ref']=model.record_ref(reviewer); acceptance['body']['evidence_refs']=self._ordered(evidence_refs)
+        a['graph']=graph
+        self._writer_result(self._accept(a),'MODEL_UNKNOWN',reason='HISTORICAL_AUTHORITY_MISSING')
+        aux['historical_context_floors']=self._copy(src['historical_context_floors'])
+        aux['historical_decision_snapshots']=self._copy(src['historical_decision_snapshots'])
+        self._writer_result(self._accept(a),'MODEL_CONSISTENT')
+
+    def test_r2_n6_missing_index_is_not_wrong_tip(self):
+        i=self._writer_input('registered-distinct-operation')
+        i['logical_index']=[row for row in i['logical_index'] if row['tip_attempt_ref'] is None]
+        self._writer_result(self._attempt_result(i),'MODEL_UNKNOWN',reason='INDEX_MISSING')
+        i=self._writer_input('registered-distinct-operation')
+        next(row for row in i['logical_index'] if row['tip_attempt_ref'] is not None)['tip_attempt_ref']=None
+        self._writer_result(self._attempt_result(i),'MODEL_REJECTED',reason='INDEX_TIP')
+        a=self._writer_input('both-controls'); a['auxiliary']['logical_index']=[]
+        self._writer_result(self._accept(a),'MODEL_UNKNOWN',reason='INDEX_MISSING')
+        a=self._writer_input('both-controls'); a['auxiliary']['logical_index'][0]['tip_attempt_ref']=None
+        self._writer_result(self._accept(a),'MODEL_REJECTED',reason='INDEX_TIP')
+
+    def test_r2_n7_expected_binding_vs_structure(self):
+        for field in ('expected_issuer_ref','attempt_ref','oracle_ref'):
+            with self.subTest(field=field):
+                i=self._writer_input('exact-positive-evidence'); aux=i['auxiliary']
+                row=next(r for r in aux['expected_cases'] if r['control_case']=='DISCONFIRMING')
+                row[field]['digest']='0'*64; aux['expected_cases']=self._ordered(aux['expected_cases'])
+                self._writer_result(self._receipt(i),'MODEL_UNKNOWN',reason='EXPECTED_BINDING_UNKNOWN')
+                row[field]['digest']='bad'
+                self._writer_result(self._receipt(i),'MODEL_REJECTED')
+        i=self._writer_input('exact-positive-evidence'); aux=i['auxiliary']
+        row=self._copy(aux['expected_cases'][0]); row['artifact_digest']='0'*64
+        aux['expected_cases']=self._ordered(aux['expected_cases']+[row])
+        self._writer_result(self._receipt(i),'MODEL_REJECTED',reason='EXPECTED_CASE_COLLISION')
+
+    def test_r2_n8_duplicate_applicable_mismatch_is_ambiguous(self):
+        i=self._writer_input('both-controls')
+        positive=self._copy(next(r for r in i['graph'] if r['kind']=='evidence' and r['body']['control_case']=='POSITIVE'))
+        positive['record_id']='fixture:r2-duplicate-mismatch'; positive['body']['observation']='distinct wrong observation'; positive['body']['verdict']='MODELED_MISMATCH'
+        i['graph'].append(positive); i['acceptance']['record_id']='fixture:r2-duplicate-assessment'
+        b=i['acceptance']['body']; b['evidence_refs']=self._ordered(b['evidence_refs']+[model.record_ref(positive)])
+        b['verdict']='MODEL_UNKNOWN'
+        self._writer_result(self._accept(i),'MODEL_UNKNOWN')
+        b['verdict']='MODEL_CONSISTENT'
+        self._writer_result(self._accept(i),'MODEL_REJECTED',reason='CLAIM_MISMATCH')
+        b['evidence_refs']=self._ordered(b['evidence_refs']+[model.record_ref(positive)])
+        self._writer_result(self._accept(i),'MODEL_REJECTED')
+        self._writer_result(self._accept(self._writer_input('applicable-failure-missing-positive')),'MODEL_REJECTED')
+
+    def test_r2_n9_cross_argument_aliases_and_fresh_outputs(self):
+        i=self._writer_input('context-complete')
+        self._writer_result(model.evaluate_context(i['graph'],i['context'],i['expected_context_floor']),'MODEL_CONSISTENT')
+        i['expected_context_floor']['required_sources']=i['context']['body']['required_sources']
+        self._writer_result(model.evaluate_context(i['graph'],i['context'],i['expected_context_floor']),'MODEL_REJECTED',reason='CYCLE_OR_MUTABLE_ALIAS')
+        i=self._writer_input('command-valid'); i['auxiliary']['expected_context_floor']['intent_ref']=i['command']['body']['intent_ref']
+        self._writer_result(model.evaluate_command(i['graph'],i['command'],i['auxiliary']),'MODEL_REJECTED',reason='CYCLE_OR_MUTABLE_ALIAS')
+        i=self._writer_input('cross-lineage-successor'); i['historical_context_floors'][0]['intent_ref']=next(r for r in i['graph'] if r['kind']=='context')['body']['intent_ref']
+        self._writer_result(self._attempt_result(i),'MODEL_REJECTED',reason='CYCLE_OR_MUTABLE_ALIAS')
+        i=self._writer_input('exact-positive-evidence'); i['auxiliary']['expected_cases'][0]['attempt_ref']=i['evidence']['body']['attempt_ref']
+        self._writer_result(self._receipt(i),'MODEL_REJECTED',reason='CYCLE_OR_MUTABLE_ALIAS')
+        i=self._writer_input('both-controls'); i['auxiliary']['expected_cases'][0]['contract_ref']=i['acceptance']['body']['contract_ref']
+        self._writer_result(self._accept(i),'MODEL_REJECTED',reason='CYCLE_OR_MUTABLE_ALIAS')
+        i=self._writer_input('fresh-approval'); original=self._copy(i)
+        result,snapshot=self._reduce(i); self._writer_result(result,'MODEL_COMMITTED','DECISION_REDUCER')
+        result['current_head_ref']['scope']['repo_id']='fixture:changed'
+        self.assertNotEqual(result['current_head_ref'],result['committed_event_ref'])
+        self.assertEqual(snapshot['head_ref'],result['committed_event_ref'])
+        snapshot['events'][0]['body']['reason']='changed output'
+        self.assertEqual(i,original)
+        i['submitted_event']['scope']=i['graph'][0]['scope']
+        self._writer_result(self._reduce(i)[0],'MODEL_REJECTED','DECISION_REDUCER','CYCLE_OR_MUTABLE_ALIAS')
+
+    def test_r2_n10_reviewer_read_only_and_capability_modes(self):
+        for effect in ('READ','SOURCE_WRITE','REF_WRITE'):
+            with self.subTest(effect=effect):
+                def change(r):
+                    if r['record_id']=='fixture:b-writer': r['body']['role']='REVIEWER'
+                    if r['scope']['lineage_id']=='fixture:public-b' and r['kind'] in ('contract','grant'):
+                        r['body']['allowed_effect_classes']=sorted({'READ',effect})
+                i=self._mutate_graph(self._writer_input('registered-distinct-operation'),change)
+                i['proposed_attempt']['body']['requested_effect_class']=effect
+                self._writer_result(self._attempt_result(i),'MODEL_CONSISTENT' if effect=='READ' else 'MODEL_REJECTED',reason=None if effect=='READ' else 'REVIEWER_EFFECT')
+        for field in ('availability','permission','quota','quiescence'):
+            for mode in ('UNKNOWN','UNAVAILABLE'):
+                with self.subTest(field=field,mode=mode):
+                    def change(r):
+                        if r['kind']=='capability' and r['scope']['lineage_id']=='fixture:public-b': r['body'][field]=mode
+                    i=self._mutate_graph(self._writer_input('registered-distinct-operation'),change)
+                    self._writer_result(self._attempt_result(i),'MODEL_UNKNOWN',reason='CAPABILITY_UNAVAILABLE')

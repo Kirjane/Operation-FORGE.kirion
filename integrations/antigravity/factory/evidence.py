@@ -217,3 +217,31 @@ class TrustedEvidenceRunner:
         }
         validate_contract(envelope, "evidence-envelope.schema.json")
         return envelope
+
+
+MAX_ASSURANCE_ARTIFACT_BYTES = 8 * 1024 * 1024
+
+
+def read_assurance_artifact(root: Path, envelope: dict[str, Any]) -> bytes:
+    """Read exact redacted bytes from the existing content-addressed store.
+
+    The store root is trusted composition, never receipt ingress. This is local
+    fixture custody, not an OS boundary against concurrent privileged writers.
+    """
+    digest = envelope["artifact_sha256"]
+    size = envelope["artifact_size_bytes"]
+    if not re.fullmatch(r"[0-9a-f]{64}", digest) or not 0 < size <= MAX_ASSURANCE_ARTIFACT_BYTES:
+        raise AuthorityError("ARTIFACT_IDENTITY_INVALID")
+    root = root.resolve(strict=True)
+    expected = root / digest[:2] / (digest + ".log")
+    if Path(envelope["artifact_path"]) != expected:
+        raise AuthorityError("ARTIFACT_PATH_MISMATCH")
+    if (expected.parent.is_symlink() or expected.is_symlink() or
+            expected.resolve(strict=True) != expected or not expected.is_file() or
+            expected.stat().st_nlink != 1):
+        raise AuthorityError("ARTIFACT_PATH_UNSAFE")
+    with expected.open("rb") as stream:
+        raw = stream.read(MAX_ASSURANCE_ARTIFACT_BYTES + 1)
+    if len(raw) != size or hashlib.sha256(raw).hexdigest() != digest:
+        raise AuthorityError("ARTIFACT_CONTENT_MISMATCH")
+    return raw

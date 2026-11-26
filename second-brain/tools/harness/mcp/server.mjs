@@ -35,15 +35,17 @@ function errorMessage(err){return err instanceof Error?err.message:String(err);}
 function toolHandler(fn){return async args=>{try{return await fn(args);}catch(err){return {isError:true,content:[{type:'text',text:`HARNESS ERROR: ${errorMessage(err)}`}],structuredContent:{error:errorMessage(err)}};}};}
 function allowedRoots(){
   const raw=process.env.PSB_HARNESS_ALLOWED_REPO_ROOTS||'';
-  return raw.split(path.delimiter).map(x=>x.trim()).filter(Boolean).map(x=>path.resolve(x));
+  return raw.split(path.delimiter).map(x=>x.trim()).filter(Boolean).map(x=>fs.realpathSync(path.resolve(x)));
 }
 function within(candidate,root){const rel=path.relative(root,candidate);return rel===''||(!rel.startsWith('..')&&!path.isAbsolute(rel));}
 function normalizeServerTask(input){
   const task=JSON.parse(JSON.stringify(input));
   if(task.repository&&task.repository.path){
-    const candidate=path.resolve(task.repository.path),roots=allowedRoots();
+    const candidate=fs.realpathSync(path.resolve(task.repository.path)),roots=allowedRoots();
     if(!roots.length) throw new Error('repository.path is disabled until PSB_HARNESS_ALLOWED_REPO_ROOTS is configured');
     if(!roots.some(root=>within(candidate,root))) throw new Error(`repository.path is outside PSB_HARNESS_ALLOWED_REPO_ROOTS: ${candidate}`);
+    const git=require('../lib/git.js').probeGitRepository(candidate);
+    if(git.status==='RESOLVED'&&!roots.some(root=>within(fs.realpathSync(git.top_level),root))) throw new Error('Git repository root is outside the configured allowlist');
     task.repository.path=candidate;
   }
   return task;

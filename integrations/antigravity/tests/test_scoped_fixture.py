@@ -56,3 +56,39 @@ class ScopedFixtureTests(unittest.TestCase):
     def test_no_grant_no_effect(self):
         self.assertEqual(self.dispatch()["status"], "BLOCKED")
         self.assertEqual((self.adapter.repo / self.adapter.owned_file).read_bytes(), b"before\n")
+
+    def make_writer(self):
+        self.packet.update(assigned_persona="Antigravity-Jane", formal_role="Code Writer",
+                           owned_paths=[self.adapter.owned_file], allowed_operations=["READ", "WRITE_OWNED"])
+        self.packet["authority"]["grant_scope"] = self.packet["allowed_operations"]
+        self.packet["required_capabilities"].append({"capability_id": "scoped_worktree_write",
+            "operation": "WRITE_OWNED", "scope": [self.adapter.owned_file],
+            "environment": "fixture", "independence_required": False})
+
+    def test_owned_write_has_observed_diff_and_duplicate_is_not_replayed(self):
+        self.make_writer()
+        self.authorize()
+        result = self.dispatch()
+        self.assertEqual(result["status"], "COMPLETED")
+        self.assertEqual(result["result"]["changed_paths"], [self.adapter.owned_file])
+        self.assertEqual(result["result"]["acceptance"], "NOT_EVALUATED")
+        self.assertNotEqual(result["result"]["before_sha256"], result["result"]["after_sha256"])
+        self.assertEqual((self.adapter.repo / self.adapter.owned_file).read_bytes(), b"after\n")
+        self.assertTrue(self.dispatch()["cached"])
+        self.assertTrue(self.journal.verify_hash_chain())
+
+    def test_conflicting_lease_denies_before_write(self):
+        self.make_writer()
+        self.authorize()
+        self.adapter.leases.acquire_leases(self.packet, "other-worker")
+        result = self.dispatch()
+        self.assertEqual(result["status"], "NO_EFFECT")
+        self.assertEqual((self.adapter.repo / self.adapter.owned_file).read_bytes(), b"before\n")
+        self.assertTrue(self.journal.verify_hash_chain())
+
+    def test_excluded_owned_file_denies_before_write(self):
+        self.make_writer()
+        self.packet["excluded_paths"] = [self.adapter.owned_file]
+        self.authorize()
+        self.assertEqual(self.dispatch()["status"], "BLOCKED")
+        self.assertEqual((self.adapter.repo / self.adapter.owned_file).read_bytes(), b"before\n")

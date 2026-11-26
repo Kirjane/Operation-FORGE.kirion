@@ -15,7 +15,7 @@ import tempfile
 from .authority import AuthorityError
 from .dispatch_preflight import FixtureDispatchAdapter, _PreInvocationBlocked
 from .mission_contract import contract_digest, digest_json
-from .ownership import LeaseManager, LeaseConflictError, assert_canonical_path_inside_worktree, parse_git_raw_z_diff, sanitize_worker_env
+from .ownership import LeaseManager, assert_canonical_path_inside_worktree, parse_git_raw_z_diff, sanitize_worker_env
 from .policy import assert_paths_within_ownership, path_matches_prefix
 
 
@@ -58,9 +58,12 @@ class ScopedGitFixtureAdapter(FixtureDispatchAdapter):
     def _git(self, *args):
         env = {k: v for k, v in sanitize_worker_env().items() if not k.upper().startswith("GIT_")}
         env.update(GIT_CONFIG_NOSYSTEM="1", GIT_CONFIG_GLOBAL=os.devnull, GIT_TERMINAL_PROMPT="0")
-        result = subprocess.run(["git", "-c", "core.hooksPath=" + os.devnull,
-                                 "-c", "core.autocrlf=false", *args], cwd=self.repo,
-                                env=env, capture_output=True, text=True, timeout=10)
+        try:
+            result = subprocess.run(["git", "-c", "core.hooksPath=" + os.devnull,
+                                     "-c", "core.autocrlf=false", *args], cwd=self.repo,
+                                    env=env, capture_output=True, text=True, timeout=10)
+        except (OSError, subprocess.SubprocessError) as exc:
+            raise AuthorityError("Disposable Git capability unavailable.") from exc
         if result.returncode:
             raise AuthorityError("Disposable Git observation failed.")
         return result.stdout.strip()

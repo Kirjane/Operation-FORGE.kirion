@@ -37,6 +37,7 @@ function sealSession(session,options={}){
 function verifySessionIntegrity(session,options={}){
   if(!session||![1,SESSION_VERSION].includes(session.version)) return {valid:false,reason:'supported lifecycle session version required'};
   const history=verifyHistory(session.history);if(!history.valid) return history;
+  if(session.version===2&&(!checkpointValid(session.checkpoint)||session.history.some(event=>!checkpointValid(event.checkpoint)))) return {valid:false,reason:'invalid content-addressed stage checkpoint'};
   const key=sessionKey(options);
   if(session.integrity_mode==='HMAC_SHA256'&&!key) return {valid:false,reason:`${SESSION_KEY_ENV} is required to verify this signed session`};
   if(!['SHA256','HMAC_SHA256'].includes(session.integrity_mode)) return {valid:false,reason:'unknown or missing integrity mode'};
@@ -45,8 +46,27 @@ function verifySessionIntegrity(session,options={}){
   const expected=digest(base,session.integrity_mode==='HMAC_SHA256'?key:null);
   return expected===session.integrity_sha256?{valid:true,history_head:history.head}:{valid:false,reason:'session integrity digest mismatch'};
 }
+function sourceRoot(run){return run.harness_git.requested_path||run.harness_git.top_level||null;}
+function checkpointValid(checkpoint){
+  if(!checkpoint||typeof checkpoint!=='object'||Array.isArray(checkpoint)) return false;
+  const {checkpoint_sha256,...basis}=checkpoint;
+  return typeof checkpoint_sha256==='string'&&checkpoint_sha256===sha256(canonicalJson(basis));
+}
+function continuityFailure(previous,next){
+  if(!previous||previous.context_manifest.status!=='RESOLVED'||next.context_manifest.status!=='RESOLVED') return null;
+  const documents=new Map(next.context_manifest.documents.map(d=>[d.path,d]));
+  for(const doc of previous.context_manifest.documents){
+    if(doc.source!=='REQUIRED_SEED'&&doc.source!=='NOTION_SNAPSHOT') continue;
+    const current=documents.get(doc.path);
+    if(!current||current.sha256!==doc.sha256||current.source_sha!==doc.source_sha) return `Previously required source changed or disappeared: ${doc.path}`;
+  }
+  return null;
+}
+function blockedEvaluation(stage,reason){
+  return {verdict:'BLOCK',through_stage:stage,blocking_failures:1,results:[{id:'CONTEXT_CONTINUITY',stage,severity:'BLOCK',status:'FAIL',reason}]};
+}
 function stageCheckpoint(run,ids,stage){
-  const basis={stage,effective_stage:run.route?.evaluated_stage||null,stage_run_id:ids.run_id,task_sha256:ids.task_sha256,runtime_sha256:run.runtime_fingerprint.sha256,config_sha256:run.config_sha256,context_sha256:ids.context_sha256,context_manifest:ids.context_manifest,provider:run.context.provider||null,snapshot_sha256:run.context.snapshot_sha256||null,source_root:run.harness_git.top_level||run.harness_git.requested_path||null,target_repository_sha256:targetRealityHash(run.target_repository)};
+  const basis={stage,effective_stage:run.route?.evaluated_stage||null,stage_run_id:ids.run_id,task_sha256:ids.task_sha256,runtime_sha256:run.runtime_fingerprint.sha256,config_sha256:run.config_sha256,context_sha256:ids.context_sha256,context_manifest:ids.context_manifest,provider:run.context.provider||null,snapshot_sha256:run.context.snapshot_sha256||null,source_root:sourceRoot(run),target_repository_sha256:targetRealityHash(run.target_repository)};
   return {...basis,checkpoint_sha256:sha256(canonicalJson(basis))};
 }
 function gateEvent(history,stage,evaluation,run,evidence,checkpoint){
@@ -63,9 +83,11 @@ function createSession(taskInput,evidence={version:1,claims:{}},options={}){
     if(attempt.target_repository_sha256!==accepted_target_sha256||attempt.task_sha256!==initialIds.task_sha256||
       attempt.runtime_sha256!==initialRun.runtime_fingerprint.sha256||attempt.config_sha256!==initialRun.config_sha256||
       attempt.provider!==checkpoint.provider||attempt.source_root!==checkpoint.source_root){
-      blocked_stage=stage;break;
+      last_evaluation=blockedEvaluation(stage,'Target, task, source, provider or runtime changed during compilation.');
+      history.push(gateEvent(history,stage,last_evaluation,run,evidence,attempt));blocked_stage=stage;break;
     }
-    const evaluation=evaluateGates(run.cfg.gates,run.gateCtx,evidence,{throughStage:stage});
+    const continuity=i>0?continuityFailure(checkpoint,attempt):null;
+    const evaluation=continuity?blockedEvaluation(stage,continuity):evaluateGates(run.cfg.gates,run.gateCtx,evidence,{throughStage:stage});
     history.push(gateEvent(history,stage,evaluation,run,evidence,attempt));last_evaluation=evaluation;
     if(evaluation.verdict==='BLOCK'){blocked_stage=stage;break;}
     current_stage=stage;checkpoint=attempt;
@@ -98,7 +120,8 @@ function assertFresh(session,run,ids){
   if(expectedRun!==ids.run_id) changed.push('run_id');
   if(session.version===2){
     if(session.checkpoint?.provider!==(run.context.provider||null)) changed.push('provider');
-    if(session.checkpoint?.source_root!==(run.harness_git.top_level||run.harness_git.requested_path||null)) changed.push('source_root');
+    if(canonicalJson(session.checkpoint.context_manifest)!==canonicalJson(ids.context_manifest)) changed.push('context_manifest');
+    if(session.checkpoint?.source_root!==sourceRoot(run)) changed.push('source_root');
   }
   if(session.task_id!==run.task.id) changed.push('task_id');
   if(session.harness_version!==run.cfg.manifest.version) changed.push('harness_version');
@@ -108,10 +131,10 @@ function assertFresh(session,run,ids){
 function preflightSession(session,taskInput,options={}){
   const integrity=verifySessionIntegrity(session,options);
   if(!integrity.valid) return {ok:false,result:{verdict:'BLOCK',status:'TAMPERED',reason:integrity.reason,session}};
-  const stage=session.version===2?(session.current_stage||'BOOTSTRAP'):'PRE_DESIGN';
+  if(session.version!==SESSION_VERSION) return {ok:false,result:{verdict:'BLOCK',status:'MIGRATION_REQUIRED',reason:'Historical v1 session is readable but cannot acquire v2 stage authority; create a new session.',session}};
+  const stage=session.current_stage||'BOOTSTRAP';
   const run=buildTask(taskInput,{...options,stage}),ids=computeRun(run),fresh=assertFresh(session,run,ids);
   if(!fresh.fresh) return {ok:false,result:{verdict:'BLOCK',status:'STALE',reason:`Harness/task/context fingerprint changed: ${fresh.changed.join(', ')}. Create a new session.`,changed:fresh.changed,session}};
-  if(session.version!==SESSION_VERSION) return {ok:false,result:{verdict:'BLOCK',status:'MIGRATION_REQUIRED',reason:'Historical v1 session is readable but cannot acquire v2 stage authority; create a new session.',session}};
   return {ok:true,run,ids};
 }
 function assertTargetAccepted(session,run){
@@ -129,10 +152,11 @@ function advanceSession(session,taskInput,evidence,targetStage,options={}){
   if(checkpoint.task_sha256!==session.task_sha256||checkpoint.runtime_sha256!==session.runtime_sha256||
     checkpoint.config_sha256!==session.config_sha256||checkpoint.provider!==session.checkpoint.provider||
     checkpoint.source_root!==session.checkpoint.source_root) return {verdict:'BLOCK',status:'STALE',reason:'Task, runtime, configuration or provider changed during stage compilation.',session};
-  const normalizedEvidence=evidence||{version:1,claims:{}},evaluation=evaluateGates(stageRun.cfg.gates,stageRun.gateCtx,normalizedEvidence,{throughStage:targetStage});
+  const continuity=continuityFailure(session.checkpoint,checkpoint);
+  const normalizedEvidence=evidence||{version:1,claims:{}},evaluation=continuity?blockedEvaluation(targetStage,continuity):evaluateGates(stageRun.cfg.gates,stageRun.gateCtx,normalizedEvidence,{throughStage:targetStage});
   const event=gateEvent(session.history,targetStage,evaluation,stageRun,normalizedEvidence,checkpoint);
   const updated={...session,target_repository:stageRun.target_repository,last_evaluation:evaluation,history:[...session.history,event]};
-  const stage_context={checkpoint,documents:stageRun.context.status==='RESOLVED'?stageRun.context.documents:[]};
+  const stage_context={checkpoint,documents:stageRun.context.status==='RESOLVED'&&!continuity?stageRun.context.documents:[]};
   if(evaluation.verdict==='BLOCK') return {verdict:'BLOCK',status:'BLOCKED',reason:`BLOCK gate failed at ${targetStage}.`,stage_context,session:sealSession({...updated,blocked_stage:targetStage,status:'BLOCKED'},options)};
   return {verdict:'PASS',status:'ADVANCED',stage_context,session:sealSession({...updated,checkpoint,context_sha256:checkpoint.context_sha256,current_stage:targetStage,blocked_stage:null,status:'ACTIVE'},options)};
 }

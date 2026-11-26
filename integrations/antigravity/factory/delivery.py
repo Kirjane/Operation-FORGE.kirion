@@ -379,6 +379,7 @@ class NairuDeliveryBroker:
                         conn.execute("ROLLBACK;")
                         result = dict(existing)
                         result["idempotent_replay"] = True
+                        result["fixture_only"] = True
                         return result
                     if existing["pr_mode"] == "BLOCKED_DIAGNOSTIC_DRAFT" and pr_mode == "VALIDATED_DRAFT_PR":
                         cur = conn.execute(
@@ -462,6 +463,7 @@ class NairuDeliveryBroker:
             conn.execute("COMMIT;")
             out = dict(row)
             out["idempotent_replay"] = False
+            out["fixture_only"] = True
             return out
         finally:
             conn.close()

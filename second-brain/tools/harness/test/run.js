@@ -411,11 +411,6 @@ test('observed runtime failure produces review-only learning candidate',()=>{
   assert.equal(candidate.review_status,'PENDING_HUMAN_REVIEW');assert.equal(candidate.doctrine_mutated,false);assert.equal(candidate.observed_behavior,'primary route returned HTTP 500');
 });
 
-console.log(`\n${count} harness tests passed.`);
-
-// W3A regression: preserve all existing tests and execute the focused suite.
-require('./reconstruction-risk');
-
 // W3B: stage checkpoints are separate from the stable session identity.
 test('W3B stage transitions compile and seal distinct context checkpoints',()=>{
   const task=bugTask();const options={sessionKey:'w3b-test'};
@@ -429,3 +424,26 @@ test('W3B stage transitions compile and seal distinct context checkpoints',()=>{
   assert.equal(result.stage_context.checkpoint.checkpoint_sha256,session.checkpoint.checkpoint_sha256);
   assert.equal(verifySessionIntegrity(session,options).valid,true);
 });
+
+// W3B: later stages must compile the same route as direct evaluation, not reuse design context.
+test('W3B implementation and delivery checkpoints carry their stage manifests',()=>{
+  const task=bugTask(),options={sessionKey:'stage-continuity-key'};
+  const evidence={version:1,claims:{'verification.automated':{status:'PASS',levels:['TESTED']},'delivery.source_state':{status:'PASS',levels:['DURABLE']}}};
+  let session=createSession(task,emptyEvidence(),{...options,throughStage:'BOOTSTRAP'});
+  const stable=session.session_id;
+  for(const stage of ['PRE_DESIGN','PRE_IMPLEMENTATION','PRE_DELIVERY']){
+    const result=advanceSession(session,task,evidence,stage,options);
+    assert.equal(result.status,'ADVANCED');
+    assert.equal(result.session.session_id,stable);
+    assert.equal(result.session.checkpoint.stage,stage);
+    assert.notEqual(result.session.checkpoint.checkpoint_sha256,session.checkpoint.checkpoint_sha256);
+    assert.equal(result.session.checkpoint.context_manifest.status,'RESOLVED');
+    session=result.session;
+  }
+  assert.equal(verifySessionIntegrity(session,options).valid,true);
+});
+
+console.log(`\n${count} harness tests passed.`);
+
+// W3A regression: preserve all existing tests and execute the focused suite.
+require('./reconstruction-risk');

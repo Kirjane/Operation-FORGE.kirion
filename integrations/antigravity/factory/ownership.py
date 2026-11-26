@@ -376,6 +376,7 @@ class WorktreeSandbox:
         self.source_repo = source_repo.resolve()
         self.sandbox_root = sandbox_root.resolve()
         self.sandbox_root.mkdir(parents=True, exist_ok=True)
+        self._created_worktrees: set[Path] = set()
 
     def create_worktree(self, branch_name: str, base_sha: str, worktree_name: str) -> Path:
         if not is_valid_git_sha(base_sha):
@@ -411,6 +412,7 @@ class WorktreeSandbox:
         if p.returncode != 0:
             raise AuthorityError(f"git worktree add failed: {p.stderr.strip()}")
 
+        self._created_worktrees.add(wt_path)
         return wt_path
 
     def inspect_and_validate_worktree(
@@ -424,6 +426,8 @@ class WorktreeSandbox:
         if not is_valid_git_sha(base_sha):
             raise AuthorityError(f"Invalid or all-zero base_sha forbidden in inspect_and_validate_worktree: {base_sha!r}")
 
+        if wt_path.is_symlink() or wt_path.resolve().parent != self.sandbox_root or wt_path.resolve() not in self._created_worktrees:
+            raise PolicyViolationError("Worktree was not created by this sandbox instance.")
         for item in wt_path.rglob("*"):
             rel_parts = item.relative_to(wt_path).parts
             if rel_parts and rel_parts[0] == ".git":
@@ -486,7 +490,12 @@ class WorktreeSandbox:
         target = wt_path.resolve()
         if wt_path.is_symlink() or target.parent != self.sandbox_root or target == self.source_repo:
             raise PolicyViolationError("Refusing removal outside a direct sandbox worktree.")
-        result = subprocess.run(["git", "worktree", "remove", str(target)], cwd=self.source_repo,
+        if target not in self._created_worktrees:
+            raise PolicyViolationError("Refusing removal of a worktree not created by this sandbox instance.")
+        # Explicit cleanup retains the historical disposal operation, confined
+        # to worktrees this instance created. No fallback recursive deletion.
+        result = subprocess.run(["git", "worktree", "remove", "--force", str(target)], cwd=self.source_repo,
                                 capture_output=True, text=True, env=sanitize_worker_env())
         if result.returncode:
-            raise PolicyViolationError("Worktree removal denied; reconcile dirty or unregistered state first.")
+            raise PolicyViolationError("Worktree removal denied; reconcile unregistered state first.")
+        self._created_worktrees.discard(target)

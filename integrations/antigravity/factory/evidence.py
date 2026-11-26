@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import datetime as dt
 import hashlib
+import os
 import re
 import subprocess
 from pathlib import Path
@@ -104,9 +105,46 @@ class TrustedEvidenceRunner:
         digest = hashlib.sha256(raw_bytes).hexdigest()
         bucket = self.artifact_store_root / digest[:2]
         bucket.mkdir(parents=True, exist_ok=True)
+        if bucket.is_symlink() or bucket.resolve(strict=True) != bucket:
+            raise AuthorityError("ARTIFACT_BUCKET_UNSAFE")
         blob_path = bucket / f"{digest}.log"
-        blob_path.write_bytes(raw_bytes)
+        # Content-addressed objects are immutable. Never follow or overwrite
+        # a preexisting symlink, hardlink or different byte sequence.
+        try:
+            with blob_path.open("xb") as stream:
+                stream.write(raw_bytes)
+                stream.flush()
+                os.fsync(stream.fileno())
+        except FileExistsError:
+            pass
+        if (blob_path.is_symlink() or blob_path.resolve(strict=True) != blob_path or
+                not blob_path.is_file() or blob_path.stat().st_nlink != 1):
+            raise AuthorityError("ARTIFACT_PATH_UNSAFE")
+        with blob_path.open("rb") as stream:
+            stored = stream.read(len(raw_bytes) + 1)
+        if stored != raw_bytes:
+            raise AuthorityError("ARTIFACT_CONTENT_MISMATCH")
         return blob_path, len(raw_bytes), digest
+
+    def capture_fixture_oracle_artifact(self, *, binding, observe_positive, observe_negative):
+        """Capture structured outcomes from two trusted fixture probes.
+
+        Only trusted test composition may supply the probes or binding. This
+        does not execute a mission-provided command, authenticate a host or
+        qualify a real product. Persist the exact redacted observation bytes
+        through the existing evidence store.
+        """
+        from copy import deepcopy
+        from .mission_contract import canonical_json
+        if type(binding) is not dict or {"observed", "negative_observed"} & set(binding):
+            raise AuthorityError("FIXTURE_OBSERVATION_BINDING_INVALID")
+        captured_binding = deepcopy(binding)
+        positive = deepcopy(observe_positive())
+        negative = deepcopy(observe_negative())
+        if type(positive) is not dict or type(negative) is not dict:
+            raise AuthorityError("FIXTURE_OBSERVATION_SHAPE_INVALID")
+        return self._store_artifact(canonical_json({
+            **captured_binding, "observed": positive, "negative_observed": negative}))
 
     def run_gate_command(
         self,
@@ -217,3 +255,31 @@ class TrustedEvidenceRunner:
         }
         validate_contract(envelope, "evidence-envelope.schema.json")
         return envelope
+
+
+MAX_ASSURANCE_ARTIFACT_BYTES = 8 * 1024 * 1024
+
+
+def read_assurance_artifact(root: Path, envelope: dict[str, Any]) -> bytes:
+    """Read exact redacted bytes from the existing content-addressed store.
+
+    The store root is trusted composition, never receipt ingress. This is local
+    fixture custody, not an OS boundary against concurrent privileged writers.
+    """
+    digest = envelope["artifact_sha256"]
+    size = envelope["artifact_size_bytes"]
+    if not re.fullmatch(r"[0-9a-f]{64}", digest) or not 0 < size <= MAX_ASSURANCE_ARTIFACT_BYTES:
+        raise AuthorityError("ARTIFACT_IDENTITY_INVALID")
+    root = root.resolve(strict=True)
+    expected = root / digest[:2] / (digest + ".log")
+    if envelope["artifact_path"] != str(expected):
+        raise AuthorityError("ARTIFACT_PATH_MISMATCH")
+    if (expected.parent.is_symlink() or expected.is_symlink() or
+            expected.resolve(strict=True) != expected or not expected.is_file() or
+            expected.stat().st_nlink != 1):
+        raise AuthorityError("ARTIFACT_PATH_UNSAFE")
+    with expected.open("rb") as stream:
+        raw = stream.read(MAX_ASSURANCE_ARTIFACT_BYTES + 1)
+    if len(raw) != size or hashlib.sha256(raw).hexdigest() != digest:
+        raise AuthorityError("ARTIFACT_CONTENT_MISMATCH")
+    return raw

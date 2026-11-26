@@ -117,6 +117,25 @@ class FixtureDispatchAdapter:
         return deepcopy(self._reconciliations.get(reservation_id))
 
 
+def is_supported_fixture_adapter(adapter):
+    from .scoped_fixture import ScopedGitFixtureAdapter
+    return type(adapter) in (FixtureDispatchAdapter, ScopedGitFixtureAdapter)
+
+
+def fixture_adapter_binding(adapter):
+    from .scoped_fixture import ScopedGitFixtureAdapter
+    if type(adapter) is ScopedGitFixtureAdapter:
+        return {"kind": "SCOPED_GIT_FIXTURE", "root": str(adapter.repo), "base_sha": adapter.base_sha}
+    if type(adapter) is FixtureDispatchAdapter:
+        return {"kind": "CALLBACK_FIXTURE"}
+    raise SchedulerError("Unsupported fixture adapter.")
+
+
+def fixture_operations(adapter):
+    from .scoped_fixture import ScopedGitFixtureAdapter
+    return {"READ", "WRITE_OWNED"} if type(adapter) is ScopedGitFixtureAdapter else {"READ", "REVIEW_READONLY"}
+
+
 class ContractJournal(FactoryJournal):
     """Existing hash-chain journal with isolated contract storage and a legacy-write fence.
 
@@ -395,7 +414,7 @@ class ContractJournal(FactoryJournal):
             return self._blocked(conn, packet, digest, "TRUSTED_PREFLIGHT_BRIDGE_UNAVAILABLE", {})
 
     def reserve_dispatch(self, raw: str | bytes, adapter: FixtureDispatchAdapter) -> dict[str, Any]:
-        if type(adapter) is not FixtureDispatchAdapter:
+        if not is_supported_fixture_adapter(adapter):
             raise SchedulerError("Trusted fixture boundary unavailable.")
         packet = parse_mission_packet(raw)
         digest = contract_digest(packet)
@@ -407,7 +426,7 @@ class ContractJournal(FactoryJournal):
             if grant is None:
                 return self._blocked(conn, packet, digest, "GRANT_UNRESOLVED", {})
             # This slice cannot perform commands, writes or actual runtime observation.
-            if (not set(packet["allowed_operations"]) <= {"READ", "REVIEW_READONLY"}
+            if (not set(packet["allowed_operations"]) <= fixture_operations(adapter)
                 or any(o["target_profile"] == "REAL" or o["evaluation_kind"] == "COMMAND"
                        for o in packet["oracles"])):
                 return self._blocked(conn, packet, digest, "LIVE_EFFECT_UNQUALIFIED", {})
@@ -437,7 +456,7 @@ class ContractJournal(FactoryJournal):
                 grant = current_grant
                 failures, material, capability_expiries = self._prerequisites(
                     conn, packet, digest, grant, observed, now)
-            except (AuthorityError, TypeError, ValueError, KeyError):
+            except (AuthorityError, TypeError, ValueError, KeyError, OSError):
                 return self._blocked(conn, packet, digest, "INVALID_OBSERVATION", {})
             if failures:
                 return self._blocked(conn, packet, digest, "|".join(failures), material)
@@ -478,7 +497,8 @@ class ContractJournal(FactoryJournal):
                         {"reservation_id": reservation, "ordinal": ordinal, "prerequisite_fingerprint": fingerprint,
                          "actor_id": grant["actor_id"], "worker_id": grant["worker_id"],
                          "host_id": grant["host_id"], "grant_sha256": grant_sha256,
-                         "valid_until_utc": valid_until.isoformat(), "fixture_only": True})
+                         "valid_until_utc": valid_until.isoformat(), "fixture_only": True,
+                         "adapter_binding": fixture_adapter_binding(adapter)})
             return {"status": "RESERVED", "reservation_id": reservation, "ordinal": ordinal,
                     "contract_sha256": digest, "revision": revision, "cached": False, "fixture_only": True}
 
@@ -519,6 +539,8 @@ class ContractJournal(FactoryJournal):
         return attempt, binding
 
     def _invocation_block_reason(self, packet, attempt, binding, adapter):
+        if binding.get("adapter_binding", {"kind": "CALLBACK_FIXTURE"}) != fixture_adapter_binding(adapter):
+            return "DISPATCH_ADAPTER_BINDING_MISMATCH"
         now = dt.datetime.now(dt.timezone.utc)
         grant = adapter.resolve_grant(packet, attempt["digest"], now)
         if (not grant or digest_json(grant) != binding["grant_sha256"]
@@ -556,18 +578,27 @@ class ContractJournal(FactoryJournal):
                      "fixture_only": True, "result": result})
 
     def complete_dispatch(self, raw, reservation_id, result, adapter):
-        if type(adapter) is not FixtureDispatchAdapter or not isinstance(result, dict):
+        if not is_supported_fixture_adapter(adapter) or not isinstance(result, dict):
             raise SchedulerError("Trusted completion boundary and object result required.")
         packet = parse_mission_packet(raw)
         digest = contract_digest(packet)
         with self._transaction() as conn:
             self._assert_chain(conn)
             grant = adapter.resolve_grant(packet, digest, dt.datetime.now(dt.timezone.utc))
-            attempt = conn.execute("SELECT * FROM contract_attempts WHERE reservation_id=?",
-                                   (reservation_id,)).fetchone()
-            if not grant or not attempt or (grant["worker_id"], grant["actor_id"], grant["attempt_ordinal"]) != (
+            attempt, binding = self._reservation_binding(conn, packet, reservation_id, {"RUNNING"})
+            if not grant or (grant["worker_id"], grant["actor_id"], grant["attempt_ordinal"]) != (
                     attempt["worker_id"], attempt["actor_id"], attempt["ordinal"]):
                 raise SchedulerError("Completion actor or authorized attempt mismatch.")
+            if binding.get("adapter_binding", {"kind": "CALLBACK_FIXTURE"}) != fixture_adapter_binding(adapter):
+                raise SchedulerError("Completion adapter binding mismatch.")
+            from .scoped_fixture import ScopedGitFixtureAdapter
+            if type(adapter) is ScopedGitFixtureAdapter:
+                adapter.verify_result(packet, result)
+                # Observation is not a grant. Recheck the exact reserved grant
+                # after the effect verification; loss of authority is UNKNOWN.
+                reason = self._invocation_block_reason(packet, attempt, binding, adapter)
+                if reason:
+                    raise SchedulerError(reason)
             self._change_attempt(conn, packet, reservation_id, {"RUNNING"}, "COMPLETED", result)
 
     def dispatch_fixture(self, raw, adapter):
@@ -617,6 +648,159 @@ class ContractJournal(FactoryJournal):
         return {"status": "COMPLETED", "fixture_only": True, "result": result,
                 "reservation_id": reservation, "contract_sha256": claim["contract_sha256"]}
 
+    def inspect_attempt(self, raw, reservation_id):
+        """Read-only recovery receipt; never converts elapsed time into replay authority."""
+        packet = parse_mission_packet(raw)
+        with self._transaction() as conn:
+            self._assert_chain(conn)
+            attempt, binding = self._reservation_binding(conn, packet, reservation_id,
+                {"RESERVED", "RUNNING", "UNKNOWN", "NO_EFFECT", "COMPLETED", "RECONCILED"})
+            status = attempt["status"]
+            return {"reservation_id": reservation_id, "contract_sha256": attempt["digest"],
+                    "status": status, "fixture_only": True,
+                    "adapter_binding": binding.get("adapter_binding", {"kind": "CALLBACK_FIXTURE"}),
+                    "result": json.loads(attempt["result_json"]) if attempt["result_json"] else None,
+                    "replay_permitted": False,
+                    "next_action": "OPERATOR_RECONCILIATION_REQUIRED" if status in
+                    {"RESERVED", "RUNNING", "UNKNOWN"} else "SEPARATE_AUTHORIZATION_REQUIRED"}
+
+    def _assurance_context(self, conn, raw, reservation_id, resolver):
+        from .assurance import FixtureAssuranceResolver, require
+        require(type(resolver) is FixtureAssuranceResolver, "TRUSTED_ASSURANCE_RESOLVER_UNAVAILABLE")
+        packet = parse_mission_packet(raw)
+        require(packet["schema_version"] == 2, "HISTORICAL_PACKET_NOT_ASSURANCE_AUTHORITY")
+        self._assert_chain(conn)
+        attempt, binding = self._reservation_binding(conn, packet, reservation_id, {"COMPLETED"})
+        require(not conn.execute("""SELECT 1 FROM contract_attempts WHERE mission_id=?
+                 AND (status IN ('RESERVED','RUNNING','UNKNOWN') OR revision>?
+                 OR (revision=? AND ordinal>?))""",
+                 (packet["mission_id"], packet["revision"], packet["revision"], attempt["ordinal"])).fetchone(),
+                "ATTEMPT_SUPERSEDED_OR_EFFECT_UNRESOLVED")
+        events = []
+        for row in conn.execute("""SELECT payload_json FROM journal_events WHERE mission_id=?
+                    AND run_id=? AND event_type='DISPATCH_COMPLETED'""", (packet["mission_id"], packet["run_id"])):
+            event = json.loads(row[0])
+            if event.get("reservation_id") == reservation_id:
+                events.append(event)
+        require(len(events) == 1 and events[0].get("contract_sha256") == attempt["digest"] and
+                events[0].get("actor_id") == attempt["actor_id"] and
+                canonical_json(events[0].get("result")) == attempt["result_json"],
+                "COMPLETION_RECEIPT_MISMATCH")
+        return packet, attempt, binding
+
+    def _assurance_records(self, conn, packet, attempt, binding, resolver):
+        from .assurance import require
+        verified = []
+        seen = set()
+        for row in conn.execute("""SELECT payload_json FROM journal_events WHERE mission_id=?
+                    AND event_type='ASSURANCE_EVIDENCE' ORDER BY seq""", (packet["mission_id"],)):
+            item = json.loads(row[0])
+            if item.get("reservation_id") != attempt["reservation_id"]:
+                continue
+            require(item.get("contract_sha256") == attempt["digest"] and item.get("revision") == attempt["revision"],
+                    "EVIDENCE_CUSTODY_BINDING_MISMATCH")
+            receipt = resolver.verify_receipt(packet, attempt, binding, canonical_json(item["receipt"]))
+            require(receipt["receipt_sha256"] == item["receipt_sha256"] and
+                    receipt["execution_sha256"] == item.get("execution_sha256") and receipt["record"]["nonce"] not in seen,
+                    "EVIDENCE_CUSTODY_DIGEST_OR_REPLAY_MISMATCH")
+            seen.add(receipt["record"]["nonce"])
+            verified.append(receipt)
+        return verified
+
+    def _assert_assurance_nonce_unused(self, conn, record):
+        from .assurance import require
+        for row in conn.execute("""SELECT payload_json FROM journal_events WHERE
+                    event_type IN ('ASSURANCE_EVIDENCE','ASSURANCE_FIXTURE_DECISION')"""):
+            item = json.loads(row[0])
+            prior = item.get("receipt", item.get("decision"))
+            require(prior["nonce"] != record["nonce"], "REPLAYED_ASSURANCE_NONCE")
+
+    def record_assurance_evidence(self, raw, reservation_id, receipt_raw, resolver=None):
+        """Authenticate and read back an applicable receipt before append-only custody."""
+        from .assurance import assurance_denial
+        try:
+            with self._transaction() as conn:
+                packet, attempt, binding = self._assurance_context(conn, raw, reservation_id, resolver)
+                receipt = resolver.verify_receipt(packet, attempt, binding, receipt_raw)
+                self._assert_assurance_nonce_unused(conn, receipt["record"])
+                self._event(conn, packet, attempt["digest"], "ASSURANCE_EVIDENCE",
+                            {"reservation_id": reservation_id, "receipt_sha256": receipt["receipt_sha256"],
+                             "execution_sha256": receipt["execution_sha256"],
+                             "receipt": receipt["record"], "fixture_only": True})
+                return {"status": "RECORDED", "receipt_sha256": receipt["receipt_sha256"],
+                        "execution_sha256": receipt["execution_sha256"], "applicability": "APPLICABLE", "applicable_verdict": receipt["verdict"], "fixture_only": True,
+                        "promotion_authorized": False}
+        except (AuthorityError, ValueError, TypeError, KeyError, OSError, sqlite3.Error,
+                RecursionError, AttributeError, StopIteration, OverflowError) as exc:
+            return assurance_denial(exc)
+
+    def evaluate_assurance(self, raw, reservation_id, resolver=None):
+        """Existing journal is the only supported aggregate/custody evaluation path."""
+        from .assurance import assurance_denial, evaluate_applicable_receipts
+        try:
+            with self._transaction() as conn:
+                packet, attempt, binding = self._assurance_context(conn, raw, reservation_id, resolver)
+                resolver.plan(packet, attempt, binding)
+                receipts = self._assurance_records(conn, packet, attempt, binding, resolver)
+                summary = evaluate_applicable_receipts(packet, receipts)
+                return {**summary, "reservation_id": reservation_id,
+                        "receipt_sha256s": sorted(r["receipt_sha256"] for r in receipts)}
+        except (AuthorityError, ValueError, TypeError, KeyError, OSError, sqlite3.Error,
+                RecursionError, AttributeError, StopIteration, OverflowError) as exc:
+            return assurance_denial(exc)
+
+    def record_assurance_decision(self, raw, reservation_id, decision_raw, resolver=None):
+        """Separate acceptance issuer, exact current receipt set; fixture only."""
+        from .assurance import assurance_denial, evaluate_applicable_receipts, require
+        try:
+            with self._transaction() as conn:
+                packet, attempt, binding = self._assurance_context(conn, raw, reservation_id, resolver)
+                receipts = self._assurance_records(conn, packet, attempt, binding, resolver)
+                summary = evaluate_applicable_receipts(packet, receipts)
+                require(summary["overall_status"] == "PASS", "REQUIRED_ASSURANCE_UNSATISFIED")
+                decision = resolver.verify_decision(packet, attempt, binding, decision_raw, receipts)
+                self._assert_assurance_nonce_unused(conn, decision)
+                for row in conn.execute("""SELECT payload_json FROM journal_events WHERE mission_id=?
+                            AND event_type='ASSURANCE_FIXTURE_DECISION'""", (packet["mission_id"],)):
+                    require(json.loads(row[0]).get("reservation_id") != reservation_id,
+                            "ATTEMPT_DECISION_ALREADY_RECORDED")
+                decision_digest = digest_json(decision)
+                self._event(conn, packet, attempt["digest"], "ASSURANCE_FIXTURE_DECISION",
+                            {"reservation_id": reservation_id, "decision_sha256": decision_digest,
+                             "decision": decision, "fixture_only": True})
+                return {"status": "FIXTURE_SUPPORTED", "decision_sha256": decision_digest,
+                        "fixture_only": True, "promotion_authorized": False,
+                        "actual_product_outcome": "NOT_TESTED"}
+        except (AuthorityError, ValueError, TypeError, KeyError, OSError, sqlite3.Error,
+                RecursionError, AttributeError, StopIteration, OverflowError) as exc:
+            return assurance_denial(exc)
+
+    def inspect_assurance_decision(self, raw, reservation_id, resolver=None):
+        """Revalidate current evidence and decision on readback, never grant live rights."""
+        from .assurance import assurance_denial, evaluate_applicable_receipts, require
+        try:
+            with self._transaction() as conn:
+                packet, attempt, binding = self._assurance_context(conn, raw, reservation_id, resolver)
+                receipts = self._assurance_records(conn, packet, attempt, binding, resolver)
+                require(evaluate_applicable_receipts(packet, receipts)["overall_status"] == "PASS",
+                        "REQUIRED_ASSURANCE_UNSATISFIED")
+                decisions = []
+                for row in conn.execute("""SELECT payload_json FROM journal_events WHERE mission_id=?
+                            AND event_type='ASSURANCE_FIXTURE_DECISION'""", (packet["mission_id"],)):
+                    item = json.loads(row[0])
+                    if item.get("reservation_id") == reservation_id:
+                        decisions.append(item)
+                require(len(decisions) == 1, "INDEPENDENT_DECISION_MISSING_OR_AMBIGUOUS")
+                item = decisions[0]
+                decision = resolver.verify_decision(packet, attempt, binding, canonical_json(item["decision"]), receipts)
+                require(item["decision_sha256"] == digest_json(decision), "DECISION_CUSTODY_MISMATCH")
+                return {"status": "FIXTURE_SUPPORTED", "decision_sha256": item["decision_sha256"],
+                        "fixture_only": True, "promotion_authorized": False,
+                        "actual_product_outcome": "NOT_TESTED"}
+        except (AuthorityError, ValueError, TypeError, KeyError, OSError, sqlite3.Error,
+                RecursionError, AttributeError, StopIteration, OverflowError) as exc:
+            return assurance_denial(exc)
+
     def reconcile_unknown(self, raw, reservation_id, adapter):
         """Only an UNKNOWN claim may use configured fixture reconciliation.
 
@@ -640,7 +824,9 @@ class ContractJournal(FactoryJournal):
                 or evidence.get("quiescent") is not True or evidence.get("effect") not in ("NO_EFFECT", "EFFECT_OBSERVED")
                 or not _nonempty(evidence.get("evidence_ref"))):
                 raise SchedulerError("Unresolved effect; no replay permitted.")
-            attempt = self._require_attempt(conn, packet, reservation_id, {"UNKNOWN"})
+            attempt, binding = self._reservation_binding(conn, packet, reservation_id, {"UNKNOWN"})
+            if binding.get("adapter_binding", {"kind": "CALLBACK_FIXTURE"}) != fixture_adapter_binding(adapter):
+                raise SchedulerError("Reconciliation adapter binding mismatch; actual fixture effects require operator reconciliation.")
             if (grant["worker_id"], grant["actor_id"], grant["attempt_ordinal"]) != (
                     attempt["worker_id"], attempt["actor_id"], attempt["ordinal"]):
                 raise SchedulerError("Reconciliation actor or authorized attempt mismatch.")

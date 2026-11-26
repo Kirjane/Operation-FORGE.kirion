@@ -524,3 +524,42 @@ class SelfHealingController:
                 }
             )
             current_sha = next_sha
+
+
+
+def assert_assurance_applicable_envelope(envelope: dict[str, Any], oracle: dict[str, Any]) -> None:
+    """The same applicability floor applies to both positive and negative evidence.
+
+    Historical v1 gate summaries remain diagnostics; this helper does not
+    authenticate an issuer or authorize acceptance on its own.
+    """
+    validate_contract(envelope, "evidence-envelope.schema.json")
+    gid = envelope["gate_id"]
+    level = envelope["evidence_level"]
+    evidence_type = envelope["evidence_type"]
+    provenance = envelope["provenance"]
+    if (gid != oracle["gate_id"] or evidence_type != oracle["evidence_type"] or
+            evidence_type not in GATE_ALLOWED_PASS_EVIDENCE_TYPES[gid]):
+        raise QualityGateError("EVIDENCE_TYPE_OR_GATE_MISMATCH")
+    if (EVIDENCE_LEVEL_ORDER[level] < max(EVIDENCE_LEVEL_ORDER[GATE_CATALOG[gid]["min_evidence"]],
+                                          EVIDENCE_LEVEL_ORDER[oracle["minimum_evidence_level"]]) or
+            envelope["certainty_ceiling"] != FORGE_LEVEL_TO_CERTAINTY_CEILING[level]):
+        raise QualityGateError("EVIDENCE_FLOOR_OR_CEILING_MISMATCH")
+    if (envelope["dirty"] or not is_valid_git_sha(envelope["candidate_sha"]) or
+            not is_valid_git_sha(envelope["tree_sha"]) or provenance in {"ASSUMED", "REPORTED"} or
+            (EVIDENCE_LEVEL_ORDER[level] >= 4 and evidence_type == "SOURCE") or
+            (evidence_type == "SOURCE" and level != "E1") or
+            (gid in E5_RUNTIME_GATES and provenance not in {"DIRECTLY_OBSERVED", "REPRODUCED"})):
+        raise QualityGateError("EVIDENCE_PROVENANCE_OR_SOURCE_MISMATCH")
+    # Crosswalk meaning is independent of gate floor. A passing build or
+    # automated unit test cannot be upgraded to runtime acceptance.
+    valid_runtime_type = evidence_type == "RUNTIME" or (gid == "G08" and evidence_type == "SECURITY")
+    if ((level == "E1" and (evidence_type != "SOURCE" or
+                            provenance not in {"DIRECTLY_OBSERVED", "REPRODUCED"})) or
+            (level == "E3" and provenance not in {"DIRECTLY_OBSERVED", "REPRODUCED"}) or
+            (level == "E4" and provenance not in {"AUTOMATED", "REPRODUCED"}) or
+            (level == "E5" and (not valid_runtime_type or
+                                provenance not in {"DIRECTLY_OBSERVED", "REPRODUCED"}))):
+        raise QualityGateError("EVIDENCE_PROVENANCE_OR_SOURCE_MISMATCH")
+    if envelope["status"] not in {"PASS", "FAIL"}:
+        raise QualityGateError("EVIDENCE_NOT_EXECUTED")

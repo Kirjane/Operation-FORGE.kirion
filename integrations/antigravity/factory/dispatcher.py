@@ -251,52 +251,47 @@ def query_live_host_plugin_discovery(repo_root: Path = REPO_ROOT) -> dict[str, A
     }
 
 
-def select_skills_for_mission(
-    profile_key: str,
-    *,
-    skill_source_sha: str,
-    extra_specialists: list[str] | None = None,
-    repo_root: Path = REPO_ROOT,
-) -> dict[str, Any]:
-    """Progressive disclosure skill selector: kirion-core + kirion-dispatch + bounded specialist pack (<= 8 files)."""
-    if not is_valid_git_sha(skill_source_sha):
-        raise AuthorityError(f"Invalid or all-zero skill_source_sha forbidden: {skill_source_sha!r}")
+def resolve_skill_plan(
+    profile_key: str, *, skill_source_sha: str, extra_specialists=None,
+    optional_specialists=None, repo_root: Path = REPO_ROOT, sources=None,
+    registry_repository_id: int = 1377058358,
+    registry_repository_name: str = "Kirjane/Operation-FORGE.kirion",
+    host: str = "chatgpt", stage: str = "PRE_IMPLEMENTATION", task: str = "general",
+    max_bytes: int = 32768, context_used_bytes: int = 0, max_files: int = 8,
+    source_authorities=(), include_routes: bool = True,
+):
+    """Read the pinned Arsenal manifest and actual blobs; never imply host loading."""
+    from .skill_registry import PinnedGitSources, SkillRegistry, SkillError
     if profile_key not in STACK_SKILL_BUNDLES:
-        raise AuthorityError(
-            f"Unknown skill profile_key {profile_key!r}; expected one of {sorted(STACK_SKILL_BUNDLES.keys())}."
-        )
-    selected_names = ["kirion-core", "kirion-dispatch"]
-    for name in STACK_SKILL_BUNDLES[profile_key]:
-        if name not in selected_names:
-            selected_names.append(name)
-    for name in extra_specialists or []:
-        if not isinstance(name, str) or not SKILL_SLUG_RE.fullmatch(name):
-            raise AuthorityError(f"Invalid extra specialist skill slug: {name!r}")
-        if name not in selected_names:
-            selected_names.append(name)
-    if len(selected_names) > 8:
-        selected_names = selected_names[:8]
+        raise SkillError("UNKNOWN_SKILL_PROFILE")
+    if not is_valid_git_sha(skill_source_sha):
+        raise SkillError("SKILL_SOURCE_SHA_INVALID")
+    if sources is None:
+        sources = PinnedGitSources({registry_repository_id: (registry_repository_name, repo_root)})
+    registry = SkillRegistry(sources, repository_id=registry_repository_id,
+                             repository_name=registry_repository_name, registry_commit=skill_source_sha)
+    required = ["kirion-core", "kirion-dispatch", *STACK_SKILL_BUNDLES[profile_key], *(extra_specialists or [])]
+    plan, _ = registry.plan(required, optional_specialists or [], host=host, stage=stage, task=task,
+                            max_bytes=max_bytes, context_used_bytes=context_used_bytes, max_files=max_files,
+                            source_authorities=source_authorities, include_routes=include_routes)
+    return plan
 
-    plugin_root = _resolve_plugin_root(repo_root)
-    resolved_paths: list[str] = []
-    for name in selected_names:
-        core_path = repo_root / ".agents" / "skills" / name / "SKILL.md"
-        if not core_path.is_file():
-            core_path = REPO_ROOT / ".agents" / "skills" / name / "SKILL.md"
-        plugin_path = plugin_root / "skills" / name / "SKILL.md"
-        if not plugin_path.is_file():
-            plugin_path = PLUGIN_ROOT / "skills" / name / "SKILL.md"
-        if core_path.is_file():
-            resolved_paths.append(f".agents/skills/{name}/SKILL.md")
-        elif plugin_path.is_file():
-            resolved_paths.append(f"integrations/antigravity/plugins/kirion-forge/skills/{name}/SKILL.md")
-        else:
-            raise AuthorityError(f"Unknown skill requested in progressive selector: {name!r}")
 
-    return {
-        "skill_source_sha": skill_source_sha,
-        "files": resolved_paths,
-    }
+def select_skills_for_mission(
+    profile_key: str, *, skill_source_sha: str, extra_specialists: list[str] | None = None,
+    repo_root: Path = REPO_ROOT, **options,
+) -> dict[str, Any]:
+    """W1-compatible selection projection; retrieval is verified, loading is not.
+
+    All profile and explicit extra skills are required. No silent truncation,
+    fallback filesystem paths or unchecked historical SHA are permitted.
+    For richer stage/host/budget provenance use resolve_skill_plan.
+    """
+    options.setdefault("include_routes", False)
+    plan = resolve_skill_plan(profile_key, skill_source_sha=skill_source_sha,
+                             extra_specialists=extra_specialists, repo_root=repo_root, **options)
+    return {"skill_source_sha": skill_source_sha,
+            "files": [entry["source"]["path"] for entry in plan["selected"]]}
 
 
 class FleetDispatcher:
@@ -344,7 +339,7 @@ class FleetDispatcher:
         journal: Any = None,
         fixture_adapter: Any = None,
     ) -> dict[str, Any]:
-        from .dispatch_preflight import ContractJournal, FixtureDispatchAdapter
+        from .dispatch_preflight import ContractJournal, is_supported_fixture_adapter
         from .mission_contract import parse_mission_packet
 
         if isinstance(packet, dict):
@@ -354,12 +349,110 @@ class FleetDispatcher:
         parsed = parse_mission_packet(packet)
         if parsed["schema_version"] != 2:
             return {"status": "BLOCKED", "reason": "LEGACY_PACKET_NOT_DISPATCH_AUTHORITY"}
-        if (type(journal) is not ContractJournal or type(fixture_adapter) is not FixtureDispatchAdapter
+        if (type(journal) is not ContractJournal or not is_supported_fixture_adapter(fixture_adapter)
                 or handler is not None or worktree_path is not None):
             if type(journal) is ContractJournal:
                 return journal.block_unavailable_bridge(packet)
             return {"status": "BLOCKED", "reason": "TRUSTED_PREFLIGHT_BRIDGE_UNAVAILABLE"}
-        return journal.dispatch_fixture(packet, fixture_adapter)
+        result = journal.dispatch_fixture(packet, fixture_adapter)
+        # Existing bounded historical fixture calls are preserved. They do not
+        # establish that a selected skill was loaded by a host.
+        return {**result, "skill_consumption_status": "NOT_VERIFIED_BY_GENERIC_DISPATCH"}
+
+    def prepare_worker_skills(self, raw, runtime=None):
+        """Generic composition seam: verify W1 packet against independently pinned skill plan."""
+        from .skill_loading import FixtureSkillRuntime, skill_denial
+        from .skill_registry import SkillError
+        from .mission_contract import parse_mission_packet
+        try:
+            if type(runtime) is not FixtureSkillRuntime:
+                raise SkillError("TRUSTED_SKILL_RUNTIME_UNAVAILABLE")
+            packet = parse_mission_packet(raw)
+            if packet["schema_version"] != 2:
+                raise SkillError("LEGACY_PACKET_NOT_SKILL_AUTHORITY")
+            return runtime.prepare(packet).summary()
+        except (AuthorityError, ValueError, TypeError, KeyError, OSError) as exc:
+            return skill_denial(exc)
+
+    def dispatch_skill_fixture(self, raw, *, journal, runtime, grants, trusted_verifiers, observe, consume):
+        """Bounded callback fixture only, through existing W1/W2 journal reservation.
+
+        The trusted fixture caller supplies the grant/observer and consumer.
+        No native adapter, real worker activation or remote delivery is allowed.
+        Required input is resolved before dispatch and read by the callback;
+        missing reads after callback entry remain UNKNOWN under W2.
+        """
+        from .dispatch_preflight import ContractJournal, FixtureDispatchAdapter
+        from .mission_contract import parse_mission_packet, contract_digest
+        from .skill_loading import FixtureSkillRuntime, skill_denial
+        from .skill_registry import SkillError, digest
+        from copy import deepcopy
+        try:
+            if type(journal) is not ContractJournal or type(runtime) is not FixtureSkillRuntime or not callable(consume):
+                raise SkillError("TRUSTED_SKILL_FIXTURE_COMPOSITION_REQUIRED")
+            packet = parse_mission_packet(raw)
+            if packet["schema_version"] != 2:
+                raise SkillError("LEGACY_PACKET_NOT_SKILL_AUTHORITY")
+            grant = deepcopy(grants.get(contract_digest(packet)))
+            prepared = runtime.prepare(packet, grant=grant, require_consumable=True)
+        except (AuthorityError, ValueError, TypeError, KeyError, OSError) as exc:
+            return skill_denial(exc)
+
+        def worker(invocation_packet):
+            current = runtime.prepare(invocation_packet, grant=grant, require_consumable=True)
+            if current.plan_sha256 != prepared.plan_sha256:
+                raise SkillError("SKILL_PLAN_DRIFT")
+            outcome, receipt = runtime.consume(current, consume, invocation_packet)
+            return {"worker_result": outcome, "skill_consumption": receipt,
+                    "skill_receipt_sha256": digest(receipt)}
+
+        adapter = FixtureDispatchAdapter(grants=deepcopy(grants), trusted_verifiers=set(trusted_verifiers),
+                                         observe=observe, handler=worker)
+        result = self.dispatch_worker(raw, journal=journal, fixture_adapter=adapter)
+        if result.get("cached"):
+            return {**result, "skill_verification": {"status": "NOT_REVERIFIED_CACHED_ATTEMPT",
+                    "native_loading_verified": False, "promotion_authorized": False, "replay_permitted": False}}
+        if result.get("status") != "COMPLETED":
+            return result
+        # No trust in a handler's own "loaded" statement: read the committed
+        # result through the journal, then verify the runtime-issued receipt.
+        verified = self.inspect_skill_fixture(raw, result["reservation_id"], journal=journal, runtime=runtime,
+                                              grant=grant)
+        return {**result, "skill_verification": verified,
+                "skill_consumption_status": ("FIXTURE_CONSUMED" if verified["status"] == "FIXTURE_CONSUMPTION_VERIFIED"
+                                             else "BLOCKED")}
+
+    def inspect_skill_fixture(self, raw, reservation_id, *, journal, runtime, grant):
+        """Read-only existing-journal custody; does not authorize replay or delivery."""
+        from .dispatch_preflight import ContractJournal
+        from .mission_contract import parse_mission_packet
+        from .skill_loading import FixtureSkillRuntime, skill_denial
+        from .skill_registry import SkillError, digest
+        try:
+            if type(journal) is not ContractJournal or type(runtime) is not FixtureSkillRuntime:
+                raise SkillError("TRUSTED_SKILL_FIXTURE_COMPOSITION_REQUIRED")
+            attempt = journal.inspect_attempt(raw, reservation_id)
+            if attempt["status"] != "COMPLETED" or attempt["adapter_binding"].get("kind") != "CALLBACK_FIXTURE":
+                raise SkillError("SKILL_ATTEMPT_NOT_COMPLETED")
+            prepared = runtime.prepare(parse_mission_packet(raw), grant=grant, require_consumable=True)
+            record = attempt["result"]
+            receipt = record["skill_consumption"]
+            if record["skill_receipt_sha256"] != digest(receipt) or receipt["result_sha256"] != digest(record["worker_result"]):
+                raise SkillError("SKILL_RECEIPT_CUSTODY_MISMATCH")
+            runtime.verify_receipt(prepared, receipt)
+            return {"status": "FIXTURE_CONSUMPTION_VERIFIED", "reservation_id": reservation_id,
+                    "receipt_sha256": digest(receipt), "promotion_authorized": False,
+                    "native_loading_verified": False, "replay_permitted": False}
+        except (AuthorityError, ValueError, TypeError, KeyError, OSError) as exc:
+            return skill_denial(exc)
+
+    def record_worker_evidence(self, raw, reservation_id, receipt_raw, *, journal=None, resolver=None):
+        """Post-dispatch evidence custody, not a second execution/authorization path."""
+        from .dispatch_preflight import ContractJournal
+        from .assurance import assurance_denial, AssuranceError
+        if type(journal) is not ContractJournal:
+            return assurance_denial(AssuranceError("TRUSTED_CONTRACT_JOURNAL_UNAVAILABLE"))
+        return journal.record_assurance_evidence(raw, reservation_id, receipt_raw, resolver)
 
     @property
     def dispatch_history(self) -> list[dict[str, Any]]:

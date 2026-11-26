@@ -68,6 +68,7 @@ class NairuDeliveryBroker:
         self.db_path = db_path
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self.actor_verifier = actor_verifier or probe_live_github_actor
+        self._fixture_verifier = actor_verifier is not None
         self._init_db()
 
     def _connect(self) -> sqlite3.Connection:
@@ -242,6 +243,17 @@ class NairuDeliveryBroker:
                 f"Gate summary missing required gates {missing_required} for {packet['risk_class']}; delivery denied."
             )
 
+    @staticmethod
+    def inspect_contract_delivery(raw, reservation_id, *, journal=None, resolver=None):
+        """A v2 delivery boundary may inspect W4 custody but cannot perform a remote effect."""
+        from .dispatch_preflight import ContractJournal
+        if type(journal) is not ContractJournal:
+            return {"status": "BLOCKED", "reason": "TRUSTED_CONTRACT_JOURNAL_UNAVAILABLE",
+                    "promotion_authorized": False, "remote_invoked": False}
+        assurance = journal.inspect_assurance_decision(raw, reservation_id, resolver)
+        return {"status": "BLOCKED", "reason": "TRUSTED_CONTRACT_DELIVERY_BRIDGE_UNAVAILABLE",
+                "assurance": assurance, "promotion_authorized": False, "remote_invoked": False}
+
     def prepare_and_record_delivery(
         self,
         *,
@@ -260,7 +272,13 @@ class NairuDeliveryBroker:
         path ownership, symlink/gitlink absence, gate results, and exact-SHA Nox review before atomically
         reserving and recording an idempotent delivery receipt.
         """
+        if isinstance(packet, dict) and packet.get("schema_version") == 2:
+            raise DeliveryBrokerError("TRUSTED_CONTRACT_DELIVERY_BRIDGE_UNAVAILABLE")
         verify_mission_packet(packet)
+        # Historical injected verifiers exist for isolated tests only. The
+        # default live path has no independently authorized v2 delivery bridge.
+        if not self._fixture_verifier:
+            raise DeliveryBrokerError("TRUSTED_CONTRACT_DELIVERY_BRIDGE_UNAVAILABLE")
         assert_operation_allowed(packet, "DELIVER_DRAFT_PR", actor_persona="Antigravity-Maintainer")
         actor = self.verify_actor_identity()
 
@@ -374,6 +392,7 @@ class NairuDeliveryBroker:
                         conn.execute("ROLLBACK;")
                         result = dict(existing)
                         result["idempotent_replay"] = True
+                        result["fixture_only"] = True
                         return result
                     if existing["pr_mode"] == "BLOCKED_DIAGNOSTIC_DRAFT" and pr_mode == "VALIDATED_DRAFT_PR":
                         cur = conn.execute(
@@ -457,6 +476,7 @@ class NairuDeliveryBroker:
             conn.execute("COMMIT;")
             out = dict(row)
             out["idempotent_replay"] = False
+            out["fixture_only"] = True
             return out
         finally:
             conn.close()

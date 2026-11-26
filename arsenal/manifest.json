@@ -1,6 +1,6 @@
 {
   "name": "kirion-skill-arsenal",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "status": "draft-not-adopted",
   "primary": "chatgpt-github-connector-plus-session-vm",
   "hosts": [
@@ -13,5 +13,778 @@
   "dispatcher": "kirion-dispatch",
   "generator": "arsenal/scripts/make-disposable-skill.py",
   "noAutomaticMerge": true,
-  "noAutomaticProjectPolicyAdoption": true
+  "noAutomaticProjectPolicyAdoption": true,
+  "registry_version": 1,
+  "candidate_count": 32,
+  "registry": [
+    {
+      "id": "kirion-architecture",
+      "kind": "skill",
+      "source": {
+        "repository_id": 1377058358,
+        "repository_name": "Kirjane/Operation-FORGE.kirion",
+        "commit_sha": "3bcdf5b036b2aa30e659f3341000b8f168765896",
+        "path": ".agents/skills/kirion-architecture/SKILL.md",
+        "blob_sha": "e47da0edcd885e83925c63e3f8f1252eb1748b33",
+        "bytes": 1163,
+        "sha256": "541af3eafeced5f3710aed9c09b07887322327bbc9fd05f2cb5aef3c9e912082"
+      },
+      "dependencies": [],
+      "hosts": {
+        "chatgpt": "MANUAL",
+        "codex": "MANUAL",
+        "antigravity": "MANUAL",
+        "fixture": "FIXTURE"
+      },
+      "status": "CANDIDATE",
+      "description": "Existing Forge candidate: architecture"
+    },
+    {
+      "id": "kirion-business-logic",
+      "kind": "skill",
+      "source": {
+        "repository_id": 1377058358,
+        "repository_name": "Kirjane/Operation-FORGE.kirion",
+        "commit_sha": "3bcdf5b036b2aa30e659f3341000b8f168765896",
+        "path": ".agents/skills/kirion-business-logic/SKILL.md",
+        "blob_sha": "a748f358ccbfebc0d59b9a056da0150d33f49b98",
+        "bytes": 3576,
+        "sha256": "7ed7d6975ad02cc898f321d1963d82ddb6238def308c5fbb8f589913cb37e941"
+      },
+      "dependencies": [],
+      "hosts": {
+        "chatgpt": "MANUAL",
+        "codex": "MANUAL",
+        "antigravity": "MANUAL",
+        "fixture": "FIXTURE"
+      },
+      "status": "CANDIDATE",
+      "description": "Existing Forge candidate: business logic"
+    },
+    {
+      "id": "kirion-cognition",
+      "kind": "skill",
+      "source": {
+        "repository_id": 1377058358,
+        "repository_name": "Kirjane/Operation-FORGE.kirion",
+        "commit_sha": "3bcdf5b036b2aa30e659f3341000b8f168765896",
+        "path": ".agents/skills/kirion-cognition/SKILL.md",
+        "blob_sha": "06ffd911a441228195e64a905149ad42fd7ceb93",
+        "bytes": 1261,
+        "sha256": "58ce80ba27e57aa8a4097aa05a3daa29137ff528a76f624cb7902bdd5d09a2a9"
+      },
+      "dependencies": [],
+      "hosts": {
+        "chatgpt": "MANUAL",
+        "codex": "MANUAL",
+        "antigravity": "MANUAL",
+        "fixture": "FIXTURE"
+      },
+      "status": "CANDIDATE",
+      "description": "Existing Forge candidate: cognition"
+    },
+    {
+      "id": "kirion-core",
+      "kind": "skill",
+      "source": {
+        "repository_id": 1377058358,
+        "repository_name": "Kirjane/Operation-FORGE.kirion",
+        "commit_sha": "3bcdf5b036b2aa30e659f3341000b8f168765896",
+        "path": ".agents/skills/kirion-core/SKILL.md",
+        "blob_sha": "712fa8e7e525cda6dd1725dc9ebbb34e5f8b139d",
+        "bytes": 1660,
+        "sha256": "0d6877a0c765760109a281d200a5e50b83e7942f4a17e09515cf7fa6a6fcc4a3"
+      },
+      "dependencies": [],
+      "hosts": {
+        "chatgpt": "MANUAL",
+        "codex": "MANUAL",
+        "antigravity": "MANUAL",
+        "fixture": "FIXTURE"
+      },
+      "status": "CANDIDATE",
+      "description": "Existing Forge candidate: core"
+    },
+    {
+      "id": "kirion-debug",
+      "kind": "skill",
+      "source": {
+        "repository_id": 1377058358,
+        "repository_name": "Kirjane/Operation-FORGE.kirion",
+        "commit_sha": "3bcdf5b036b2aa30e659f3341000b8f168765896",
+        "path": ".agents/skills/kirion-debug/SKILL.md",
+        "blob_sha": "e3110f4a7b46c1b48567a339979590161d5cfca9",
+        "bytes": 866,
+        "sha256": "aa22a384f539f144194504a1a1a9a984d2c546b6cc03461e24caf81f40134eb0"
+      },
+      "dependencies": [],
+      "hosts": {
+        "chatgpt": "MANUAL",
+        "codex": "MANUAL",
+        "antigravity": "MANUAL",
+        "fixture": "FIXTURE"
+      },
+      "status": "CANDIDATE",
+      "description": "Existing Forge candidate: debug"
+    },
+    {
+      "id": "kirion-dispatch",
+      "kind": "skill",
+      "source": {
+        "repository_id": 1377058358,
+        "repository_name": "Kirjane/Operation-FORGE.kirion",
+        "commit_sha": "3bcdf5b036b2aa30e659f3341000b8f168765896",
+        "path": ".agents/skills/kirion-dispatch/SKILL.md",
+        "blob_sha": "ab65104357eaa9d07218aac07e2d22c97129e8a7",
+        "bytes": 1447,
+        "sha256": "090d71b74075467ff97657725cf3f066fbe4d583506771098f5fbf11670552f1"
+      },
+      "dependencies": [
+        "kirion-core"
+      ],
+      "hosts": {
+        "chatgpt": "MANUAL",
+        "codex": "MANUAL",
+        "antigravity": "MANUAL",
+        "fixture": "FIXTURE"
+      },
+      "status": "CANDIDATE",
+      "description": "Existing Forge candidate: dispatch"
+    },
+    {
+      "id": "kirion-evidence",
+      "kind": "skill",
+      "source": {
+        "repository_id": 1377058358,
+        "repository_name": "Kirjane/Operation-FORGE.kirion",
+        "commit_sha": "3bcdf5b036b2aa30e659f3341000b8f168765896",
+        "path": ".agents/skills/kirion-evidence/SKILL.md",
+        "blob_sha": "c4cb895e68ab5c4e4431b49698480b3fcdbd1c39",
+        "bytes": 852,
+        "sha256": "fc92d0e766bcf058a11bd6ada99156d1ca6a01a3967c9c34da00202a62faa0a0"
+      },
+      "dependencies": [],
+      "hosts": {
+        "chatgpt": "MANUAL",
+        "codex": "MANUAL",
+        "antigravity": "MANUAL",
+        "fixture": "FIXTURE"
+      },
+      "status": "CANDIDATE",
+      "description": "Existing Forge candidate: evidence"
+    },
+    {
+      "id": "kirion-frontend",
+      "kind": "skill",
+      "source": {
+        "repository_id": 1377058358,
+        "repository_name": "Kirjane/Operation-FORGE.kirion",
+        "commit_sha": "3bcdf5b036b2aa30e659f3341000b8f168765896",
+        "path": ".agents/skills/kirion-frontend/SKILL.md",
+        "blob_sha": "0770185284121d8634b9b2dd9bbb0173a0fb61fe",
+        "bytes": 1379,
+        "sha256": "c64590128466648dbc62e867a22b69b161c9c6ec28d7137dc9212776c8d9bbec"
+      },
+      "dependencies": [],
+      "hosts": {
+        "chatgpt": "MANUAL",
+        "codex": "MANUAL",
+        "antigravity": "MANUAL",
+        "fixture": "FIXTURE"
+      },
+      "status": "CANDIDATE",
+      "description": "Existing Forge candidate: frontend"
+    },
+    {
+      "id": "kirion-integrator",
+      "kind": "skill",
+      "source": {
+        "repository_id": 1377058358,
+        "repository_name": "Kirjane/Operation-FORGE.kirion",
+        "commit_sha": "3bcdf5b036b2aa30e659f3341000b8f168765896",
+        "path": ".agents/skills/kirion-integrator/SKILL.md",
+        "blob_sha": "b94ce28ff46681bd24e60240c5a32502154b5524",
+        "bytes": 892,
+        "sha256": "6ac3ed12abb3189763d31510d5daccf242c62e4fd27148535042baa952d8e922"
+      },
+      "dependencies": [],
+      "hosts": {
+        "chatgpt": "MANUAL",
+        "codex": "MANUAL",
+        "antigravity": "MANUAL",
+        "fixture": "FIXTURE"
+      },
+      "status": "CANDIDATE",
+      "description": "Existing Forge candidate: integrator"
+    },
+    {
+      "id": "kirion-qa",
+      "kind": "skill",
+      "source": {
+        "repository_id": 1377058358,
+        "repository_name": "Kirjane/Operation-FORGE.kirion",
+        "commit_sha": "3bcdf5b036b2aa30e659f3341000b8f168765896",
+        "path": ".agents/skills/kirion-qa/SKILL.md",
+        "blob_sha": "37ce76213345b1cbb396539441261699825d1dba",
+        "bytes": 1499,
+        "sha256": "ed076777bca3477d432ce5ad80d5965bb5984da0b855e525dba455cd78c9e29f"
+      },
+      "dependencies": [],
+      "hosts": {
+        "chatgpt": "MANUAL",
+        "codex": "MANUAL",
+        "antigravity": "MANUAL",
+        "fixture": "FIXTURE"
+      },
+      "status": "CANDIDATE",
+      "description": "Existing Forge candidate: qa"
+    },
+    {
+      "id": "kirion-review",
+      "kind": "skill",
+      "source": {
+        "repository_id": 1377058358,
+        "repository_name": "Kirjane/Operation-FORGE.kirion",
+        "commit_sha": "3bcdf5b036b2aa30e659f3341000b8f168765896",
+        "path": ".agents/skills/kirion-review/SKILL.md",
+        "blob_sha": "f2cb9bbbf6abdce2538a639e227cf627785286ae",
+        "bytes": 912,
+        "sha256": "3320b1f6a1623b3d6cc5e349c02392719075a42724c5caf960d0745ec4c45409"
+      },
+      "dependencies": [],
+      "hosts": {
+        "chatgpt": "MANUAL",
+        "codex": "MANUAL",
+        "antigravity": "MANUAL",
+        "fixture": "FIXTURE"
+      },
+      "status": "CANDIDATE",
+      "description": "Existing Forge candidate: review"
+    },
+    {
+      "id": "kirion-runtime",
+      "kind": "skill",
+      "source": {
+        "repository_id": 1377058358,
+        "repository_name": "Kirjane/Operation-FORGE.kirion",
+        "commit_sha": "3bcdf5b036b2aa30e659f3341000b8f168765896",
+        "path": ".agents/skills/kirion-runtime/SKILL.md",
+        "blob_sha": "a45ed5cfaaac8711b7d3a9aee5cc97b861434a5d",
+        "bytes": 917,
+        "sha256": "417560bb03c23200f62742650244abf1dec4b7be380ea35ad7cbcf8c05efc937"
+      },
+      "dependencies": [],
+      "hosts": {
+        "chatgpt": "MANUAL",
+        "codex": "MANUAL",
+        "antigravity": "MANUAL",
+        "fixture": "FIXTURE"
+      },
+      "status": "CANDIDATE",
+      "description": "Existing Forge candidate: runtime"
+    },
+    {
+      "id": "kirion-security",
+      "kind": "skill",
+      "source": {
+        "repository_id": 1377058358,
+        "repository_name": "Kirjane/Operation-FORGE.kirion",
+        "commit_sha": "3bcdf5b036b2aa30e659f3341000b8f168765896",
+        "path": ".agents/skills/kirion-security/SKILL.md",
+        "blob_sha": "7e1340c6df35ad246ae6f4ae60476d97a57ef029",
+        "bytes": 936,
+        "sha256": "f0ce1523057b69916172cfe325abc3977ae50edc52f29db74d59e6b9cc128371"
+      },
+      "dependencies": [],
+      "hosts": {
+        "chatgpt": "MANUAL",
+        "codex": "MANUAL",
+        "antigravity": "MANUAL",
+        "fixture": "FIXTURE"
+      },
+      "status": "CANDIDATE",
+      "description": "Existing Forge candidate: security"
+    },
+    {
+      "id": "kirion-session-host",
+      "kind": "skill",
+      "source": {
+        "repository_id": 1377058358,
+        "repository_name": "Kirjane/Operation-FORGE.kirion",
+        "commit_sha": "3bcdf5b036b2aa30e659f3341000b8f168765896",
+        "path": ".agents/skills/kirion-session-host/SKILL.md",
+        "blob_sha": "0c37a217ecd88b8b94e02b9dce683611b34ac528",
+        "bytes": 1708,
+        "sha256": "ce25178976b04c8f2f89988bdb538d1b75c4eea03f00c6725fd1c7d37d2eb8dd"
+      },
+      "dependencies": [],
+      "hosts": {
+        "chatgpt": "MANUAL",
+        "codex": "MANUAL",
+        "antigravity": "MANUAL",
+        "fixture": "FIXTURE"
+      },
+      "status": "CANDIDATE",
+      "description": "Existing Forge candidate: session host"
+    },
+    {
+      "id": "kirion-skill-smith",
+      "kind": "skill",
+      "source": {
+        "repository_id": 1377058358,
+        "repository_name": "Kirjane/Operation-FORGE.kirion",
+        "commit_sha": "3bcdf5b036b2aa30e659f3341000b8f168765896",
+        "path": ".agents/skills/kirion-skill-smith/SKILL.md",
+        "blob_sha": "d0e0e05ed52748e6b718e4d346d5776faad22b06",
+        "bytes": 1179,
+        "sha256": "0662a7233401ef0f5102f5483a5ef2b60011dde37ed3b3be1c24e98d296d476b"
+      },
+      "dependencies": [],
+      "hosts": {
+        "chatgpt": "MANUAL",
+        "codex": "MANUAL",
+        "antigravity": "MANUAL",
+        "fixture": "FIXTURE"
+      },
+      "status": "CANDIDATE",
+      "description": "Existing Forge candidate: skill smith"
+    },
+    {
+      "id": "kirion-worker",
+      "kind": "skill",
+      "source": {
+        "repository_id": 1377058358,
+        "repository_name": "Kirjane/Operation-FORGE.kirion",
+        "commit_sha": "3bcdf5b036b2aa30e659f3341000b8f168765896",
+        "path": ".agents/skills/kirion-worker/SKILL.md",
+        "blob_sha": "af8f21c82a6e6a065f73d9d36ec22483b3351eab",
+        "bytes": 3215,
+        "sha256": "4c2c16337e9fa2483e8ffbfcfa877a42a25c0559af14e30ae95a213eb5eafce6"
+      },
+      "dependencies": [],
+      "hosts": {
+        "chatgpt": "MANUAL",
+        "codex": "MANUAL",
+        "antigravity": "MANUAL",
+        "fixture": "FIXTURE"
+      },
+      "status": "CANDIDATE",
+      "description": "Existing Forge candidate: worker"
+    },
+    {
+      "id": "kirion-api",
+      "kind": "skill",
+      "source": {
+        "repository_id": 1377058358,
+        "repository_name": "Kirjane/Operation-FORGE.kirion",
+        "commit_sha": "3bcdf5b036b2aa30e659f3341000b8f168765896",
+        "path": "integrations/antigravity/plugins/kirion-forge/skills/kirion-api/SKILL.md",
+        "blob_sha": "e18fc724b0c8c43e76f7ae92f6ad9175e8539198",
+        "bytes": 1863,
+        "sha256": "a96e16dcc2bae91ec477f463272d053e3c93c3f137146e156595c3fcb0f54a98"
+      },
+      "dependencies": [],
+      "hosts": {
+        "chatgpt": "MANUAL",
+        "codex": "MANUAL",
+        "antigravity": "MANUAL",
+        "fixture": "FIXTURE"
+      },
+      "status": "CANDIDATE",
+      "description": "Existing Forge candidate: api"
+    },
+    {
+      "id": "kirion-aspnet",
+      "kind": "skill",
+      "source": {
+        "repository_id": 1377058358,
+        "repository_name": "Kirjane/Operation-FORGE.kirion",
+        "commit_sha": "3bcdf5b036b2aa30e659f3341000b8f168765896",
+        "path": "integrations/antigravity/plugins/kirion-forge/skills/kirion-aspnet/SKILL.md",
+        "blob_sha": "dea5e9cc3132b28fc8019691a1e6ca9ca38643be",
+        "bytes": 2657,
+        "sha256": "416cc35eaaae4e9cbf9ea787fae42dca7fd9448f16aa4f2679fab6d4b593e01d"
+      },
+      "dependencies": [
+        "kirion-csharp"
+      ],
+      "hosts": {
+        "chatgpt": "MANUAL",
+        "codex": "MANUAL",
+        "antigravity": "MANUAL",
+        "fixture": "FIXTURE"
+      },
+      "status": "CANDIDATE",
+      "description": "Existing Forge candidate: aspnet"
+    },
+    {
+      "id": "kirion-concurrency",
+      "kind": "skill",
+      "source": {
+        "repository_id": 1377058358,
+        "repository_name": "Kirjane/Operation-FORGE.kirion",
+        "commit_sha": "3bcdf5b036b2aa30e659f3341000b8f168765896",
+        "path": "integrations/antigravity/plugins/kirion-forge/skills/kirion-concurrency/SKILL.md",
+        "blob_sha": "3421d0a8f560a7243e2d88449e22f8725c77fe51",
+        "bytes": 2548,
+        "sha256": "41a0e14b6c1ed65a5a1b073a3ebceccb9d4de2486e415251b49db87303c50125"
+      },
+      "dependencies": [],
+      "hosts": {
+        "chatgpt": "MANUAL",
+        "codex": "MANUAL",
+        "antigravity": "MANUAL",
+        "fixture": "FIXTURE"
+      },
+      "status": "CANDIDATE",
+      "description": "Existing Forge candidate: concurrency"
+    },
+    {
+      "id": "kirion-csharp",
+      "kind": "skill",
+      "source": {
+        "repository_id": 1377058358,
+        "repository_name": "Kirjane/Operation-FORGE.kirion",
+        "commit_sha": "3bcdf5b036b2aa30e659f3341000b8f168765896",
+        "path": "integrations/antigravity/plugins/kirion-forge/skills/kirion-csharp/SKILL.md",
+        "blob_sha": "303ad0b1372ab933e34e13ad624c61f56d55f119",
+        "bytes": 2483,
+        "sha256": "3d58a4b31a886573e8fbbc0b8ab8757e42eb2c135855226d0f6282a768c1e37d"
+      },
+      "dependencies": [],
+      "hosts": {
+        "chatgpt": "MANUAL",
+        "codex": "MANUAL",
+        "antigravity": "MANUAL",
+        "fixture": "FIXTURE"
+      },
+      "status": "CANDIDATE",
+      "description": "Existing Forge candidate: csharp"
+    },
+    {
+      "id": "kirion-database",
+      "kind": "skill",
+      "source": {
+        "repository_id": 1377058358,
+        "repository_name": "Kirjane/Operation-FORGE.kirion",
+        "commit_sha": "3bcdf5b036b2aa30e659f3341000b8f168765896",
+        "path": "integrations/antigravity/plugins/kirion-forge/skills/kirion-database/SKILL.md",
+        "blob_sha": "393d4ce84c94562d5b93182eaa485f0a58c6b55a",
+        "bytes": 2298,
+        "sha256": "605ad6b18b5b79decf86a6e520610471945c99f6af946f2ce8f8f227ac4ea3ca"
+      },
+      "dependencies": [],
+      "hosts": {
+        "chatgpt": "MANUAL",
+        "codex": "MANUAL",
+        "antigravity": "MANUAL",
+        "fixture": "FIXTURE"
+      },
+      "status": "CANDIDATE",
+      "description": "Existing Forge candidate: database"
+    },
+    {
+      "id": "kirion-design-engineering",
+      "kind": "skill",
+      "source": {
+        "repository_id": 1377058358,
+        "repository_name": "Kirjane/Operation-FORGE.kirion",
+        "commit_sha": "3bcdf5b036b2aa30e659f3341000b8f168765896",
+        "path": "integrations/antigravity/plugins/kirion-forge/skills/kirion-design-engineering/SKILL.md",
+        "blob_sha": "b216315ea944256eb0276418acafceb027e7d0a8",
+        "bytes": 2413,
+        "sha256": "d40637515d5b229a02b4382dd0e646ae94b39d440d30a7c6ab92ba9cf806e93e"
+      },
+      "dependencies": [
+        "kirion-frontend"
+      ],
+      "hosts": {
+        "chatgpt": "MANUAL",
+        "codex": "MANUAL",
+        "antigravity": "MANUAL",
+        "fixture": "FIXTURE"
+      },
+      "status": "CANDIDATE",
+      "description": "Existing Forge candidate: design engineering"
+    },
+    {
+      "id": "kirion-devsecops",
+      "kind": "skill",
+      "source": {
+        "repository_id": 1377058358,
+        "repository_name": "Kirjane/Operation-FORGE.kirion",
+        "commit_sha": "3bcdf5b036b2aa30e659f3341000b8f168765896",
+        "path": "integrations/antigravity/plugins/kirion-forge/skills/kirion-devsecops/SKILL.md",
+        "blob_sha": "9c2810d085f889c885a5a8199ead2b930c3c3f0c",
+        "bytes": 2247,
+        "sha256": "5e6ee80ae78b864fef97c9e39853cd1afd8767ea392c3f03581fa46077775068"
+      },
+      "dependencies": [],
+      "hosts": {
+        "chatgpt": "MANUAL",
+        "codex": "MANUAL",
+        "antigravity": "MANUAL",
+        "fixture": "FIXTURE"
+      },
+      "status": "CANDIDATE",
+      "description": "Existing Forge candidate: devsecops"
+    },
+    {
+      "id": "kirion-efcore",
+      "kind": "skill",
+      "source": {
+        "repository_id": 1377058358,
+        "repository_name": "Kirjane/Operation-FORGE.kirion",
+        "commit_sha": "3bcdf5b036b2aa30e659f3341000b8f168765896",
+        "path": "integrations/antigravity/plugins/kirion-forge/skills/kirion-efcore/SKILL.md",
+        "blob_sha": "f7cca3971f3b589af6a7b36126602d80fc382607",
+        "bytes": 2336,
+        "sha256": "0dfeeda94e40935b0d58252556ee4ee642634db36c78aa2509066acacfa59627"
+      },
+      "dependencies": [
+        "kirion-csharp",
+        "kirion-aspnet"
+      ],
+      "hosts": {
+        "chatgpt": "MANUAL",
+        "codex": "MANUAL",
+        "antigravity": "MANUAL",
+        "fixture": "FIXTURE"
+      },
+      "status": "CANDIDATE",
+      "description": "Existing Forge candidate: efcore"
+    },
+    {
+      "id": "kirion-eloquent",
+      "kind": "skill",
+      "source": {
+        "repository_id": 1377058358,
+        "repository_name": "Kirjane/Operation-FORGE.kirion",
+        "commit_sha": "3bcdf5b036b2aa30e659f3341000b8f168765896",
+        "path": "integrations/antigravity/plugins/kirion-forge/skills/kirion-eloquent/SKILL.md",
+        "blob_sha": "2987fa37406d6b35070b1d40b532d715102fcfe3",
+        "bytes": 2615,
+        "sha256": "05cc6589665cbf220bda97c7ebfa1a98f955dcfd8101542336986988fa1d219f"
+      },
+      "dependencies": [
+        "kirion-php",
+        "kirion-laravel"
+      ],
+      "hosts": {
+        "chatgpt": "MANUAL",
+        "codex": "MANUAL",
+        "antigravity": "MANUAL",
+        "fixture": "FIXTURE"
+      },
+      "status": "CANDIDATE",
+      "description": "Existing Forge candidate: eloquent"
+    },
+    {
+      "id": "kirion-laravel-runtime",
+      "kind": "skill",
+      "source": {
+        "repository_id": 1377058358,
+        "repository_name": "Kirjane/Operation-FORGE.kirion",
+        "commit_sha": "3bcdf5b036b2aa30e659f3341000b8f168765896",
+        "path": "integrations/antigravity/plugins/kirion-forge/skills/kirion-laravel-runtime/SKILL.md",
+        "blob_sha": "9ee9c594d78fbcf9dba30442d8104b1eda818cdd",
+        "bytes": 2438,
+        "sha256": "a0edb6966c74dcb6026c253085cbc2e4d0c557870b8bdc32ec6cc72c1487bd1b"
+      },
+      "dependencies": [
+        "kirion-laravel"
+      ],
+      "hosts": {
+        "chatgpt": "MANUAL",
+        "codex": "MANUAL",
+        "antigravity": "MANUAL",
+        "fixture": "FIXTURE"
+      },
+      "status": "CANDIDATE",
+      "description": "Existing Forge candidate: laravel runtime"
+    },
+    {
+      "id": "kirion-laravel-security",
+      "kind": "skill",
+      "source": {
+        "repository_id": 1377058358,
+        "repository_name": "Kirjane/Operation-FORGE.kirion",
+        "commit_sha": "3bcdf5b036b2aa30e659f3341000b8f168765896",
+        "path": "integrations/antigravity/plugins/kirion-forge/skills/kirion-laravel-security/SKILL.md",
+        "blob_sha": "6a130944fc3141795e85923419a71233ef73b81d",
+        "bytes": 2678,
+        "sha256": "a3cfbf31f202249a1ed17779f9a96f02dfffac1031248c541f3003d5f286c453"
+      },
+      "dependencies": [
+        "kirion-laravel"
+      ],
+      "hosts": {
+        "chatgpt": "MANUAL",
+        "codex": "MANUAL",
+        "antigravity": "MANUAL",
+        "fixture": "FIXTURE"
+      },
+      "status": "CANDIDATE",
+      "description": "Existing Forge candidate: laravel security"
+    },
+    {
+      "id": "kirion-laravel",
+      "kind": "skill",
+      "source": {
+        "repository_id": 1377058358,
+        "repository_name": "Kirjane/Operation-FORGE.kirion",
+        "commit_sha": "3bcdf5b036b2aa30e659f3341000b8f168765896",
+        "path": "integrations/antigravity/plugins/kirion-forge/skills/kirion-laravel/SKILL.md",
+        "blob_sha": "29911e44652c9cca09ae714f9af46e09e7115280",
+        "bytes": 2897,
+        "sha256": "f9c2e25dffa04a8b7f4d9fcd28a4b41d2b4051414a8abe85a8e668c64d55c9db"
+      },
+      "dependencies": [
+        "kirion-php"
+      ],
+      "hosts": {
+        "chatgpt": "MANUAL",
+        "codex": "MANUAL",
+        "antigravity": "MANUAL",
+        "fixture": "FIXTURE"
+      },
+      "status": "CANDIDATE",
+      "description": "Existing Forge candidate: laravel"
+    },
+    {
+      "id": "kirion-observability",
+      "kind": "skill",
+      "source": {
+        "repository_id": 1377058358,
+        "repository_name": "Kirjane/Operation-FORGE.kirion",
+        "commit_sha": "3bcdf5b036b2aa30e659f3341000b8f168765896",
+        "path": "integrations/antigravity/plugins/kirion-forge/skills/kirion-observability/SKILL.md",
+        "blob_sha": "afacefbe52bb8c7167fbcafc44f3dd9d355dd085",
+        "bytes": 1926,
+        "sha256": "1b1e73ed25d126ad0464948a75a0d6b900fd08691ac0335e947f0e9f8c50055b"
+      },
+      "dependencies": [],
+      "hosts": {
+        "chatgpt": "MANUAL",
+        "codex": "MANUAL",
+        "antigravity": "MANUAL",
+        "fixture": "FIXTURE"
+      },
+      "status": "CANDIDATE",
+      "description": "Existing Forge candidate: observability"
+    },
+    {
+      "id": "kirion-performance",
+      "kind": "skill",
+      "source": {
+        "repository_id": 1377058358,
+        "repository_name": "Kirjane/Operation-FORGE.kirion",
+        "commit_sha": "3bcdf5b036b2aa30e659f3341000b8f168765896",
+        "path": "integrations/antigravity/plugins/kirion-forge/skills/kirion-performance/SKILL.md",
+        "blob_sha": "8451cf5efa419ad482f5961b0dace6f75d84d9da",
+        "bytes": 1751,
+        "sha256": "d94162b7ce014693809b258fae8cb7cd041de497cc226dd7d9fa42211f4da2a1"
+      },
+      "dependencies": [],
+      "hosts": {
+        "chatgpt": "MANUAL",
+        "codex": "MANUAL",
+        "antigravity": "MANUAL",
+        "fixture": "FIXTURE"
+      },
+      "status": "CANDIDATE",
+      "description": "Existing Forge candidate: performance"
+    },
+    {
+      "id": "kirion-php",
+      "kind": "skill",
+      "source": {
+        "repository_id": 1377058358,
+        "repository_name": "Kirjane/Operation-FORGE.kirion",
+        "commit_sha": "3bcdf5b036b2aa30e659f3341000b8f168765896",
+        "path": "integrations/antigravity/plugins/kirion-forge/skills/kirion-php/SKILL.md",
+        "blob_sha": "b88a2fb0a5eca6668a85b38be3cd26bfca3d5fcc",
+        "bytes": 2860,
+        "sha256": "2fcc47a7998a0f93343a71babbcb4a47afd254b363d4739957b4123467b2a860"
+      },
+      "dependencies": [],
+      "hosts": {
+        "chatgpt": "MANUAL",
+        "codex": "MANUAL",
+        "antigravity": "MANUAL",
+        "fixture": "FIXTURE"
+      },
+      "status": "CANDIDATE",
+      "description": "Existing Forge candidate: php"
+    },
+    {
+      "id": "kirion-test-engineering",
+      "kind": "skill",
+      "source": {
+        "repository_id": 1377058358,
+        "repository_name": "Kirjane/Operation-FORGE.kirion",
+        "commit_sha": "3bcdf5b036b2aa30e659f3341000b8f168765896",
+        "path": "integrations/antigravity/plugins/kirion-forge/skills/kirion-test-engineering/SKILL.md",
+        "blob_sha": "79e5a1cadc7c00d36d07939b9a364e6befbc4292",
+        "bytes": 2016,
+        "sha256": "2e14025ef0848e5ee509f5f932750fa87f31c0c5b14918330833a170e53eb0b7"
+      },
+      "dependencies": [],
+      "hosts": {
+        "chatgpt": "MANUAL",
+        "codex": "MANUAL",
+        "antigravity": "MANUAL",
+        "fixture": "FIXTURE"
+      },
+      "status": "CANDIDATE",
+      "description": "Existing Forge candidate: test engineering"
+    }
+  ],
+  "stage_optional": {
+    "PRE_DESIGN": [
+      "kirion-architecture"
+    ],
+    "PRE_IMPLEMENTATION": [
+      "kirion-worker"
+    ],
+    "PRE_DELIVERY": [
+      "kirion-evidence"
+    ],
+    "POST_DEPLOY": [
+      "kirion-runtime"
+    ]
+  },
+  "task_optional": {
+    "debug": [
+      "kirion-debug"
+    ],
+    "security": [
+      "kirion-security"
+    ],
+    "test": [
+      "kirion-qa"
+    ],
+    "performance": [
+      "kirion-performance"
+    ],
+    "api": [
+      "kirion-api"
+    ],
+    "data": [
+      "kirion-database"
+    ],
+    "documentation": [
+      "kirion-cognition"
+    ],
+    "integration": [
+      "kirion-integrator"
+    ],
+    "general": []
+  },
+  "source_policy": {
+    "origin": "existing-repository-candidates",
+    "external_import": "NOT_AUTHORIZED",
+    "license_status": "NO_NEW_EXTERNAL_CODE_IMPORTED",
+    "host_adoption": "NOT_ADOPTED"
+  }
 }

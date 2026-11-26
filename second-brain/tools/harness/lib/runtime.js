@@ -63,9 +63,9 @@ function bootstrapTask(taskInput,options={}){
   }
   return report;
 }
-function evaluateTask(taskInput,evidence,options={}){const run=buildTask(taskInput,options),ctx=run.gateCtx,throughStage=options.throughStage||'PRE_DELIVERY';return {...evaluateGates(run.cfg.gates,ctx,evidence||{version:1,claims:{}},{throughStage}),run:computeRun(run)};}
+function evaluateTask(taskInput,evidence,options={}){const throughStage=options.throughStage||'PRE_DELIVERY',run=buildTask(taskInput,{...options,stage:throughStage}),ctx=run.gateCtx;return {...evaluateGates(run.cfg.gates,ctx,evidence||{version:1,claims:{}},{throughStage}),run:computeRun(run)};}
 function intake(input,options={}){const task=intakeTask(input),run=buildTask(task,options);return {task,classification:run.classification,signals:run.signals,risk:run.risk,route:run.route,gates:run.gates,semantic_provider:run.context.provider||null,stop:run.gates.verdict==='BLOCK'||run.classification.status!=='RESOLVED'};}
-function learningCandidate(taskInput,evidence,options={}){const run=buildTask(taskInput,options),gateEvaluation=evaluateGates(run.cfg.gates,run.gateCtx,evidence||{version:1,claims:{}},{throughStage:options.throughStage||'POST_VERIFY'});return createLearningCandidate({task:run.task,evidence,failureClaim:options.failureClaim,gateEvaluation,proposal:options.proposal||null,scope:options.scope||'HARNESS',confidence:options.confidence||'MEDIUM'});}
+function learningCandidate(taskInput,evidence,options={}){const run=buildTask(taskInput,{...options,stage:options.throughStage||'POST_VERIFY'}),gateEvaluation=evaluateGates(run.cfg.gates,run.gateCtx,evidence||{version:1,claims:{}},{throughStage:options.throughStage||'POST_VERIFY'});return createLearningCandidate({task:run.task,evidence,failureClaim:options.failureClaim,gateEvaluation,proposal:options.proposal||null,scope:options.scope||'HARNESS',confidence:options.confidence||'MEDIUM'});}
 function doctor(root=repoRoot(),options={}){
   const cfg=loadConfig(root),errors=[],warnings=[],map=laneMap(cfg.lanes),signalNames=new Set(Object.keys(SIGNAL_KEYWORDS)),typeIds=cfg.taskTypes.types.map(x=>x.id),typeSet=new Set(typeIds),lanePaths=new Set();
   if(map.size!==23) errors.push(`Expected 23 semantic lanes, found ${map.size}.`); if(typeSet.size!==typeIds.length) errors.push('Duplicate task type id detected.');

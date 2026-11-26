@@ -8,6 +8,7 @@ import shutil
 import sqlite3
 import subprocess
 from pathlib import Path
+from contextlib import contextmanager
 from typing import Any
 
 from .authority import AuthorityError, is_valid_git_sha
@@ -284,6 +285,38 @@ class LeaseManager:
         finally:
             conn.close()
 
+    @contextmanager
+    def hold_owned_paths(self, packet, worker_id, acquired, paths):
+        """Fence cooperating lease users for one bounded local operation.
+
+        This lock is not an OS sandbox or a native host authorization.
+        A stale lease or a path outside the declared ownership never enters.
+        """
+        assert_paths_within_ownership(packet, paths)
+        expected = {item["lease_id"]: item["version"] for item in acquired}
+        conn = self._connect()
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+            now = dt.datetime.now(dt.timezone.utc).timestamp()
+            rows = conn.execute(
+                "SELECT * FROM leases WHERE repo_name=? AND mission_id=? AND worker_id=?",
+                (packet["repo_name"], packet["mission_id"], worker_id)).fetchall()
+            active = [row for row in rows if row["released"] == 0 and row["expires_at_epoch"] > now
+                      and expected.get(row["lease_id"]) == row["version"]]
+            if not expected or set(expected) != {row["lease_id"] for row in active}:
+                raise LeaseConflictError("Missing, stale or expired ownership lease.")
+            if not all(any(row["target_kind"] == "PATH" and path_matches_prefix(path, row["target_value"])
+                           for row in active) for path in paths):
+                raise LeaseConflictError("Operation lacks a current path lease.")
+            yield
+            conn.execute("COMMIT")
+        except BaseException:
+            if conn.in_transaction:
+                conn.execute("ROLLBACK")
+            raise
+        finally:
+            conn.close()
+
     def heartbeat(
         self,
         lease_id: str,
@@ -343,6 +376,7 @@ class WorktreeSandbox:
         self.source_repo = source_repo.resolve()
         self.sandbox_root = sandbox_root.resolve()
         self.sandbox_root.mkdir(parents=True, exist_ok=True)
+        self._created_worktrees: dict[Path, tuple[str, str]] = {}
 
     def create_worktree(self, branch_name: str, base_sha: str, worktree_name: str) -> Path:
         if not is_valid_git_sha(base_sha):
@@ -365,13 +399,16 @@ class WorktreeSandbox:
         if wt_path == self.sandbox_root:
             raise PolicyViolationError("worktree_name cannot resolve to sandbox_root itself.")
 
-        if wt_path.exists():
-            subprocess.run(["git", "worktree", "remove", "--force", str(wt_path)], cwd=self.source_repo, capture_output=True)
-            if wt_path.exists():
-                shutil.rmtree(wt_path, ignore_errors=True)
+        if wt_path.exists() or (self.sandbox_root / worktree_name).is_symlink():
+            raise PolicyViolationError("Existing worktree path requires explicit reconciliation; refusing replacement.")
 
+        existing_ref = subprocess.run(["git", "show-ref", "--verify", "--hash", "refs/heads/" + branch_name],
+                                      cwd=self.source_repo, capture_output=True, text=True, env=sanitize_worker_env())
+        if existing_ref.returncode == 0 and existing_ref.stdout.strip() != base_sha:
+            raise PolicyViolationError("Existing branch does not equal authorized base; refusing reset.")
+        branch_args = [str(wt_path), branch_name] if existing_ref.returncode == 0 else ["-b", branch_name, str(wt_path), base_sha]
         p = subprocess.run(
-            ["git", "worktree", "add", "-B", branch_name, str(wt_path), base_sha],
+            ["git", "-c", "core.autocrlf=false", "worktree", "add", *branch_args],
             cwd=self.source_repo,
             capture_output=True,
             text=True,
@@ -380,7 +417,7 @@ class WorktreeSandbox:
         if p.returncode != 0:
             raise AuthorityError(f"git worktree add failed: {p.stderr.strip()}")
 
-        subprocess.run(["git", "config", "core.autocrlf", "false"], cwd=wt_path, capture_output=True, check=False)
+        self._created_worktrees[wt_path] = (branch_name, base_sha)
         return wt_path
 
     def inspect_and_validate_worktree(
@@ -394,6 +431,32 @@ class WorktreeSandbox:
         if not is_valid_git_sha(base_sha):
             raise AuthorityError(f"Invalid or all-zero base_sha forbidden in inspect_and_validate_worktree: {base_sha!r}")
 
+        if wt_path.is_symlink() or wt_path.resolve().parent != self.sandbox_root or wt_path.resolve() not in self._created_worktrees:
+            raise PolicyViolationError("Worktree was not created by this sandbox instance.")
+        branch, original_base = self._created_worktrees[wt_path.resolve()]
+        if packet.get("schema_version") == 2 and (packet["base_sha"] != base_sha or original_base != base_sha
+                                                   or packet["permitted_branch"] != branch):
+            raise PolicyViolationError("Contract target does not bind the created worktree.")
+        for args, expected in ((["rev-parse", "--show-toplevel"], str(wt_path.resolve())),
+                               (["symbolic-ref", "--short", "HEAD"], branch)):
+            observed = subprocess.run(["git", *args], cwd=wt_path, capture_output=True, text=True,
+                                      env=sanitize_worker_env())
+            if observed.returncode or (Path(observed.stdout.strip()).resolve() != wt_path.resolve()
+                                      if args[0] == "rev-parse" else observed.stdout.strip() != expected):
+                raise PolicyViolationError("Observed worktree root or branch drift.")
+        def common_dir(root):
+            observed = subprocess.run(["git", "rev-parse", "--git-common-dir"], cwd=root,
+                                      capture_output=True, text=True, env=sanitize_worker_env())
+            if observed.returncode:
+                raise PolicyViolationError("Cannot establish Git common directory.")
+            return (root / observed.stdout.strip()).resolve()
+        if common_dir(wt_path) != common_dir(self.source_repo):
+            raise PolicyViolationError("Worktree is not registered to the authorized source repository.")
+        if packet.get("schema_version") == 2:
+            ancestry = subprocess.run(["git", "merge-base", "--is-ancestor", base_sha, "HEAD"],
+                                      cwd=wt_path, capture_output=True, env=sanitize_worker_env())
+            if ancestry.returncode:
+                raise PolicyViolationError("Observed worktree does not descend from the contract base.")
         for item in wt_path.rglob("*"):
             rel_parts = item.relative_to(wt_path).parts
             if rel_parts and rel_parts[0] == ".git":
@@ -427,7 +490,7 @@ class WorktreeSandbox:
             )
 
         untracked_p = subprocess.run(
-            ["git", "-c", "core.quotepath=false", "ls-files", "--others", "--exclude-standard", "-z"],
+            ["git", "-c", "core.quotepath=false", "ls-files", "--others", "-z"],
             cwd=wt_path,
             capture_output=True,
             text=True,
@@ -453,6 +516,15 @@ class WorktreeSandbox:
         return changed
 
     def remove_worktree(self, wt_path: Path) -> None:
-        subprocess.run(["git", "worktree", "remove", "--force", str(wt_path)], cwd=self.source_repo, capture_output=True)
-        if wt_path.exists():
-            shutil.rmtree(wt_path, ignore_errors=True)
+        target = wt_path.resolve()
+        if wt_path.is_symlink() or target.parent != self.sandbox_root or target == self.source_repo:
+            raise PolicyViolationError("Refusing removal outside a direct sandbox worktree.")
+        if target not in self._created_worktrees:
+            raise PolicyViolationError("Refusing removal of a worktree not created by this sandbox instance.")
+        # Explicit cleanup retains the historical disposal operation, confined
+        # to worktrees this instance created. No fallback recursive deletion.
+        result = subprocess.run(["git", "worktree", "remove", "--force", str(target)], cwd=self.source_repo,
+                                capture_output=True, text=True, env=sanitize_worker_env())
+        if result.returncode:
+            raise PolicyViolationError("Worktree removal denied; reconcile unregistered state first.")
+        del self._created_worktrees[target]

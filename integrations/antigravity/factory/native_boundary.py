@@ -48,8 +48,9 @@ class FixtureNativeBoundary:
     """Operator/test composition only. Never instantiate from a host workflow.
 
     No native agent, arbitrary executable, callback adapter or delivery transport.
-    Generic skill loading remains owned by the dispatcher; no skill consumption
-    is asserted here. Combined integration must wire a trusted loader.
+    A configured scoped adapter combines the generic loader, actor observation
+    and fixed effect. Historical fixture adapters without loading remain
+    nonpromotable and cannot authorize frontend writes.
     """
 
     def __init__(self, journal, adapter, *, assurance=None):

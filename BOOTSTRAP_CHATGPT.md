@@ -49,3 +49,5 @@ Do not read the full repository by default. Load:
 4. only the doctrine/protocol/subsystem needed for the next decision.
 
 For implementation efficiency, see [Decision Surface Compression](doctrine/decision-surface-compression.md).
+
+For a supervised exact-SHA handoff when native execution is unavailable, use [supervised engineering](arsenal/adapters/chatgpt/SUPERVISED_ENGINEERING.md). Do not infer host control or skill consumption from retrieved text.

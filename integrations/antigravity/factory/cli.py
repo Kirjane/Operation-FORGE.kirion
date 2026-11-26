@@ -56,10 +56,45 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="KIRION Forge Antigravity Software Factory CLI")
     parser.add_argument(
         "command",
-        choices=["verify-plugin", "status", "test"],
+        choices=["verify-plugin", "status", "test", "supervised-handoff", "inspect-candidate"],
         help="Factory command to execute",
     )
+    parser.add_argument("--packet", type=Path)
+    parser.add_argument("--context-config", type=Path)
+    parser.add_argument("--source-root", type=Path, default=REPO_ROOT)
+    parser.add_argument("--target-root", type=Path)
+    parser.add_argument("--candidate-sha")
+    parser.add_argument("--workflow", default="feature_delivery")
     args = parser.parse_args(argv)
+    if args.command in {"supervised-handoff", "inspect-candidate"}:
+        from .authority import AuthorityError
+        from .mission_contract import parse_mission_packet
+        from .skill_registry import PinnedGitSources, SkillRegistry, parse_json
+        from .supervised import (FORGE_REPOSITORY_ID, FORGE_REPOSITORY,
+                                 supervised_handoff, inspect_supervised_candidate)
+        if args.packet is None:
+            parser.error("--packet is required")
+        try:
+            raw = args.packet.read_bytes()
+            if args.command == "supervised-handoff":
+                if args.context_config is None:
+                    parser.error("--context-config is required")
+                packet = parse_mission_packet(raw)
+                sources = PinnedGitSources({FORGE_REPOSITORY_ID: (FORGE_REPOSITORY, args.source_root)})
+                registry = SkillRegistry(sources, repository_id=FORGE_REPOSITORY_ID,
+                    repository_name=FORGE_REPOSITORY, registry_commit=packet["selected_skills"]["skill_source_sha"])
+                result = supervised_handoff(raw, registry, parse_json(args.context_config.read_bytes()),
+                                            workflow=args.workflow)
+            else:
+                if args.target_root is None or args.candidate_sha is None:
+                    parser.error("--target-root and --candidate-sha are required")
+                result = inspect_supervised_candidate(raw, target_root=args.target_root, candidate_sha=args.candidate_sha)
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+            return 0
+        except (AuthorityError, OSError, KeyError, TypeError, ValueError) as exc:
+            print(json.dumps({"status": "BLOCKED", "reason": str(exc),
+                              "native_execution": "UNAVAILABLE", "promotion_authorized": False}))
+            return 1
     if args.command == "verify-plugin":
         return cmd_verify_plugin()
     if args.command == "status":

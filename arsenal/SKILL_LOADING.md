@@ -1,4 +1,4 @@
-# Arsenal W5 loading contract (draft, not adopted)
+# Arsenal skill loading contract (draft, not adopted)
 
 The existing Arsenal manifest is the sole candidate registry. A pinned manifest
 commit identifies a set of candidate entries; it does not activate them. Every
@@ -78,3 +78,7 @@ Python execution. Nox owns the independent native composition and later wiring.
 All ADAPT decisions here are implementation hypotheses, not independent
 adoption or promotion decisions. See issues #19 and #25 and the existing
 Arsenal ADOPTION.md for promotion constraints.
+
+## Convergence
+
+The versioned registry includes exact Lucien skill and standard source pins. The eight-skill limit is separate from at most sixteen reference documents and twenty-four combined selected documents; the cognition document budget may reduce this. Profile/declaration bytes are charged to the context. See [supervised engineering](adapters/chatgpt/SUPERVISED_ENGINEERING.md) for a manual route. Native frontend role activation remains unqualified.

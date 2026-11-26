@@ -15,7 +15,7 @@
   "noAutomaticMerge": true,
   "noAutomaticProjectPolicyAdoption": true,
   "registry_version": 1,
-  "candidate_count": 32,
+  "candidate_count": 47,
   "registry": [
     {
       "id": "kirion-architecture",
@@ -179,11 +179,11 @@
       "source": {
         "repository_id": 1377058358,
         "repository_name": "Kirjane/Operation-FORGE.kirion",
-        "commit_sha": "3bcdf5b036b2aa30e659f3341000b8f168765896",
+        "commit_sha": "91b79a901f91a218c0f6fcde8f1babe1918af3f6",
         "path": ".agents/skills/kirion-frontend/SKILL.md",
-        "blob_sha": "0770185284121d8634b9b2dd9bbb0173a0fb61fe",
-        "bytes": 1379,
-        "sha256": "c64590128466648dbc62e867a22b69b161c9c6ec28d7137dc9212776c8d9bbec"
+        "blob_sha": "67976dc77638272a9e5ea3dce7f41acb928f674a",
+        "bytes": 2148,
+        "sha256": "f59ce7a6d55b7c52a851366ad970457f6610152399f43451ae02dd449d35c9b7"
       },
       "dependencies": [],
       "hosts": {
@@ -489,11 +489,11 @@
       "source": {
         "repository_id": 1377058358,
         "repository_name": "Kirjane/Operation-FORGE.kirion",
-        "commit_sha": "3bcdf5b036b2aa30e659f3341000b8f168765896",
+        "commit_sha": "91b79a901f91a218c0f6fcde8f1babe1918af3f6",
         "path": "integrations/antigravity/plugins/kirion-forge/skills/kirion-design-engineering/SKILL.md",
-        "blob_sha": "b216315ea944256eb0276418acafceb027e7d0a8",
-        "bytes": 2413,
-        "sha256": "d40637515d5b229a02b4382dd0e646ae94b39d440d30a7c6ab92ba9cf806e93e"
+        "blob_sha": "e6d4e500c223ea26f4fa379d279d262ba279b811",
+        "bytes": 3167,
+        "sha256": "84abdc1e10fc57ff6364452fbd072b618bd4acb49f306f5b2411afccdd3654db"
       },
       "dependencies": [
         "kirion-frontend"
@@ -738,6 +738,336 @@
       },
       "status": "CANDIDATE",
       "description": "Existing Forge candidate: test engineering"
+    },
+    {
+      "id": "frontend-standard-readme",
+      "kind": "reference",
+      "source": {
+        "repository_id": 1377058358,
+        "repository_name": "Kirjane/Operation-FORGE.kirion",
+        "commit_sha": "91b79a901f91a218c0f6fcde8f1babe1918af3f6",
+        "path": "standards/frontend/README.md",
+        "blob_sha": "2edbc2ad5279c6bc013ee848651d8c1dc710289e",
+        "bytes": 4504,
+        "sha256": "ea32a86163d8c7f68c8e69a7f5821cfe297595af7451baf1d623809416b0c141"
+      },
+      "dependencies": [],
+      "hosts": {
+        "chatgpt": "MANUAL",
+        "codex": "MANUAL",
+        "antigravity": "MANUAL",
+        "fixture": "FIXTURE"
+      },
+      "status": "CANDIDATE",
+      "description": "Canonical frontend standard reference: standards/frontend/README.md"
+    },
+    {
+      "id": "frontend-standard-design-discovery",
+      "kind": "reference",
+      "source": {
+        "repository_id": 1377058358,
+        "repository_name": "Kirjane/Operation-FORGE.kirion",
+        "commit_sha": "91b79a901f91a218c0f6fcde8f1babe1918af3f6",
+        "path": "standards/frontend/design-discovery.md",
+        "blob_sha": "2dc8a7039d83d26a0156b0fadea9ae4a0cf3b4f0",
+        "bytes": 4550,
+        "sha256": "f6d343c3055a317b1367a3b673a4d194515cdfd667445a9ca0e5fed16246c226"
+      },
+      "dependencies": [],
+      "hosts": {
+        "chatgpt": "MANUAL",
+        "codex": "MANUAL",
+        "antigravity": "MANUAL",
+        "fixture": "FIXTURE"
+      },
+      "status": "CANDIDATE",
+      "description": "Canonical frontend standard reference: standards/frontend/design-discovery.md"
+    },
+    {
+      "id": "frontend-standard-visual-system",
+      "kind": "reference",
+      "source": {
+        "repository_id": 1377058358,
+        "repository_name": "Kirjane/Operation-FORGE.kirion",
+        "commit_sha": "91b79a901f91a218c0f6fcde8f1babe1918af3f6",
+        "path": "standards/frontend/visual-system.md",
+        "blob_sha": "97d49b87c3122344460da7fc5e877c4580ac864b",
+        "bytes": 4182,
+        "sha256": "415d1c28c7694cb9b0163be4d24491c82aa17087b164fe3c9b94248a0ff04bf9"
+      },
+      "dependencies": [],
+      "hosts": {
+        "chatgpt": "MANUAL",
+        "codex": "MANUAL",
+        "antigravity": "MANUAL",
+        "fixture": "FIXTURE"
+      },
+      "status": "CANDIDATE",
+      "description": "Canonical frontend standard reference: standards/frontend/visual-system.md"
+    },
+    {
+      "id": "frontend-standard-interaction-and-motion",
+      "kind": "reference",
+      "source": {
+        "repository_id": 1377058358,
+        "repository_name": "Kirjane/Operation-FORGE.kirion",
+        "commit_sha": "91b79a901f91a218c0f6fcde8f1babe1918af3f6",
+        "path": "standards/frontend/interaction-and-motion.md",
+        "blob_sha": "1f2582a423478b190884245547fb35d680d585fa",
+        "bytes": 3146,
+        "sha256": "407bf23b65a182c07785e4e71c8976406aa70b026b42e382276096f1b36bf8bf"
+      },
+      "dependencies": [],
+      "hosts": {
+        "chatgpt": "MANUAL",
+        "codex": "MANUAL",
+        "antigravity": "MANUAL",
+        "fixture": "FIXTURE"
+      },
+      "status": "CANDIDATE",
+      "description": "Canonical frontend standard reference: standards/frontend/interaction-and-motion.md"
+    },
+    {
+      "id": "frontend-standard-responsive-accessibility",
+      "kind": "reference",
+      "source": {
+        "repository_id": 1377058358,
+        "repository_name": "Kirjane/Operation-FORGE.kirion",
+        "commit_sha": "91b79a901f91a218c0f6fcde8f1babe1918af3f6",
+        "path": "standards/frontend/responsive-accessibility.md",
+        "blob_sha": "53c4efc9482bdc77cc2374d161adaceac4973848",
+        "bytes": 2763,
+        "sha256": "d691969c0b92d9076244346049a59cfba9f051016bca2e1defb8811d66bda707"
+      },
+      "dependencies": [],
+      "hosts": {
+        "chatgpt": "MANUAL",
+        "codex": "MANUAL",
+        "antigravity": "MANUAL",
+        "fixture": "FIXTURE"
+      },
+      "status": "CANDIDATE",
+      "description": "Canonical frontend standard reference: standards/frontend/responsive-accessibility.md"
+    },
+    {
+      "id": "frontend-standard-frontend-architecture",
+      "kind": "reference",
+      "source": {
+        "repository_id": 1377058358,
+        "repository_name": "Kirjane/Operation-FORGE.kirion",
+        "commit_sha": "91b79a901f91a218c0f6fcde8f1babe1918af3f6",
+        "path": "standards/frontend/frontend-architecture.md",
+        "blob_sha": "52de0901aaa9f52145daf74c73ebb0b940cc4f09",
+        "bytes": 4341,
+        "sha256": "71f07f652c3ebac9f3dfc0c673d52d12ba0cc19388d25def9b772fe7e49b0d45"
+      },
+      "dependencies": [],
+      "hosts": {
+        "chatgpt": "MANUAL",
+        "codex": "MANUAL",
+        "antigravity": "MANUAL",
+        "fixture": "FIXTURE"
+      },
+      "status": "CANDIDATE",
+      "description": "Canonical frontend standard reference: standards/frontend/frontend-architecture.md"
+    },
+    {
+      "id": "frontend-standard-implementation-workflow",
+      "kind": "reference",
+      "source": {
+        "repository_id": 1377058358,
+        "repository_name": "Kirjane/Operation-FORGE.kirion",
+        "commit_sha": "91b79a901f91a218c0f6fcde8f1babe1918af3f6",
+        "path": "standards/frontend/implementation-workflow.md",
+        "blob_sha": "8d5672c992eb324251de36f27723e834533da209",
+        "bytes": 2732,
+        "sha256": "1647cd0ca63d8de93318b0802b796f9cd0734e9c15a17e320e77952c6ad333e1"
+      },
+      "dependencies": [],
+      "hosts": {
+        "chatgpt": "MANUAL",
+        "codex": "MANUAL",
+        "antigravity": "MANUAL",
+        "fixture": "FIXTURE"
+      },
+      "status": "CANDIDATE",
+      "description": "Canonical frontend standard reference: standards/frontend/implementation-workflow.md"
+    },
+    {
+      "id": "frontend-standard-product-integration",
+      "kind": "reference",
+      "source": {
+        "repository_id": 1377058358,
+        "repository_name": "Kirjane/Operation-FORGE.kirion",
+        "commit_sha": "91b79a901f91a218c0f6fcde8f1babe1918af3f6",
+        "path": "standards/frontend/product-integration.md",
+        "blob_sha": "a20899753f5dac5c88c606fd20026da0cf8b269c",
+        "bytes": 6091,
+        "sha256": "d839febdb9a647c26ce31c545edd8ea0c7b3c9c06713e1e1239097047808391b"
+      },
+      "dependencies": [],
+      "hosts": {
+        "chatgpt": "MANUAL",
+        "codex": "MANUAL",
+        "antigravity": "MANUAL",
+        "fixture": "FIXTURE"
+      },
+      "status": "CANDIDATE",
+      "description": "Canonical frontend standard reference: standards/frontend/product-integration.md"
+    },
+    {
+      "id": "frontend-standard-acceptance-and-evidence",
+      "kind": "reference",
+      "source": {
+        "repository_id": 1377058358,
+        "repository_name": "Kirjane/Operation-FORGE.kirion",
+        "commit_sha": "91b79a901f91a218c0f6fcde8f1babe1918af3f6",
+        "path": "standards/frontend/acceptance-and-evidence.md",
+        "blob_sha": "1c3468c108af89c60fdfdbc72d7427f90b46ad71",
+        "bytes": 3882,
+        "sha256": "2f9696aab3e04e7a8ac394b4ab419a35813bb4d7fb3e5bd18be11e4b2f091b55"
+      },
+      "dependencies": [],
+      "hosts": {
+        "chatgpt": "MANUAL",
+        "codex": "MANUAL",
+        "antigravity": "MANUAL",
+        "fixture": "FIXTURE"
+      },
+      "status": "CANDIDATE",
+      "description": "Canonical frontend standard reference: standards/frontend/acceptance-and-evidence.md"
+    },
+    {
+      "id": "frontend-standard-patterns-catalog",
+      "kind": "reference",
+      "source": {
+        "repository_id": 1377058358,
+        "repository_name": "Kirjane/Operation-FORGE.kirion",
+        "commit_sha": "91b79a901f91a218c0f6fcde8f1babe1918af3f6",
+        "path": "standards/frontend/patterns/catalog.md",
+        "blob_sha": "df1ddb73f4e253d0c42eddb27dd19b6dd0645b6b",
+        "bytes": 4761,
+        "sha256": "ab0043710b536ead80ecec055fe97fc72cb2b115c8bb8aeebb8d398ba9642749"
+      },
+      "dependencies": [],
+      "hosts": {
+        "chatgpt": "MANUAL",
+        "codex": "MANUAL",
+        "antigravity": "MANUAL",
+        "fixture": "FIXTURE"
+      },
+      "status": "CANDIDATE",
+      "description": "Canonical frontend standard reference: standards/frontend/patterns/catalog.md"
+    },
+    {
+      "id": "frontend-standard-patterns-anti-patterns",
+      "kind": "reference",
+      "source": {
+        "repository_id": 1377058358,
+        "repository_name": "Kirjane/Operation-FORGE.kirion",
+        "commit_sha": "91b79a901f91a218c0f6fcde8f1babe1918af3f6",
+        "path": "standards/frontend/patterns/anti-patterns.md",
+        "blob_sha": "6e99715b1f9157348d60600b1b8f7f0ad07d8b19",
+        "bytes": 2438,
+        "sha256": "ecc52709048707422b4a1ea35c75009fb6d47e6e807364eba3223c8df9c241ce"
+      },
+      "dependencies": [],
+      "hosts": {
+        "chatgpt": "MANUAL",
+        "codex": "MANUAL",
+        "antigravity": "MANUAL",
+        "fixture": "FIXTURE"
+      },
+      "status": "CANDIDATE",
+      "description": "Canonical frontend standard reference: standards/frontend/patterns/anti-patterns.md"
+    },
+    {
+      "id": "frontend-standard-provenance",
+      "kind": "reference",
+      "source": {
+        "repository_id": 1377058358,
+        "repository_name": "Kirjane/Operation-FORGE.kirion",
+        "commit_sha": "91b79a901f91a218c0f6fcde8f1babe1918af3f6",
+        "path": "standards/frontend/provenance.md",
+        "blob_sha": "589b0524078dce46cbf06b9cb8872fb0c2a73a70",
+        "bytes": 6172,
+        "sha256": "cd8a2b117d41e03ad67e5b3466825f1a76c7bbd1cd8d28cd4e79f3ac95063f4b"
+      },
+      "dependencies": [],
+      "hosts": {
+        "chatgpt": "MANUAL",
+        "codex": "MANUAL",
+        "antigravity": "MANUAL",
+        "fixture": "FIXTURE"
+      },
+      "status": "CANDIDATE",
+      "description": "Canonical frontend standard reference: standards/frontend/provenance.md"
+    },
+    {
+      "id": "frontend-standard-skill-adoption",
+      "kind": "reference",
+      "source": {
+        "repository_id": 1377058358,
+        "repository_name": "Kirjane/Operation-FORGE.kirion",
+        "commit_sha": "91b79a901f91a218c0f6fcde8f1babe1918af3f6",
+        "path": "standards/frontend/skill-adoption.md",
+        "blob_sha": "a55e9586ff6ddf91c37d1fdb1d01055d063c3724",
+        "bytes": 6015,
+        "sha256": "8f4713fcc3f0d0c50a5abe1ee3ed53a46231bd50ab061ffab945bfa4e7fa474c"
+      },
+      "dependencies": [],
+      "hosts": {
+        "chatgpt": "MANUAL",
+        "codex": "MANUAL",
+        "antigravity": "MANUAL",
+        "fixture": "FIXTURE"
+      },
+      "status": "CANDIDATE",
+      "description": "Canonical frontend standard reference: standards/frontend/skill-adoption.md"
+    },
+    {
+      "id": "frontend-standard-case-studies-one-talibon",
+      "kind": "reference",
+      "source": {
+        "repository_id": 1377058358,
+        "repository_name": "Kirjane/Operation-FORGE.kirion",
+        "commit_sha": "91b79a901f91a218c0f6fcde8f1babe1918af3f6",
+        "path": "standards/frontend/case-studies/one-talibon.md",
+        "blob_sha": "a563d8a50024df298d5cdce0c2e0ce858538cda8",
+        "bytes": 3438,
+        "sha256": "0736161bb82683abb9d72486e18c176fe95e8c716f9a693e6d75ccb454ac4d05"
+      },
+      "dependencies": [],
+      "hosts": {
+        "chatgpt": "MANUAL",
+        "codex": "MANUAL",
+        "antigravity": "MANUAL",
+        "fixture": "FIXTURE"
+      },
+      "status": "CANDIDATE",
+      "description": "Canonical frontend standard reference: standards/frontend/case-studies/one-talibon.md"
+    },
+    {
+      "id": "frontend-standard-case-studies-salryn-cafe",
+      "kind": "reference",
+      "source": {
+        "repository_id": 1377058358,
+        "repository_name": "Kirjane/Operation-FORGE.kirion",
+        "commit_sha": "91b79a901f91a218c0f6fcde8f1babe1918af3f6",
+        "path": "standards/frontend/case-studies/salryn-cafe.md",
+        "blob_sha": "0d7167feeb0c7f2607c1c5539cd5d03a8bad76a4",
+        "bytes": 3670,
+        "sha256": "12dfdcfc1dbd3cd93133ef65d4175f605b2839ec818ff638289cc2048e54cafe"
+      },
+      "dependencies": [],
+      "hosts": {
+        "chatgpt": "MANUAL",
+        "codex": "MANUAL",
+        "antigravity": "MANUAL",
+        "fixture": "FIXTURE"
+      },
+      "status": "CANDIDATE",
+      "description": "Canonical frontend standard reference: standards/frontend/case-studies/salryn-cafe.md"
     }
   ],
   "stage_optional": {
@@ -786,5 +1116,25 @@
     "external_import": "NOT_AUTHORIZED",
     "license_status": "NO_NEW_EXTERNAL_CODE_IMPORTED",
     "host_adoption": "NOT_ADOPTED"
+  },
+  "frontend_activation": {
+    "declaration": {
+      "repository_id": 1377058358,
+      "repository_name": "Kirjane/Operation-FORGE.kirion",
+      "commit_sha": "91b79a901f91a218c0f6fcde8f1babe1918af3f6",
+      "path": "standards/frontend/activation.json",
+      "blob_sha": "ccc6a9ced60d06adc486ed1d550c7b8803da8183",
+      "bytes": 2029,
+      "sha256": "75b698797842d7bcd3cd05e4385e0a810765b6ad265de6caaa27aef8e9367309"
+    },
+    "profile": {
+      "repository_id": 1377058358,
+      "repository_name": "Kirjane/Operation-FORGE.kirion",
+      "commit_sha": "91b79a901f91a218c0f6fcde8f1babe1918af3f6",
+      "path": "integrations/antigravity/profiles/frontend_web.json",
+      "blob_sha": "75e5480a6ed36ec69fa6378281ce48ff80f39346",
+      "bytes": 1360,
+      "sha256": "cb6be8258613416eb128529e07f2a3883a1ff2735d701839715048751e32f337"
+    }
   }
 }

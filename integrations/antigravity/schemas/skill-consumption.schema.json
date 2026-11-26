@@ -144,7 +144,7 @@
     "loaded": {
       "type": "array",
       "minItems": 1,
-      "maxItems": 8,
+      "maxItems": 24,
       "items": {
         "type": "object",
         "additionalProperties": false,

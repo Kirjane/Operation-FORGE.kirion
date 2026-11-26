@@ -59,18 +59,37 @@ class ScopedGitFixtureAdapter(FixtureDispatchAdapter):
     def close(self):
         self._temporary.cleanup()
 
-    def _git(self, *args):
+    def _git_bytes(self, *args):
         env = {k: v for k, v in sanitize_worker_env().items() if not k.upper().startswith("GIT_")}
         env.update(GIT_CONFIG_NOSYSTEM="1", GIT_CONFIG_GLOBAL=os.devnull, GIT_TERMINAL_PROMPT="0")
         try:
             result = subprocess.run(["git", "-c", "core.hooksPath=" + os.devnull,
                                      "-c", "core.autocrlf=false", *args], cwd=self.repo,
-                                    env=env, capture_output=True, text=True, timeout=10)
+                                    env=env, capture_output=True, timeout=10)
         except (OSError, subprocess.SubprocessError) as exc:
             raise AuthorityError("Disposable Git capability unavailable.") from exc
         if result.returncode:
             raise AuthorityError("Disposable Git observation failed.")
-        return result.stdout.strip()
+        return result.stdout
+
+    def _git(self, *args):
+        return self._git_bytes(*args).decode("utf-8", errors="strict").strip()
+
+    def _fixed_oracle_observation(self):
+        """Actual pinned blob bytes; not an independent acceptance oracle."""
+        blob = self._git("rev-parse", self.base_sha + ":docs/contract.md")
+        if blob != self.oracle_blob_sha:
+            raise AuthorityError("Fixed oracle identity drift.")
+        data = self._git_bytes("cat-file", "blob", blob)
+        git_identity = hashlib.sha1(
+            b"blob " + str(len(data)).encode("ascii") + b"\0" + data
+        ).hexdigest()
+        if git_identity != blob or data != b"pinned acceptance source\n":
+            raise AuthorityError("Fixed oracle byte observation mismatch.")
+        return {"blob_sha": blob, "sha256": hashlib.sha256(data).hexdigest(),
+                "bytes": len(data), "execution": "GIT_CAT_FILE_FIXED_SOURCE",
+                "independent": False, "fixture_only": True,
+                "acceptance": "NOT_EVALUATED"}
 
     def _assert_clean_target(self, packet):
         if (self.repo.is_symlink() or self.repo.resolve().parent != self.root
@@ -94,7 +113,7 @@ class ScopedGitFixtureAdapter(FixtureDispatchAdapter):
         target = assert_canonical_path_inside_worktree(self.repo, self.repo / self.owned_file)
         if not target.is_file() or target.is_symlink() or target.stat().st_nlink != 1:
             raise AuthorityError("Fixture target must be a regular unlinked file.")
-        if target.read_bytes() != b"before\n":
+        if identity(target.stat()) != self._file_identity or target.read_bytes() != b"before\n":
             raise AuthorityError("Fixture baseline bytes changed.")
 
     def _observe_git(self, packet):
@@ -114,11 +133,13 @@ class ScopedGitFixtureAdapter(FixtureDispatchAdapter):
             sources[source["source_id"]] = {"repository_id": self.repo_id, "repository_name": self.repo_name,
                                             "commit_sha": self._git("rev-parse", "HEAD")}
         oracles = {}
+        fixed_oracle = self._fixed_oracle_observation()
         for oracle in packet["oracles"]:
             if oracle["path"] != "docs/contract.md" or oracle["fixture_sha256"] is not None:
                 raise AuthorityError("Only the pinned source oracle is supported.")
             oracles[oracle["oracle_id"]] = {"source_id": oracle["source_id"], "path": "docs/contract.md",
-                "blob_sha": self._git("rev-parse", self.base_sha + ":docs/contract.md"), "fixture_sha256": None}
+                "blob_sha": fixed_oracle["blob_sha"], "fixture_sha256": None,
+                "byte_observation": fixed_oracle}
         target = {"repo_id": self.repo_id, "repo_name": self.repo_name, "base_sha": self.base_sha,
                   "permitted_branch": self.branch, "delivery_destination": self.destination}
         probe = digest_json({"target": target, "sources": sources, "oracles": oracles})
@@ -166,9 +187,11 @@ class ScopedGitFixtureAdapter(FixtureDispatchAdapter):
         raw = self._git("diff", "--raw", "-z", "--no-renames", self.base_sha)
         changed, forbidden = parse_git_raw_z_diff(raw)
         others = self._git("ls-files", "--others", "-z")
-        if (forbidden or others or changed != [self.owned_file] or target.read_bytes() != b"after\n"
+        if (forbidden or others or changed != [self.owned_file] or target.stat().st_nlink != 1
+                or identity(target.stat()) != self._file_identity or target.read_bytes() != b"after\n"
                 or result != {"effect": "LOCAL_FIXTURE_WRITE_OBSERVED", "changed_paths": changed,
                     "base_sha": self.base_sha, "oracle_blob_sha": self.oracle_blob_sha,
+                    "oracle_observation": self._fixed_oracle_observation(),
                     "before_sha256": hashlib.sha256(b"before\n").hexdigest(),
                     "after_sha256": hashlib.sha256(target.read_bytes()).hexdigest(),
                     "acceptance": "NOT_EVALUATED"}):
@@ -224,6 +247,7 @@ class ScopedGitFixtureAdapter(FixtureDispatchAdapter):
                     raise AuthorityError("Observed fixture effects exceed bounded operation.")
                 result = {"effect": "LOCAL_FIXTURE_WRITE_OBSERVED", "changed_paths": changed,
                           "base_sha": self.base_sha, "oracle_blob_sha": self.oracle_blob_sha,
+                          "oracle_observation": self._fixed_oracle_observation(),
                           "before_sha256": hashlib.sha256(b"before\n").hexdigest(),
                           "after_sha256": hashlib.sha256(target.read_bytes()).hexdigest(),
                           "acceptance": "NOT_EVALUATED"}

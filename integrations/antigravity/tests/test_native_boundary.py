@@ -53,6 +53,11 @@ class ScopedNativeCompositionTests(unittest.TestCase):
     def test_actual_read_recovery_and_delivery_denial(self):
         result = self.boundary.execute("greenfield_discovery", self.raw)
         self.assertEqual(result["status"], "COMPLETED")
+        oracle = result["result"]["observed"]["oracles"]["source_observation"]["byte_observation"]
+        self.assertEqual(oracle["blob_sha"], self.adapter.oracle_blob_sha)
+        self.assertEqual(oracle["execution"], "GIT_CAT_FILE_FIXED_SOURCE")
+        self.assertFalse(oracle["independent"])
+        self.assertEqual(oracle["acceptance"], "NOT_EVALUATED")
         reservation = result["reservation_id"]
         recovery = self.boundary.inspect_recovery(self.raw, reservation)
         self.assertFalse(recovery["replay_permitted"])
@@ -114,3 +119,19 @@ class DescriptorFenceTests(unittest.TestCase):
                 replace(b"after")
         self.assertEqual(original.read_bytes(), b"before")
         self.assertEqual(self.target.read_bytes(), b"before")
+
+    def test_baseline_bytes_changed_denied(self):
+        with self.fence() as replace:
+            self.target.write_bytes(b"drift")
+            with self.assertRaises(FenceDenied):
+                replace(b"after")
+        self.assertEqual(self.target.read_bytes(), b"drift")
+
+    def test_directory_symlink_denied(self):
+        other = self.root / "other"
+        self.docs.rename(other)
+        self.docs.symlink_to(other, target_is_directory=True)
+        with self.assertRaises(OSError):
+            with self.fence():
+                self.fail("linked directory entered")
+        self.assertEqual((other / "owned.txt").read_bytes(), b"before")

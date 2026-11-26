@@ -418,7 +418,9 @@ class FleetDispatcher:
         # result through the journal, then verify the runtime-issued receipt.
         verified = self.inspect_skill_fixture(raw, result["reservation_id"], journal=journal, runtime=runtime,
                                               grant=grant)
-        return {**result, "skill_verification": verified}
+        return {**result, "skill_verification": verified,
+                "skill_consumption_status": ("FIXTURE_CONSUMED" if verified["status"] == "FIXTURE_CONSUMPTION_VERIFIED"
+                                             else "BLOCKED")}
 
     def inspect_skill_fixture(self, raw, reservation_id, *, journal, runtime, grant):
         """Read-only existing-journal custody; does not authorize replay or delivery."""

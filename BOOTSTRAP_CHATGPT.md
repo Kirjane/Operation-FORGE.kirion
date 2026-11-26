@@ -31,6 +31,10 @@ Then emit the installation handshake defined in [BOOTSTRAP.md](BOOTSTRAP.md), us
 - Fresh conversations reconstruct from repository-local memory, not replayed chat history.
 - Tool absence narrows actions and claims; it never creates evidence.
 
+## Semantic naming
+
+Load the authorized Forge [semantic naming and readability rule](AGENTS.md#semantic-naming-and-readability) at role activation. Writers apply it before delivery; reviewers and Acceptance apply it to the actual candidate. This includes work for other Kirjane repositories, not only Forge itself. A session that cannot load the rule must report that limitation rather than claim compliance.
+
 ## Persistent Memory
 
 Persistent product memory may retain stable workflow preferences such as using Forge and Maintainer/Code Writer separation. It must not be used as authority for changing SHAs, active branches, test results, deployments, incidents, or current project state.

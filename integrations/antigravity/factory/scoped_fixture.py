@@ -13,6 +13,7 @@ import subprocess
 import tempfile
 
 from .authority import AuthorityError
+from .fenced_file import FenceDenied, fixed_file, identity, supported
 from .dispatch_preflight import FixtureDispatchAdapter, _PreInvocationBlocked
 from .mission_contract import contract_digest, digest_json
 from .ownership import LeaseManager, assert_canonical_path_inside_worktree, parse_git_raw_z_diff, sanitize_worker_env
@@ -45,6 +46,9 @@ class ScopedGitFixtureAdapter(FixtureDispatchAdapter):
         self.base_sha = self._git("rev-parse", "HEAD")
         self.oracle_blob_sha = self._git("rev-parse", "HEAD:docs/contract.md")
         self.leases = LeaseManager(self.root / "leases.sqlite")
+        self._root_identity = identity(self.repo.stat())
+        self._docs_identity = identity((self.repo / "docs").stat())
+        self._file_identity = identity((self.repo / self.owned_file).stat())
 
     def configure_fixture_grants(self, grants, trusted_verifiers):
         # Trusted test composition only; never called by dispatcher ingress.
@@ -82,6 +86,8 @@ class ScopedGitFixtureAdapter(FixtureDispatchAdapter):
         if packet["cognition"]["mode"] == "INHERITED":
             raise AuthorityError("Inherited cognition not qualified in disposable fixture.")
         if "WRITE_OWNED" in packet["allowed_operations"]:
+            if not supported():
+                raise AuthorityError("Descriptor-confined fixture write unavailable.")
             assert_paths_within_ownership(packet, [self.owned_file])
             if packet["owned_paths"] != [self.owned_file]:
                 raise AuthorityError("Only the fixed fixture file may be owned.")
@@ -168,6 +174,26 @@ class ScopedGitFixtureAdapter(FixtureDispatchAdapter):
                     "acceptance": "NOT_EVALUATED"}):
             raise AuthorityError("Fixture result does not match observed effects.")
 
+    def inspect_local_effect(self):
+        """Read-only actual local observation, never proof of quiescence."""
+        if (self.repo.is_symlink() or identity(self.repo.stat()) != self._root_identity
+                or self._git("rev-parse", "HEAD") != self.base_sha
+                or self._git("symbolic-ref", "--short", "HEAD") != self.branch
+                or self._git("remote")):
+            raise AuthorityError("Recovery target identity changed.")
+        target = assert_canonical_path_inside_worktree(self.repo, self.repo / self.owned_file)
+        if (target.is_symlink() or not target.is_file() or target.stat().st_nlink != 1
+                or identity(target.stat()) != self._file_identity):
+            raise AuthorityError("Recovery target changed.")
+        raw = self._git("diff", "--raw", "-z", "--no-renames", self.base_sha)
+        changed, forbidden = parse_git_raw_z_diff(raw)
+        others = self._git("ls-files", "--others", "-z")
+        if forbidden or others or any(path != self.owned_file for path in changed):
+            raise AuthorityError("Recovery observes unexpected effects.")
+        return {"base_sha": self.base_sha, "changed_paths": changed,
+                "owned_file_sha256": hashlib.sha256(target.read_bytes()).hexdigest(),
+                "quiescence": "NOT_ESTABLISHED", "fixture_only": True}
+
     def invoke(self, packet, *, before_invoke):
         # Re-observe the actual source and target, not a caller observation.
         try:
@@ -187,9 +213,11 @@ class ScopedGitFixtureAdapter(FixtureDispatchAdapter):
             with self.leases.hold_owned_paths(packet, worker, acquired, [self.owned_file]):
                 self._assert_clean_target(packet)
                 target = self.repo / self.owned_file
-                before_invoke()
-                entered = True
-                target.write_bytes(b"after\n")
+                with fixed_file(self.repo, self._root_identity, self._docs_identity,
+                                self._file_identity, b"before\n") as replace:
+                    before_invoke()
+                    entered = True
+                    replace(b"after\n")
                 raw = self._git("diff", "--raw", "-z", "--no-renames", self.base_sha)
                 changed, forbidden = parse_git_raw_z_diff(raw)
                 if changed != [self.owned_file] or forbidden or target.read_bytes() != b"after\n":
@@ -201,7 +229,7 @@ class ScopedGitFixtureAdapter(FixtureDispatchAdapter):
                           "acceptance": "NOT_EVALUATED"}
             self.leases.release_worker_leases(packet["mission_id"], worker)
             return result
-        except (AuthorityError, OSError, subprocess.SubprocessError, _PreInvocationBlocked) as exc:
+        except (AuthorityError, FenceDenied, OSError, subprocess.SubprocessError, _PreInvocationBlocked) as exc:
             if not entered:
                 self.leases.release_worker_leases(packet["mission_id"], worker)
                 raise _PreInvocationBlocked("FIXTURE_OWNERSHIP_OR_TARGET_CHANGED") from exc

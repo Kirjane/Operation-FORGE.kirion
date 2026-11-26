@@ -1,0 +1,122 @@
+name: FORGE P1a exact R1 transport
+on:
+  push:
+    branches: [transport/forge-p1a-r1]
+    paths: ['.forge-transport/r1/READY']
+permissions: {}
+concurrency:
+  group: forge-p1a-r1-publication
+  cancel-in-progress: false
+jobs:
+  publish-exact-r1:
+    if: github.actor_id == '335897759' || github.actor_id == '291564617'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Reassemble verified public bytes and publish one exact commit
+        shell: bash
+        env:
+          PUBLISH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 -I -B - <<'PY'
+          import base64, hashlib, os, pathlib, re, subprocess, tempfile
+          F="928d08edc691dfaeccd4929d2a6566d1f3a3a789"
+          FT="5c3c6a5557b9faa7f7dfbb66d226afa38f17d4b4"
+          TARGET="refs/heads/experiment/forge-p1a-contract-compatibility"
+          STAGING="refs/heads/transport/forge-p1a-r1"
+          PREFIX=".forge-transport/r1/"
+          DEST="experiments/contract_compatibility/"
+          URL="https://github.com/Kirjane/Operation-FORGE.kirion.git"
+          expected={
+              "README.md":(4751,"cab05a3ae9fd36377156199fde2e1a5f74ad7519795c7ab22a88e9556259fd8b","9b80e4c09d0ee1a03b90d4c9f6a89d223fe77cd7"),
+              "record.schema.json":(75585,"04c44eb4fcc8634e8b3659c4fe95919443f2e7236542924d0c8f7ad301f8d060","1ceb42412dfd8f14eeb8c18d4a83a206a3bdc9b5"),
+              "contract_records.py":(45063,"f6470a6d1c17862e48e4c169709ad5439a7b00434c2699ccedd0f2ad39e0de8d","07b1d9e4e55f9536ae8d8bd27fd4267cff68c326"),
+              "vectors.json":(4725515,"da69134eec26977258d8a066fe807a9414a8f15deebacd9932ba893ef12d9a2b","9187a1c8de53d07be1b55a3dd17371b95dd24ea1"),
+              "test_contract_records.py":(18659,"5f9de1f349096095484dca800dc0a49d5b890ecda37f4753afb410eb62a89632","5ecc389900ebafbaf09c67301ad34d7cbe53b3f9"),
+          }
+          def require(ok,msg):
+              if not ok: raise RuntimeError("STOP: "+msg)
+          token=os.environ.pop("PUBLISH_TOKEN")
+          require(bool(token),"missing publication token")
+          require(os.environ["GITHUB_REPOSITORY"]=="Kirjane/Operation-FORGE.kirion","repository")
+          require(os.environ["GITHUB_REF"]==STAGING,"staging ref")
+          stage=os.environ["GITHUB_SHA"]
+          require(re.fullmatch(r"[0-9a-f]{40}",stage) is not None,"staging sha")
+          env={"PATH":"/usr/bin:/bin","HOME":"/nonexistent","LANG":"C","GIT_CONFIG_NOSYSTEM":"1","GIT_CONFIG_GLOBAL":"/dev/null","GIT_TERMINAL_PROMPT":"0","GIT_AUTHOR_NAME":"github-actions[bot]","GIT_AUTHOR_EMAIL":"41898282+github-actions[bot]@users.noreply.github.com","GIT_COMMITTER_NAME":"github-actions[bot]","GIT_COMMITTER_EMAIL":"41898282+github-actions[bot]@users.noreply.github.com"}
+          with tempfile.TemporaryDirectory(prefix="forge-r1-transport-") as d:
+              def git(*args,data=None,auth=False):
+                  e=env.copy()
+                  if auth:
+                      e.update(GIT_CONFIG_COUNT="1",GIT_CONFIG_KEY_0="http.https://github.com/.extraheader",GIT_CONFIG_VALUE_0="AUTHORIZATION: basic "+base64.b64encode(("x-access-token:"+token).encode()).decode())
+                  r=subprocess.run(["git","-c","core.hooksPath=/dev/null","-C",d,*args],input=data,stdout=subprocess.PIPE,env=e,check=True)
+                  return r.stdout
+              def g(*args): return git(*args).decode().strip()
+              def remote(ref):
+                  rows=g("ls-remote","--exit-code",URL,ref).splitlines()
+                  require(len(rows)==1 and rows[0].split()[1]==ref,"remote ref")
+                  return rows[0].split()[0]
+              git("init","--bare","--quiet")
+              require(remote(TARGET)==F,"target already changed")
+              require(remote(STAGING)==stage,"staging lease")
+              git("fetch","--quiet","--no-tags","--depth=2",URL,STAGING)
+              require(g("rev-parse","FETCH_HEAD")==stage,"staged commit")
+              previous=g("rev-parse",stage+"^")
+              require(g("rev-list","--parents","-n","1",stage)==stage+" "+previous,"single staging parent")
+              rows=git("diff-tree","--no-commit-id","--name-status","-r","--no-renames","-z",previous,stage).split(b"\0")
+              require(rows.pop()==b"" and len(rows)%2==0,"staging diff format")
+              require(all(rows[i]==b"A" and rows[i+1].decode().startswith(PREFIX) for i in range(0,len(rows),2)),"staging must only add transport paths")
+              entries={}
+              for line in git("ls-tree","-r","-z",stage,"--",PREFIX).split(b"\0"):
+                  if not line: continue
+                  meta,path=line.split(b"\t",1)
+                  mode,typ,oid=meta.decode().split()
+                  require(mode=="100644" and typ=="blob","transport file mode")
+                  name=path.decode()
+                  require(name.startswith(PREFIX) and name not in entries,"transport path")
+                  entries[name]=oid
+              require(set(entries)==set(rows[i+1].decode() for i in range(0,len(rows),2)),"no inherited transport data")
+              ready=PREFIX+"READY"
+              require(ready in entries and git("cat-file","blob",entries.pop(ready))==b"R1\n","ready marker")
+              recovered={}
+              for name,(size,sha256,sha1) in expected.items():
+                  stem=PREFIX+name+".part-"
+                  parts=sorted(p for p in entries if p.startswith(stem))
+                  require(1<=len(parts)<=64,"part count "+name)
+                  require(parts==[stem+format(i,"04d") for i in range(len(parts))],"contiguous part names "+name)
+                  blocks=[]
+                  for part in parts:
+                      block=git("cat-file","blob",entries.pop(part))
+                      require(0<len(block)<=131072,"part size "+part)
+                      blocks.append(block)
+                  data=b"".join(blocks)
+                  require(len(data)==size and hashlib.sha256(data).hexdigest()==sha256,"exact source SHA256 "+name)
+                  require(hashlib.sha1(("blob "+str(size)+"\0").encode()+data).hexdigest()==sha1,"exact Git blob "+name)
+                  recovered[name]=data
+                  print("SOURCE_VERIFIED",name,size,sha256,sha1,flush=True)
+              require(not entries,"unexpected transport paths")
+              git("fetch","--quiet","--no-tags",URL,TARGET)
+              require(g("rev-parse","FETCH_HEAD")==F and g("rev-parse",F+"^{tree}")==FT,"frozen parent and tree")
+              git("read-tree",F)
+              for name,data in recovered.items():
+                  oid=git("hash-object","-w","--stdin",data=data).decode().strip()
+                  require(oid==expected[name][2],"local blob")
+                  git("update-index","--add","--cacheinfo","100644,"+oid+","+DEST+name)
+              tree=g("write-tree")
+              diff=g("diff-tree","--no-commit-id","--name-status","-r","--no-renames",F,tree).splitlines()
+              require(set(diff)=={"A\t"+DEST+name for name in expected} and len(diff)==5,"exact five-file diff")
+              for name in expected:
+                  require(g("ls-tree",tree,"--",DEST+name)=="100644 blob "+expected[name][2]+"\t"+DEST+name,"exact final mode/blob")
+              candidate=g("commit-tree",tree,"-p",F,"-m","Publish exact Kirion-Jane P1a R1 source artifact (authorized transport only)","-m","Writer receipt #7194758739; Engineer decision #7194882570; original archive SHA256 fb35ed2c4ec29b8725440564d00dd1fe9d5c7cb18f32a6a297483122d4049336. No candidate execution or acceptance.")
+              require(g("rev-list","--parents","-n","1",candidate)==candidate+" "+F,"candidate parent")
+              require(remote(TARGET)==F,"final target lease")
+              git("push",URL,candidate+":"+TARGET,auth=True)
+              require(remote(TARGET)==candidate,"publication readback")
+              print("PUBLICATION_VERIFIED",flush=True)
+              print("PARENT="+F,flush=True)
+              print("CANDIDATE="+candidate,flush=True)
+              print("TREE="+tree,flush=True)
+              print("NO_CANDIDATE_EXECUTION; NO_MERGE",flush=True)
+          PY

@@ -90,7 +90,17 @@ class PinnedGitSources:
                     "SOURCE_CONFIGURATION_INVALID")
             name, root = item
             require(type(name) is str and bool(name), "SOURCE_CONFIGURATION_INVALID")
-            self._repos[repo_id] = (name, Path(root).resolve(strict=True))
+            resolved = Path(root).resolve(strict=True)
+            require(resolved.is_dir(), "SOURCE_ROOT_INVALID")
+            bare = self._git(resolved, "rev-parse", "--is-bare-repository").decode("ascii").strip()
+            if bare == "true":
+                observed_root = self._git(resolved, "rev-parse", "--absolute-git-dir")
+            else:
+                require(bare == "false", "SOURCE_ROOT_INVALID")
+                observed_root = self._git(resolved, "rev-parse", "--show-toplevel")
+            require(Path(os.fsdecode(observed_root).strip()).resolve(strict=True) == resolved,
+                    "SOURCE_ROOT_MISMATCH")
+            self._repos[repo_id] = (name, resolved)
 
     def _git(self, root, *args):
         # Do not inherit repository redirects, replace refs or lazy fetch.
@@ -154,6 +164,7 @@ class SkillRegistry:
         self._sources = sources
         self._entries = {}
         seen_paths = set()
+        seen_digests = set()
         for entry in entries:
             require(type(entry) is dict and set(entry) == {"id", "kind", "source", "dependencies",
                     "hosts", "status", "description"}, "REGISTRY_ENTRY_INVALID")
@@ -175,6 +186,8 @@ class SkillRegistry:
                     and 0 < src["bytes"] <= MAX_FILE_BYTES, "REGISTRY_SOURCE_INVALID")
             require(type(src["sha256"]) is str and DIGEST.fullmatch(src["sha256"])
                     and src["sha256"] != "0" * 64, "REGISTRY_DIGEST_INVALID")
+            require(src["sha256"] not in seen_digests, "REGISTRY_DUPLICATE_CONTENT")
+            seen_digests.add(src["sha256"])
             if entry["kind"] == "skill":
                 require(path in {f".agents/skills/{name}/SKILL.md",
                         f"integrations/antigravity/plugins/kirion-forge/skills/{name}/SKILL.md"}

@@ -167,6 +167,17 @@ class SkillLoadingTests(unittest.TestCase):
         with self.assertRaises(AuthorityError):
             self.sources.read(self.repo_id, "other/repo", self.source_commit, p)
 
+    def test_source_store_cannot_fall_back_to_parent_repository(self):
+        sub = self.repo / ".agents"
+        with self.assertRaisesRegex(SkillError, "SOURCE_ROOT_MISMATCH"):
+            PinnedGitSources({self.repo_id: (self.repo_name, sub)})
+
+    def test_duplicate_content_pin_denied(self):
+        m = copy.deepcopy(self.manifest)
+        m["registry"][1]["source"]["sha256"] = m["registry"][0]["source"]["sha256"]
+        with self.assertRaisesRegex(SkillError, "REGISTRY_DUPLICATE_CONTENT"):
+            self.registry_from(m)
+
     def test_wrong_blob_digest_and_size(self):
         for key, value in (("blob_sha", "f" * 40), ("sha256", "f" * 64), ("bytes", 1)):
             m = copy.deepcopy(self.manifest)

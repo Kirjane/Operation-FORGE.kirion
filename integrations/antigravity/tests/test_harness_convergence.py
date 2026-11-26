@@ -168,6 +168,15 @@ class HarnessConvergenceTests(unittest.TestCase):
         self.assertEqual(boundary.execute("feature_delivery", self.raw)["status"], "BLOCKED")
         self.unchanged()
 
+    def test_advisory_standard_scope_cannot_satisfy_required_reference(self):
+        self.packet['source_authorities'][1]['scope'] = SCOPE[:-1]
+        self.packet['source_authorities'].append({**self.packet['source_authorities'][1],
+            'source_id': 'advisory-standard', 'scope': SCOPE[-1:], 'authority_kind': 'REFERENCE'})
+        self.packet['authority']['source_precedence'].append('advisory-standard')
+        boundary, _ = self.compose()
+        self.assertEqual(boundary.execute('feature_delivery', self.raw)['status'], 'BLOCKED')
+        self.unchanged()
+
     def test_required_standard_budget_denies(self):
         boundary, _ = self.compose(config_changes={"max_reference_files": 1})
         self.assertEqual(boundary.execute("feature_delivery", self.raw)["status"], "BLOCKED")

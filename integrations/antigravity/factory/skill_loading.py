@@ -166,7 +166,8 @@ class FixtureSkillRuntime:
                 context_used_bytes=used, max_files=min(cfg.get("max_files", 8), document_remaining),
                 max_reference_files=cfg.get("max_reference_files", MAX_REFERENCE_FILES),
                 max_documents=min(document_remaining, 24),
-                source_authorities=packet["source_authorities"],
+                source_authorities=[source for source in packet["source_authorities"]
+                    if frontend is None or source["authority_kind"] in {"CONSTRAINT", "FUNCTIONAL"}],
                 include_routes=cfg.get("include_routes", True))
         plan["frontend_activation"] = frontend
         require([s["source"]["path"] for s in plan["selected"] if s["kind"] == "skill"] ==

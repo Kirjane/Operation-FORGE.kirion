@@ -1,0 +1,36 @@
+name: FORGE incident 38 release gate regression
+on:
+  push:
+    branches: [infra/forge-p1a-hosted-qualification]
+    paths: ['.github/workflows/forge-incident-38-gate-regression.yml']
+permissions: {}
+jobs:
+  gate-regression:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Test actual pinned gate source without candidate execution
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -I -B - <<'PY'
+          import hashlib, textwrap, urllib.request
+          url="https://raw.githubusercontent.com/Kirjane/Operation-FORGE.kirion/10f2debf5d3df9713f9378295693a040495df0a8/.github/workflows/forge-p1a-r1-public-qualification.yml"
+          with urllib.request.urlopen(url,timeout=20) as response:
+              source=response.read()
+          oid=hashlib.sha1(("blob "+str(len(source))+"\0").encode()+source).hexdigest()
+          if oid!="c03549335f288861d90ca3568ec299aadf24eb3f":
+              raise RuntimeError("gate source hash")
+          text=source.decode("utf-8")
+          anchor='          # A text marker alone is insufficient.'
+          block=text.split(anchor,1)[1].split("          PY\n",1)[0]
+          code=block.split("<<'PY'\n",1)[1]
+          # Compile the entire trusted gate, but execute only its pure self-check.
+          compile(textwrap.dedent(code),"pinned-release-gate.py","exec")
+          prefix=code.split("          candidate,receipt=",1)[0]
+          if "RELEASE_GATE_SELFTEST 6/6" not in prefix:
+              raise RuntimeError("missing selftest")
+          exec(compile(textwrap.dedent(prefix),"pinned-release-gate-selftest.py","exec"),{})
+          print("GATE_SOURCE_HASH_VERIFIED",oid)
+          print("INCIDENT_38_GATE_REGRESSION_PASS; NO_CANDIDATE_EXECUTION")
+          PY

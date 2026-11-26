@@ -10,9 +10,11 @@ from __future__ import annotations
 import hashlib
 import hmac
 import uuid
+import weakref
 from copy import deepcopy
 
 from .mission_contract import contract_digest
+from .authority import validate_contract
 from .skill_registry import SkillRegistry, SkillError, require, canonical, digest
 
 
@@ -32,7 +34,7 @@ def _brain_bytes(packet, config):
     if cognition["mode"] != "INHERITED":
         require(not packet["authority"]["brain_required"] and context is None,
                 "REQUIRED_BRAIN_CONTEXT_UNAVAILABLE")
-        return other, config["max_context_bytes"], None
+        return other, config["max_context_bytes"], None, 8
     require(type(context) is dict and config.get("brain_run_id") == cognition["brain_run_id"],
             "BRAIN_STAGE_CONTEXT_UNAVAILABLE")
     checkpoint = context["checkpoint"]
@@ -58,7 +60,8 @@ def _brain_bytes(packet, config):
     require(projected == manifest["documents"] and total == manifest["total_bytes"] and
             total <= manifest["byte_budget"] and len(docs) <= manifest["document_budget"],
             "BRAIN_CONTEXT_ACCOUNTING_MISMATCH")
-    return total + other, min(config["max_context_bytes"], manifest["byte_budget"]), checkpoint["checkpoint_sha256"]
+    return (total + other, min(config["max_context_bytes"], manifest["byte_budget"]),
+            checkpoint["checkpoint_sha256"], manifest["document_budget"] - len(docs))
 
 
 class PreparedSkillContext:
@@ -82,6 +85,7 @@ class FixtureSkillInput:
     def __init__(self, prepared):
         self._contents = dict(prepared._contents)
         self._sources = {x["id"]: x["source"] for x in prepared._plan["selected"]}
+        self._dependencies = {x["id"]: x["dependencies"] for x in prepared._plan["selected"]}
         self._reads = []
         self._closed = False
 
@@ -90,6 +94,7 @@ class FixtureSkillInput:
 
     def read(self, skill_id):
         require(not self._closed and skill_id in self._contents, "SKILL_INPUT_UNAVAILABLE")
+        require(set(self._dependencies[skill_id]) <= set(self._reads), "SKILL_DEPENDENCY_NOT_CONSUMED")
         raw = self._contents[skill_id]
         require(hashlib.sha256(raw).hexdigest() == self._sources[skill_id]["sha256"]
                 and len(raw) == self._sources[skill_id]["bytes"], "SKILL_INPUT_CHANGED")
@@ -116,6 +121,7 @@ class FixtureSkillRuntime:
         self._configs = deepcopy(configs)
         self._key = signing_key
         self._issued = set()
+        self._prepared = weakref.WeakKeyDictionary()
 
     def prepare(self, packet, *, grant=None, require_consumable=False):
         from .dispatcher import STACK_SKILL_BUNDLES
@@ -137,12 +143,13 @@ class FixtureSkillRuntime:
             require(all(grant.get(k) == cfg[k] for k in ("actor_id", "host_id", "attempt_ordinal"))
                     and grant.get("contract_sha256") == contract and grant.get("revision") == packet["revision"],
                     "SKILL_GRANT_BINDING_MISMATCH")
-        used, limit, checkpoint = _brain_bytes(packet, cfg)
+        used, limit, checkpoint, document_remaining = _brain_bytes(packet, cfg)
+        require(document_remaining > 0, "SKILL_CONTEXT_DOCUMENT_BUDGET_EXCEEDED")
         required = ["kirion-core", "kirion-dispatch", *STACK_SKILL_BUNDLES[cfg["profile"]],
                     *cfg.get("required_extra", [])]
         plan, contents = self._registry.plan(required, cfg.get("optional_extra", []), host=cfg["host"],
                 stage=cfg["stage"], task=cfg.get("task", "general"), max_bytes=limit,
-                context_used_bytes=used, max_files=cfg.get("max_files", 8),
+                context_used_bytes=used, max_files=min(cfg.get("max_files", 8), document_remaining),
                 source_authorities=packet["source_authorities"],
                 include_routes=cfg.get("include_routes", True))
         require([s["source"]["path"] for s in plan["selected"]] == packet["selected_skills"]["files"],
@@ -158,10 +165,14 @@ class FixtureSkillRuntime:
                    "context_id": cfg["context_id"], "attempt_ordinal": cfg["attempt_ordinal"],
                    "grant_sha256": digest(grant) if grant is not None else None,
                    "cognition_sha256": cognition_hash(packet), "brain_checkpoint_sha256": checkpoint}
-        return PreparedSkillContext(plan, contents, binding)
+        prepared = PreparedSkillContext(plan, contents, binding)
+        self._prepared[prepared] = prepared.plan_sha256
+        return prepared
 
     def consume(self, prepared, consumer, packet):
         require(type(prepared) is PreparedSkillContext and callable(consumer)
+                and self._prepared.get(prepared) == prepared.plan_sha256
+                and digest({"plan": prepared._plan, "binding": prepared._binding}) == prepared.plan_sha256
                 and prepared._plan["host"] == "fixture"
                 and prepared._binding["contract_sha256"] == contract_digest(packet)
                 and prepared._binding["grant_sha256"] is not None, "SKILL_CONSUMPTION_CONTEXT_INVALID")
@@ -186,9 +197,11 @@ class FixtureSkillRuntime:
                    "consumed_bytes": sum(by_id[name]["source"]["bytes"] for name in reads),
                    "result_sha256": digest(result)}
         receipt["signature"] = hmac.new(self._key, canonical(receipt).encode("utf-8"), hashlib.sha256).hexdigest()
+        validate_contract(receipt, "skill-consumption.schema.json")
         return result, receipt
 
     def verify_receipt(self, prepared, receipt):
+        validate_contract(receipt, "skill-consumption.schema.json")
         require(type(receipt) is dict and type(receipt.get("signature")) is str, "SKILL_RECEIPT_INVALID")
         unsigned = {k: v for k, v in receipt.items() if k != "signature"}
         expected = hmac.new(self._key, canonical(unsigned).encode("utf-8"), hashlib.sha256).hexdigest()
@@ -201,6 +214,8 @@ class FixtureSkillRuntime:
         reads = [e["id"] for e in receipt["loaded"]]
         require(len(reads) == len(set(reads)) and set(reads) <= set(by_id)
                 and set(prepared._plan["required"]) <= set(reads), "SKILL_RECEIPT_COVERAGE_INVALID")
+        for i, name in enumerate(reads):
+            require(set(by_id[name]["dependencies"]) <= set(reads[:i]), "SKILL_RECEIPT_DEPENDENCY_ORDER_INVALID")
         require(receipt["loaded"] == [{"id": n, "source": by_id[n]["source"], "status": "CONSUMED_FIXTURE"}
                                       for n in reads] and receipt["retrieved_not_loaded"] ==
                 [n for n in by_id if n not in reads] and receipt["consumed_bytes"] ==

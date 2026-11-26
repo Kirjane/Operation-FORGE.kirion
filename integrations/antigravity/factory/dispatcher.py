@@ -354,7 +354,10 @@ class FleetDispatcher:
             if type(journal) is ContractJournal:
                 return journal.block_unavailable_bridge(packet)
             return {"status": "BLOCKED", "reason": "TRUSTED_PREFLIGHT_BRIDGE_UNAVAILABLE"}
-        return journal.dispatch_fixture(packet, fixture_adapter)
+        result = journal.dispatch_fixture(packet, fixture_adapter)
+        # Existing bounded historical fixture calls are preserved. They do not
+        # establish that a selected skill was loaded by a host.
+        return {**result, "skill_consumption_status": "NOT_VERIFIED_BY_GENERIC_DISPATCH"}
 
     def prepare_worker_skills(self, raw, runtime=None):
         """Generic composition seam: verify W1 packet against independently pinned skill plan."""
@@ -406,6 +409,9 @@ class FleetDispatcher:
         adapter = FixtureDispatchAdapter(grants=deepcopy(grants), trusted_verifiers=set(trusted_verifiers),
                                          observe=observe, handler=worker)
         result = self.dispatch_worker(raw, journal=journal, fixture_adapter=adapter)
+        if result.get("cached"):
+            return {**result, "skill_verification": {"status": "NOT_REVERIFIED_CACHED_ATTEMPT",
+                    "native_loading_verified": False, "promotion_authorized": False, "replay_permitted": False}}
         if result.get("status") != "COMPLETED":
             return result
         # No trust in a handler's own "loaded" statement: read the committed
@@ -429,7 +435,7 @@ class FleetDispatcher:
             prepared = runtime.prepare(parse_mission_packet(raw), grant=grant, require_consumable=True)
             record = attempt["result"]
             receipt = record["skill_consumption"]
-            if record["skill_receipt_sha256"] != digest(receipt):
+            if record["skill_receipt_sha256"] != digest(receipt) or receipt["result_sha256"] != digest(record["worker_result"]):
                 raise SkillError("SKILL_RECEIPT_CUSTODY_MISMATCH")
             runtime.verify_receipt(prepared, receipt)
             return {"status": "FIXTURE_CONSUMPTION_VERIFIED", "reservation_id": reservation_id,

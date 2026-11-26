@@ -14,7 +14,7 @@ import subprocess
 from copy import deepcopy
 from pathlib import Path, PurePosixPath
 
-from .authority import AuthorityError
+from .authority import AuthorityError, validate_contract
 
 REGISTRY_PATH = "arsenal/manifest.json"
 MAX_FILE_BYTES = 256 * 1024
@@ -54,7 +54,7 @@ def canonical_path(value):
             and not any(ord(c) < 32 or ord(c) == 127 for c in value), "SKILL_PATH_INVALID")
     p = PurePosixPath(value)
     require(not p.is_absolute() and p.as_posix() == value and
-            all(x not in {".", "..", ".git"} for x in p.parts)
+            all(x.casefold() not in {".", "..", ".git"} for x in p.parts)
             and value.endswith(".md") and not value.startswith("-"), "SKILL_PATH_INVALID")
     return value
 
@@ -144,8 +144,10 @@ class SkillRegistry:
         raw, self._identity = sources.read(repository_id, repository_name, registry_commit,
                                           REGISTRY_PATH, max_bytes=MAX_REGISTRY_BYTES)
         m = parse_json(raw)
+        validate_contract(m, "skill-registry.schema.json")
         require(type(m) is dict and type(m.get("registry_version")) is int and m["registry_version"] == 1
-                and m.get("status") == "draft-not-adopted", "REGISTRY_VERSION_OR_STATUS_INVALID")
+                and m.get("status") == "draft-not-adopted" and m.get("noAutomaticMerge") is True
+                and m.get("noAutomaticProjectPolicyAdoption") is True, "REGISTRY_VERSION_OR_STATUS_INVALID")
         entries = m.get("registry")
         require(type(entries) is list and 0 < len(entries) <= 128 and m.get("candidate_count") == len(entries),
                 "REGISTRY_INVENTORY_INVALID")
@@ -162,9 +164,8 @@ class SkillRegistry:
                     and type(entry["description"]) is str and bool(entry["description"].strip()),
                     "REGISTRY_ENTRY_INVALID")
             src = entry["source"]
-            require(type(src) is dict and set(src) in ({"repository_id", "repository_name", "commit_sha",
-                    "path", "blob_sha", "bytes"}, {"repository_id", "repository_name", "commit_sha",
-                    "path", "blob_sha", "bytes", "sha256"}), "REGISTRY_SOURCE_INVALID")
+            require(type(src) is dict and set(src) == {"repository_id", "repository_name", "commit_sha",
+                    "path", "blob_sha", "bytes", "sha256"}, "REGISTRY_SOURCE_INVALID")
             path = canonical_path(src["path"])
             require(path.casefold() not in seen_paths, "REGISTRY_DUPLICATE_PATH")
             seen_paths.add(path.casefold())
@@ -172,8 +173,8 @@ class SkillRegistry:
                     type(src["repository_name"]) is str and bool(src["repository_name"]) and
                     sha_ok(src["commit_sha"]) and sha_ok(src["blob_sha"]) and type(src["bytes"]) is int
                     and 0 < src["bytes"] <= MAX_FILE_BYTES, "REGISTRY_SOURCE_INVALID")
-            if "sha256" in src:
-                require(type(src["sha256"]) is str and DIGEST.fullmatch(src["sha256"]), "REGISTRY_DIGEST_INVALID")
+            require(type(src["sha256"]) is str and DIGEST.fullmatch(src["sha256"])
+                    and src["sha256"] != "0" * 64, "REGISTRY_DIGEST_INVALID")
             if entry["kind"] == "skill":
                 require(path in {f".agents/skills/{name}/SKILL.md",
                         f"integrations/antigravity/plugins/kirion-forge/skills/{name}/SKILL.md"}
@@ -197,7 +198,9 @@ class SkillRegistry:
 
     def inventory(self):
         return [{"id": name, "kind": e["kind"], "path": e["source"]["path"],
-                 "status": "AVAILABLE_METADATA", "adopted": False, "hosts": deepcopy(e["hosts"])}
+                 "description": e["description"], "source": deepcopy(e["source"]),
+                 "dependencies": list(e["dependencies"]), "status": "AVAILABLE_METADATA",
+                 "adopted": False, "hosts": deepcopy(e["hosts"])}
                 for name, e in sorted(self._entries.items())]
 
     def _validate_routes(self, routes, keys=None):
@@ -257,6 +260,8 @@ class SkillRegistry:
         require(type(max_bytes) is int and type(context_used_bytes) is int and
                 0 <= context_used_bytes <= max_bytes <= 8 * 1024 * 1024 and type(max_files) is int
                 and 1 <= max_files <= MAX_FILES, "SKILL_BUDGET_INVALID")
+        require(type(required) in (list, tuple) and type(optional) in (list, tuple)
+                and all(type(n) is str for n in [*required, *optional]), "SKILL_SELECTION_INVALID")
         required = self._closure(required)
         optional = list(dict.fromkeys([*optional, *(self._stage[stage] if include_routes else []),
                                       *(self._task[task] if include_routes else [])]))
@@ -275,8 +280,12 @@ class SkillRegistry:
                 if mandatory:
                     raise SkillError(reason)
                 omitted.append({"id": group[-1], "reason": reason, "status": "OMITTED_OPTIONAL"})
-            if any(self._entries[n]["hosts"][host] not in {"MANUAL", "FIXTURE"} for n in todo):
-                reject("SKILL_HOST_UNAVAILABLE_OR_ADVISORY")
+            modes = {"FIXTURE"} if host == "fixture" else {"MANUAL"}
+            unavailable = [self._entries[n]["hosts"][host] for n in todo
+                           if self._entries[n]["hosts"][host] not in modes]
+            if unavailable:
+                reject("SKILL_HOST_ADVISORY_ONLY" if all(m == "ADVISORY_ONLY" for m in unavailable)
+                       else "SKILL_HOST_UNAVAILABLE")
                 return
             if len(selected) + len(todo) > max_files or used + sum(
                     self._entries[n]["source"]["bytes"] for n in todo) > max_bytes:
@@ -297,7 +306,9 @@ class SkillRegistry:
                 contents[n] = raw
                 used += len(raw)
                 selected.append({"id": n, "required": n in required, "source": identity,
-                                 "host_mode": self._entries[n]["hosts"][host], "status": "RETRIEVED"})
+                                 "dependencies": list(self._entries[n]["dependencies"]),
+                                 "selection_status": "SELECTED", "host_mode": self._entries[n]["hosts"][host],
+                                 "status": "RETRIEVED", "loading_status": "NOT_LOADED"})
         add_group(required, True)
         for n in optional:
             add_group(self._closure([n]), False)

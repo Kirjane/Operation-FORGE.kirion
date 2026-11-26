@@ -548,6 +548,7 @@ def assert_assurance_applicable_envelope(envelope: dict[str, Any], oracle: dict[
     if (envelope["dirty"] or not is_valid_git_sha(envelope["candidate_sha"]) or
             not is_valid_git_sha(envelope["tree_sha"]) or provenance in {"ASSUMED", "REPORTED"} or
             (EVIDENCE_LEVEL_ORDER[level] >= 4 and evidence_type == "SOURCE") or
+            (evidence_type == "SOURCE" and level != "E1") or
             (gid in E5_RUNTIME_GATES and provenance not in {"DIRECTLY_OBSERVED", "REPRODUCED"})):
         raise QualityGateError("EVIDENCE_PROVENANCE_OR_SOURCE_MISMATCH")
     if envelope["status"] not in {"PASS", "FAIL"}:

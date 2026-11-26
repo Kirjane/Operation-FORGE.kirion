@@ -44,6 +44,9 @@ def assurance_denial(exc):
 def strict_json(raw):
     require(type(raw) in (str, bytes), "RAW_JSON_REQUIRED")
     try:
+        if type(raw) is bytes:
+            raw = raw.decode("utf-8", errors="strict")
+        require(len(raw) <= 8 * 1024 * 1024, "ASSURANCE_JSON_TOO_LARGE")
         obj = json.loads(raw, object_pairs_hook=_unique_pairs, parse_constant=_invalid_constant)
         _check_json(obj)
     except (ValueError, UnicodeError, RecursionError) as exc:
@@ -131,6 +134,7 @@ class FixtureAssuranceResolver:
             raise AssuranceError("CURRENT_OBSERVATION_UNAVAILABLE") from exc
         require(type(actual) is dict and same(actual, expected_observation),
                 "CURRENT_SOURCE_TARGET_OR_RUNTIME_DRIFT")
+        require(dt.datetime.now(dt.timezone.utc) < utc(plan["expires_at_utc"]), "ASSURANCE_PLAN_STALE")
         return plan
 
     def verify_issuer(self, record, plan, role, now):
@@ -143,8 +147,9 @@ class FixtureAssuranceResolver:
         require(contract_scope(plan) in issuer["contracts"], "ISSUER_CONTRACT_SCOPE_MISMATCH")
         expected = hmac.new(issuer["key"], signed_material(record), hashlib.sha256).hexdigest()
         require(hmac.compare_digest(expected, record["signature"]), "RECEIPT_SIGNATURE_INVALID")
-        require(utc(plan["observed_at_utc"]) <= utc(record["issued_at_utc"]) <= now <
-                utc(record["expires_at_utc"]) <= utc(plan["expires_at_utc"]), "RECEIPT_STALE")
+        require(max(utc(plan["observed_at_utc"]), utc(issuer["valid_from_utc"])) <=
+                utc(record["issued_at_utc"]) <= now < utc(record["expires_at_utc"]) <=
+                min(utc(plan["expires_at_utc"]), utc(issuer["expires_at_utc"])), "RECEIPT_STALE")
         author = plan["author_actor_id"]
         if role == "WRITER":
             require(issuer["actor_id"] == author and issuer["context_id"] == plan["author_context_id"],
@@ -185,8 +190,18 @@ class FixtureAssuranceResolver:
         require(oracle["oracle_id"] in issuer["oracles"], "ISSUER_ORACLE_SCOPE_MISMATCH")
         require(EVIDENCE_LEVEL_ORDER[env["evidence_level"]] <= EVIDENCE_LEVEL_ORDER[issuer["max_level"]]
                 <= EVIDENCE_LEVEL_ORDER["E5"], "EVIDENCE_CEILING_EXCEEDED")
-        require(oracle["target_profile"] == configured["target"]["profile"] and
-                oracle["environment"] == configured["target"]["environment"], "ORACLE_TARGET_MISMATCH")
+        target = configured["target"]
+        require(oracle["target_profile"] == target["profile"] and
+                oracle["environment"] == target["environment"], "ORACLE_TARGET_MISMATCH")
+        require(configured["runtime_sha256"] != "0" * 64, "RUNTIME_IDENTITY_UNANCHORED")
+        if target["kind"] == "device-fixture":
+            require(bool(target["device_id"]) and target["executable_sha256"] not in {None, "0" * 64}
+                    and target["signing_policy_sha256"] not in {None, "0" * 64}, "DEVICE_OR_SIGNING_IDENTITY_MISSING")
+        if oracle["gate_id"] in {"G07", "G09", "G10", "G11"}:
+            allowed_targets = {"G07": {"database-fixture"}, "G09": {"runtime-fixture", "database-fixture"},
+                               "G10": {"runtime-fixture", "browser-fixture", "device-fixture"},
+                               "G11": {"browser-fixture", "device-fixture"}}
+            require(target["kind"] in allowed_targets[oracle["gate_id"]], "RUNTIME_GATE_TARGET_KIND_MISMATCH")
         for key, value in {"mission_id": packet["mission_id"], "run_id": packet["run_id"],
                            "candidate_sha": plan["candidate_sha"], "tree_sha": plan["tree_sha"],
                            "stage": configured["stage"], "cwd": configured["target"]["cwd"],
@@ -234,10 +249,12 @@ class FixtureAssuranceResolver:
                 set(comparisons) == set(actual_comparisons) and
                 same(artifact["source_comparisons"], actual_comparisons), "SOURCE_COMPARISON_BINDING_MISMATCH")
         if env["evidence_type"] == "SOURCE":
-            require(oracle["path"] in comparisons and all(
+            require(comparisons.get(oracle["path"]) == oracle["blob_sha"] and all(
                 normalize_rel_path(p) == p and any(path_matches_prefix(p, scope) for scope in source["scope"])
                 and is_valid_git_sha(comparisons[p]) and is_valid_git_sha(actual_comparisons[p])
                 for p in comparisons), "SOURCE_COMPARISON_SCOPE_INCOMPLETE")
+        else:
+            require(not comparisons, "UNEXPECTED_SOURCE_COMPARISON")
         verdict = "PASS" if same(artifact["observed"], positive) and same(comparisons, actual_comparisons) else "FAIL"
         require(env["status"] == verdict and env["exit_code"] is not None and
                 (verdict != "PASS" or env["exit_code"] == 0), "ORACLE_RESULT_MISMATCH")
@@ -253,6 +270,8 @@ class FixtureAssuranceResolver:
             require(set(configured["review_scope"]) <= set(review["inspected_scope"]), "REVIEW_SCOPE_INCOMPLETE")
             finding_ids = [f["id"] for f in review["findings"]]
             require(len(finding_ids) == len(set(finding_ids)), "DUPLICATE_FINDING")
+            require(len(review["evidence_inspected"]) == len(set(review["evidence_inspected"])),
+                    "DUPLICATE_REVIEW_EVIDENCE")
             # Independently configured known finding inventory cannot be omitted.
             known = configured["known_findings"]
             require(type(known) is dict and set(known) <= set(finding_ids), "KNOWN_FINDING_OMITTED")
@@ -265,7 +284,8 @@ class FixtureAssuranceResolver:
                 if finding["severity"] in {"P0", "P1", "P2"}:
                     if finding["disposition"] == "FIXED":
                         required_proofs.add(fid)
-                        require(type(proofs.get(fid)) is str and proofs[fid] in review["evidence_inspected"],
+                        require(type(proofs.get(fid)) is str and proofs[fid] in review["evidence_inspected"]
+                                and bool(configured["finding_fix_oracles"].get(fid)),
                                 "FINDING_FIX_PROOF_MISSING")
                     elif finding["disposition"] == "AUTHORIZED_DISPOSITION":
                         required_proofs.add(fid)
@@ -279,7 +299,8 @@ class FixtureAssuranceResolver:
         else:
             require(review is None and not proofs, "WRITER_CANNOT_ISSUE_REVIEW")
         return {"record": record, "receipt_sha256": digest_json(record), "verdict": verdict,
-                "review": review, "finding_proofs": proofs, "fixture_only": True}
+                "review": review, "finding_proofs": proofs,
+                "finding_fix_oracles": configured.get("finding_fix_oracles", {}), "fixture_only": True}
 
     def verify_decision(self, packet, attempt, binding, raw, receipts):
         decision = strict_json(raw)
@@ -320,10 +341,23 @@ def evaluate_applicable_receipts(packet, receipts):
         if gid not in missing + failed + conflicted:
             passed.append(gid)
     # The independent review must cite every applicable writer receipt.
-    writer = {r["receipt_sha256"] for r in receipts if r["record"]["issuer_role"] == "WRITER"}
+    writer = {r["receipt_sha256"]: r for r in receipts if r["record"]["issuer_role"] == "WRITER"}
     reviews = [r for r in receipts if r["record"]["issuer_role"] == "REVIEWER"]
-    review_complete = bool(reviews) and all(r["review"] and
-        set(r["review"]["evidence_inspected"]) == writer for r in reviews)
+
+    def review_has_relevant_proofs(receipt):
+        review = receipt["review"]
+        if not review or set(review["evidence_inspected"]) != set(writer):
+            return False
+        for finding in review["findings"]:
+            if finding["severity"] not in {"P0", "P1", "P2"} or finding["disposition"] != "FIXED":
+                continue
+            proof = writer.get(receipt["finding_proofs"].get(finding["id"]))
+            if (not proof or proof["verdict"] != "PASS" or proof["record"]["oracle_id"] not in
+                    receipt["finding_fix_oracles"].get(finding["id"], [])):
+                return False
+        return True
+
+    review_complete = bool(reviews) and all(review_has_relevant_proofs(r) for r in reviews)
     if not review_complete and "G13" in passed:
         passed.remove("G13")
         missing.append("G13")

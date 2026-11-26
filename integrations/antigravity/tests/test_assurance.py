@@ -78,6 +78,7 @@ class AssuranceTests(unittest.TestCase):
                 "expected": {"status": 403, "reason": "OWNERSHIP_DENIED"},
                 "negative_expected": {"status": 403, "reason": "WRONG_TARGET"},
                 "review_scope": ["docs"], "known_findings": {}, "authorized_dispositions": {},
+                "finding_fix_oracles": {"P1-01": ["oracle-G01"]},
             }
         self.issuers = {}
         for issuer, role, actor, context, key in (
@@ -303,6 +304,19 @@ class AssuranceTests(unittest.TestCase):
         self.assertEqual(self.record(self.receipt("G13", review=self.review([writer], [finding])))["status"], "BLOCKED")
         self.assertEqual(self.record(self.receipt("G13", review=self.review([writer], [finding]),
                                               proofs={finding["id"]: writer}))["status"], "RECORDED")
+
+    def test_finding_fix_requires_applicable_authorized_oracle(self):
+        digests = []
+        for gate in ("G00", "G01", "G04", "G15"):
+            digests.append(self.record(self.receipt(gate))["receipt_sha256"])
+        finding = {"id": "P1-01", "severity": "P1", "path": "docs/contract.md", "line": 1,
+                   "contract_violated": "fixture", "reproduction": "observed", "requested_correction": "fix",
+                   "disposition": "FIXED"}
+        result = self.record(self.receipt("G13", review=self.review(digests, [finding]),
+                                          proofs={"P1-01": digests[0]}))
+        self.assertEqual(result["status"], "RECORDED")
+        self.assertIn("G13", self.summary()["missing_gates"])
+        self.assertEqual(self.summary()["overall_status"], "BLOCKED")
 
     def test_acceptance_actor_cannot_be_writer_or_reviewer(self):
         receipts = self.complete()

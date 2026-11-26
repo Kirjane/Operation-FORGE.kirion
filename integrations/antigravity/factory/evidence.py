@@ -234,7 +234,7 @@ def read_assurance_artifact(root: Path, envelope: dict[str, Any]) -> bytes:
         raise AuthorityError("ARTIFACT_IDENTITY_INVALID")
     root = root.resolve(strict=True)
     expected = root / digest[:2] / (digest + ".log")
-    if Path(envelope["artifact_path"]) != expected:
+    if envelope["artifact_path"] != str(expected):
         raise AuthorityError("ARTIFACT_PATH_MISMATCH")
     if (expected.parent.is_symlink() or expected.is_symlink() or
             expected.resolve(strict=True) != expected or not expected.is_file() or

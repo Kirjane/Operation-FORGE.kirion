@@ -258,10 +258,16 @@ FRONTEND_ROOTS = (
     "frontend", "web", "client", "ui", "src/frontend", "src/client", "src/ui",
     "src/components", "src/pages", "src/features", "src/styles", "src/assets",
     "src/routes", "src/screens", "src/navigation", "src/hooks", "src/lib/ui",
+    "src/lib/client", "src/services/client",
     "resources/js", "resources/css", "resources/views", "public/assets",
     "views", "pages", "components", "wwwroot/css", "wwwroot/js", "wwwroot/images",
     "tests/frontend", "tests/e2e", "tests/browser", "e2e", "playwright",
 )
+FRONTEND_EXACT_ENTRYPOINTS = frozenset({
+    "src/app.tsx", "src/app.jsx", "src/main.tsx", "src/main.jsx", "src/main.ts",
+    "src/index.tsx", "src/index.jsx", "src/app.vue", "src/app.svelte", "index.html",
+    "src/api/client.ts", "src/api/hostclient.ts",
+})
 ARCHITECTURE_ROOTS = ("docs/architecture", "docs/adr", "architecture", "adr",
                       "integrations/antigravity/adr", "integrations/antigravity/schemas")
 
@@ -298,7 +304,12 @@ def _explicit_owned_file(packet: dict[str, Any], norm: str, root: str) -> bool:
 def _frontend_path_allowed(packet: dict[str, Any], norm: str) -> bool:
     root = _frontend_root(norm)
     name = PurePosixPath(norm).name.lower()
-    if root is None or name in FRONTEND_DENIED_NAMES:
+    if name in FRONTEND_DENIED_NAMES:
+        return False
+    if norm.lower() in FRONTEND_EXACT_ENTRYPOINTS:
+        return any(normalize_rel_path(prefix).lower() == norm.lower()
+                   for prefix in packet.get("owned_paths", []))
+    if root is None:
         return False
     parts = norm.lower().split("/")
     # Framework server routes/actions can live inside apparently client trees.

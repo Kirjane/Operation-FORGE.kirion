@@ -60,6 +60,15 @@ class FrontendRoleTests(unittest.TestCase):
             with self.subTest(persona=persona):
                 self.assertEqual(assert_paths_within_ownership(packet, paths, **binding(packet)), paths)
 
+    def test_exact_entrypoints_and_client_adapter(self):
+        paths = ["src/App.tsx", "src/main.tsx", "src/api/hostClient.ts", "index.html"]
+        for persona in (LUCIEN, IRIS):
+            packet = writer(persona, owned=paths)
+            self.assertEqual(assert_paths_within_ownership(packet, paths, **binding(packet)), paths)
+            broad = writer(persona, owned=["src"])
+            with self.assertRaises(PolicyViolationError):
+                assert_paths_within_ownership(broad, ["src/App.tsx"], **binding(broad))
+
     def test_denied_backend_and_scope_even_with_valid_grant(self):
         for persona in (LUCIEN, IRIS):
             packet = writer(persona, owned=["src/components", "src/pages", "src/routes",

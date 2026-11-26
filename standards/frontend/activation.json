@@ -66,8 +66,9 @@
     "deduplicate": "first_occurrence",
     "budget": "generic_loader_authorized_actual_bytes",
     "required_missing": "DENY",
-    "optional_unavailable": "REPORT_NOT_LOADED",
+    "optional_unavailable": "REPORT_NOT_LOADED_ONLY_IF_SEPARATELY_MARKED_OPTIONAL_BY_GENERIC_PLAN",
     "receipt": "verified_consumption_only",
-    "execution": "NO_LIVE_ACTIVATION_UNTIL_COMBINED_QUALIFICATION"
+    "execution": "NO_LIVE_ACTIVATION_UNTIL_COMBINED_QUALIFICATION",
+    "explicit_selected_domains_required": true
   }
 }

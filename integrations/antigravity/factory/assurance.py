@@ -17,6 +17,7 @@ from .authority import AuthorityError, validate_contract, is_valid_git_sha
 from .evidence import read_assurance_artifact
 from .mission_contract import (_check_json, _unique_pairs, _invalid_constant,
                                canonical_json, contract_digest, digest_json)
+from .policy import normalize_rel_path, path_matches_prefix
 from .quality import (assert_assurance_applicable_envelope, EVIDENCE_LEVEL_ORDER,
                       NoxReviewEngine, RISK_REQUIRED_GATES)
 
@@ -35,6 +36,7 @@ def assurance_denial(exc):
     # or signed payload values (which can include sensitive material).
     reason = str(exc) if isinstance(exc, AssuranceError) else "INVALID_OR_UNAVAILABLE_ASSURANCE"
     return {"status": "BLOCKED", "overall_status": "BLOCKED", "reason": reason,
+            "applicability": "UNVERIFIED",
             "fixture_only": True, "promotion_authorized": False,
             "actual_product_outcome": "NOT_TESTED"}
 
@@ -108,10 +110,26 @@ class FixtureAssuranceResolver:
         now = dt.datetime.now(dt.timezone.utc)
         require(utc(plan["observed_at_utc"]) <= now < utc(plan["expires_at_utc"]) <= utc(binding["valid_until_utc"]),
                 "ASSURANCE_PLAN_STALE")
-        # Independently supplied current readback, not target/runtime from ingress.
-        actual = self._observe(deepcopy(plan))
-        require(type(actual) is dict and same(actual, {k: plan[k] for k in
-                ("candidate_sha", "tree_sha", "target", "runtime_sha256", "environment_versions")}),
+        # Per-oracle current readback, not target/runtime from ingress. A
+        # source check, browser journey and device check need not share a host.
+        oracle_observations = {}
+        for oid, configured in plan["oracles"].items():
+            target = configured["target"]
+            require(target["profile"] in {"MOCK", "SYNTHETIC"} and
+                    target["repo_id"] == packet["repo_id"] and target["repo_name"] == packet["repo_name"]
+                    and target["branch"] == packet["permitted_branch"], "ORACLE_TARGET_TRUST_UNAVAILABLE")
+            require(all(type(target[k]) is str and target[k].strip() for k in
+                        ("kind", "environment", "data_authority", "cwd")), "TARGET_IDENTITY_INCOMPLETE")
+            oracle_observations[oid] = {k: configured[k] for k in
+                ("target", "runtime_sha256", "environment_versions", "source_sha256",
+                 "oracle_blob_sha", "observed_source_comparisons")}
+        expected_observation = {"candidate_sha": plan["candidate_sha"], "tree_sha": plan["tree_sha"],
+                                "oracles": oracle_observations}
+        try:
+            actual = self._observe(deepcopy(plan))
+        except Exception as exc:
+            raise AssuranceError("CURRENT_OBSERVATION_UNAVAILABLE") from exc
+        require(type(actual) is dict and same(actual, expected_observation),
                 "CURRENT_SOURCE_TARGET_OR_RUNTIME_DRIFT")
         return plan
 
@@ -147,7 +165,8 @@ class FixtureAssuranceResolver:
         source = next(s for s in packet["source_authorities"] if s["source_id"] == oracle["source_id"])
         configured = plan["oracles"].get(oracle["oracle_id"])
         require(type(configured) is dict and configured.get("oracle_sha256") == digest_json(oracle)
-                and configured.get("source_sha256") == digest_json(source), "ORACLE_TRUST_UNAVAILABLE")
+                and configured.get("source_sha256") == digest_json(source)
+                and configured.get("oracle_blob_sha") == oracle["blob_sha"], "ORACLE_TRUST_UNAVAILABLE")
         expected = {
             "contract_sha256": contract_digest(packet), "revision": packet["revision"],
             "repo_id": packet["repo_id"], "repo_name": packet["repo_name"], "base_sha": packet["base_sha"],
@@ -156,7 +175,7 @@ class FixtureAssuranceResolver:
             "attempt_ordinal": attempt["ordinal"], "worker_actor_id": attempt["actor_id"],
             "plan_sha256": digest_json(plan), "oracle_sha256": digest_json(oracle),
             "source_sha256": digest_json(source), "outcome_ids": oracle["outcome_ids"],
-            "target": plan["target"], "runtime_sha256": plan["runtime_sha256"],
+            "target": configured["target"], "runtime_sha256": configured["runtime_sha256"],
         }
         for key, value in expected.items():
             require(same(record[key], value), "RECEIPT_BINDING_MISMATCH:" + key)
@@ -166,27 +185,37 @@ class FixtureAssuranceResolver:
         require(oracle["oracle_id"] in issuer["oracles"], "ISSUER_ORACLE_SCOPE_MISMATCH")
         require(EVIDENCE_LEVEL_ORDER[env["evidence_level"]] <= EVIDENCE_LEVEL_ORDER[issuer["max_level"]]
                 <= EVIDENCE_LEVEL_ORDER["E5"], "EVIDENCE_CEILING_EXCEEDED")
-        require(oracle["target_profile"] == plan["target"]["profile"] and
-                oracle["environment"] == plan["target"]["environment"], "ORACLE_TARGET_MISMATCH")
+        require(oracle["target_profile"] == configured["target"]["profile"] and
+                oracle["environment"] == configured["target"]["environment"], "ORACLE_TARGET_MISMATCH")
         for key, value in {"mission_id": packet["mission_id"], "run_id": packet["run_id"],
                            "candidate_sha": plan["candidate_sha"], "tree_sha": plan["tree_sha"],
-                           "stage": configured["stage"], "cwd": plan["target"]["cwd"],
-                           "environment_versions": plan["environment_versions"],
+                           "stage": configured["stage"], "cwd": configured["target"]["cwd"],
+                           "environment_versions": configured["environment_versions"],
                            "fixture_sha256": oracle["fixture_sha256"] or "0" * 64}.items():
             require(same(env[key], value), "ENVELOPE_BINDING_MISMATCH:" + key)
         require(utc(plan["observed_at_utc"]) <= utc(env["started_at_utc"]) <=
                 utc(env["completed_at_utc"]) <= utc(record["issued_at_utc"]), "EXECUTION_TIME_MISMATCH")
         require(same(env["command_argv"], oracle["command_argv"] or configured["observation_argv"]),
                 "COMMAND_OR_OBSERVATION_MISMATCH")
-        assert_assurance_applicable_envelope(env, oracle)
-        artifact = strict_json(read_assurance_artifact(self._root, env))
+        try:
+            assert_assurance_applicable_envelope(env, oracle)
+            artifact = strict_json(read_assurance_artifact(self._root, env))
+        except AuthorityError as exc:
+            # The existing quality and artifact helpers use fixed reason codes.
+            reason = str(exc)
+            if reason in {"EVIDENCE_TYPE_OR_GATE_MISMATCH", "EVIDENCE_FLOOR_OR_CEILING_MISMATCH",
+                          "EVIDENCE_PROVENANCE_OR_SOURCE_MISMATCH", "EVIDENCE_NOT_EXECUTED",
+                          "ARTIFACT_IDENTITY_INVALID", "ARTIFACT_PATH_MISMATCH", "ARTIFACT_PATH_UNSAFE",
+                          "ARTIFACT_CONTENT_MISMATCH"}:
+                raise AssuranceError(reason) from exc
+            raise
         artifact_expected = {"schema_version": 1, "oracle_sha256": digest_json(oracle),
-                             "source_sha256": digest_json(source), "target": plan["target"],
+                             "source_sha256": digest_json(source), "target": configured["target"],
                              "candidate_sha": plan["candidate_sha"], "tree_sha": plan["tree_sha"],
-                             "runtime_sha256": plan["runtime_sha256"], "nonce": record["nonce"],
+                             "runtime_sha256": configured["runtime_sha256"], "nonce": record["nonce"],
                              "reservation_id": attempt["reservation_id"], "outcome_ids": oracle["outcome_ids"],
                              "negative_scenario": oracle["negative_control"]}
-        require(set(artifact) == set(artifact_expected) | {"observed", "negative_observed", "review", "finding_proofs"},
+        require(set(artifact) == set(artifact_expected) | {"observed", "negative_observed", "review", "finding_proofs", "source_comparisons"},
                 "OBSERVATION_SHAPE_MISMATCH")
         require(all(same(artifact[k], v) for k, v in artifact_expected.items()), "OBSERVATION_BINDING_MISMATCH")
         # Fixed exact structured comparator; all required observation keys must
@@ -197,7 +226,19 @@ class FixtureAssuranceResolver:
         require(type(artifact["observed"]) is dict and set(artifact["observed"]) == set(positive),
                 "OBSERVATION_SCOPE_INCOMPLETE")
         require(same(artifact["negative_observed"], negative), "NEGATIVE_CONTROL_MISMATCH")
-        verdict = "PASS" if same(artifact["observed"], positive) else "FAIL"
+        # A receipt cannot compare an unrelated blob or silently omit a
+        # required path. Compare actual per-path readback to authorized identity.
+        comparisons = configured["source_comparisons"]
+        actual_comparisons = configured["observed_source_comparisons"]
+        require(type(comparisons) is dict and type(actual_comparisons) is dict and
+                set(comparisons) == set(actual_comparisons) and
+                same(artifact["source_comparisons"], actual_comparisons), "SOURCE_COMPARISON_BINDING_MISMATCH")
+        if env["evidence_type"] == "SOURCE":
+            require(oracle["path"] in comparisons and all(
+                normalize_rel_path(p) == p and any(path_matches_prefix(p, scope) for scope in source["scope"])
+                and is_valid_git_sha(comparisons[p]) and is_valid_git_sha(actual_comparisons[p])
+                for p in comparisons), "SOURCE_COMPARISON_SCOPE_INCOMPLETE")
+        verdict = "PASS" if same(artifact["observed"], positive) and same(comparisons, actual_comparisons) else "FAIL"
         require(env["status"] == verdict and env["exit_code"] is not None and
                 (verdict != "PASS" or env["exit_code"] == 0), "ORACLE_RESULT_MISMATCH")
         review = artifact["review"]

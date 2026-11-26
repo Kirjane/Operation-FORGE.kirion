@@ -138,7 +138,78 @@
       }
     },
     "target": {
-      "type": "object"
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repo_id",
+        "repo_name",
+        "branch",
+        "kind",
+        "profile",
+        "environment",
+        "data_authority",
+        "cwd",
+        "device_id",
+        "executable_sha256",
+        "signing_policy_sha256"
+      ],
+      "properties": {
+        "repo_id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "repo_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "branch": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "type": "string",
+          "minLength": 1
+        },
+        "profile": {
+          "type": "string",
+          "enum": [
+            "MOCK",
+            "SYNTHETIC"
+          ]
+        },
+        "environment": {
+          "type": "string",
+          "minLength": 1
+        },
+        "data_authority": {
+          "type": "string",
+          "minLength": 1
+        },
+        "cwd": {
+          "type": "string",
+          "minLength": 1
+        },
+        "device_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "executable_sha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "signing_policy_sha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
     },
     "runtime_sha256": {
       "type": "string",

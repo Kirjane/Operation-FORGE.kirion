@@ -726,7 +726,7 @@ class ContractJournal(FactoryJournal):
                             {"reservation_id": reservation_id, "receipt_sha256": receipt["receipt_sha256"],
                              "receipt": receipt["record"], "fixture_only": True})
                 return {"status": "RECORDED", "receipt_sha256": receipt["receipt_sha256"],
-                        "applicable_verdict": receipt["verdict"], "fixture_only": True,
+                        "applicability": "APPLICABLE", "applicable_verdict": receipt["verdict"], "fixture_only": True,
                         "promotion_authorized": False}
         except (AuthorityError, ValueError, TypeError, KeyError, OSError, sqlite3.Error, RecursionError) as exc:
             return assurance_denial(exc)

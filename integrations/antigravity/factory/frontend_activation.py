@@ -16,7 +16,7 @@ def frontend_selection(registry, packet, cfg, required_skills):
     require(declaration["path"] == DECLARATION and profile["path"] == PROFILE and
             all(declaration[k] == profile[k] for k in ("repository_id", "repository_name", "commit_sha")),
             "FRONTEND_DECLARATION_PIN_MISMATCH")
-    authorities = packet["source_authorities"]
+    authorities = [a for a in packet["source_authorities"] if a["authority_kind"] in {"CONSTRAINT", "FUNCTIONAL"}]
     raw, declaration_identity = registry.read_declared_source(declaration, authorities)
     profile_raw, profile_identity = registry.read_declared_source(profile, authorities)
     decl, prof = parse_json(raw), parse_json(profile_raw)

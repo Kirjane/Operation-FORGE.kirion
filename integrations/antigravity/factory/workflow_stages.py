@@ -16,9 +16,9 @@ STAGES = {
         {"stage": "failure_classification", "role": "Reviewer", "artifact": "failure taxonomy and discriminating regression",
          "stop_on": ["requirements", "drift", "resource"]},
         {"stage": "root_cause_repair", "role": "Code Writer", "requires": "authorized repairable class, exact candidate and remaining budget",
-         "artifact": "writer result and pre/post regression evidence, no assertion weakening"},
-        {"stage": "independent_recheck", "role": "Reviewer", "requires": "READY writer result and distinct actor/context",
-         "artifact": "exact repaired SHA review"}],
+         "artifact": "writer-result.schema.json and pre/post regression evidence, no assertion weakening"},
+        {"stage": "independent_recheck", "role": "Reviewer", "requires": "READY writer final_sha and distinct actor/context",
+         "artifact": "nox-result.schema.json at exact repaired SHA", "candidate_binding": "writer final_sha"}],
     "nox_adversarial_audit": [
         {"stage": "frozen_candidate_audit", "role": "Reviewer", "requires": "independent nonauthor actor/context and exact SHA",
          "artifact": "source, tests, policy, evidence and security findings; nox-result.schema.json"}],

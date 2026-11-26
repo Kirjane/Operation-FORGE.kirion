@@ -802,10 +802,15 @@ class FactoryCoreTests(unittest.TestCase):
         self.assertFalse(is_prohibited_branch("feat/antigravity-software-factory-r1"))
 
         # NOX-R3-009: self_healing_repair.py invokes writer repair + schema-synced Nox re-review
-        repair_wf = (ANTIGRAVITY_ROOT / "workflows" / "self_healing_repair.py").read_text(encoding="utf-8")
-        self.assertIn("writer-result.schema.json", repair_wf)
-        self.assertIn("nox-result.schema.json", repair_wf)
-        self.assertIn('writer_res["final_sha"]', repair_wf)
+        from integrations.antigravity.factory.workflow_stages import workflow_stages
+        repair_wf = workflow_stages("self_healing_repair")
+        self.assertEqual([s["stage"] for s in repair_wf],
+                         ["failure_classification", "root_cause_repair", "independent_recheck"])
+        self.assertIn("writer-result.schema.json", repair_wf[1]["artifact"])
+        self.assertIn("nox-result.schema.json", repair_wf[2]["artifact"])
+        self.assertIn("final_sha", repair_wf[2]["requires"])
+        self.assertEqual(repair_wf[0]["stop_on"], ["requirements", "drift", "resource"])
+        self.assertTrue(all(not s["native_invoked"] and s["requires_separate_authority"] for s in repair_wf))
 
         # NOX-R3-010: ANTIGRAVITY_CSRF_TOKEN= redacted
         self.assertNotIn("secret_csrf_token_12345", redact_secrets("ANTIGRAVITY_CSRF_TOKEN=secret_csrf_token_12345"))

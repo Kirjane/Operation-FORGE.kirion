@@ -152,6 +152,9 @@ class FixtureSkillRuntime:
         if packet["assigned_persona"] in FRONTEND_PERSONAS or cfg["profile"] == "frontend_web":
             from .frontend_activation import frontend_selection
             require(cfg["profile"] == "frontend_web", "FRONTEND_PROFILE_REQUIRED")
+            require(all(self._registry.entry_kind(n) == "skill" for n in
+                        [*cfg.get("required_extra", []), *cfg.get("optional_extra", [])]),
+                    "FRONTEND_REFERENCE_REQUIRES_EXPLICIT_DOMAIN")
             references, optional_references, frontend = frontend_selection(self._registry, packet, cfg, required)
             used += frontend["metadata_bytes"]
             document_remaining -= 2

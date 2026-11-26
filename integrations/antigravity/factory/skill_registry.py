@@ -232,6 +232,10 @@ class SkillRegistry:
                        src["path"].startswith(scope.rstrip("/") + "/") for scope in a["scope"])
                    for a in authorities)
 
+    def entry_kind(self, name):
+        require(name in self._entries, 'SKILL_UNKNOWN')
+        return self._entries[name]['kind']
+
     def reference_for(self, source, path):
         found = [name for name, e in self._entries.items() if e["kind"] == "reference" and
                  e["source"]["path"] == path and all(e["source"][k] == source[k] for k in

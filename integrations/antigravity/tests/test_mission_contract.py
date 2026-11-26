@@ -175,10 +175,7 @@ class MissionContractTests(unittest.TestCase):
             verify_mission_packet(make_contract())
 
     def test_standard_and_fallback_schema(self):
-        try:
-            from jsonschema import Draft202012Validator
-        except ImportError:
-            self.skipTest("Optional standard JSON Schema validator unavailable")
+        from jsonschema import Draft202012Validator  # required for qualification, not a runtime dependency
         schema = load_schema("mission-packet-v2.schema.json")
         Draft202012Validator.check_schema(schema)
         validator = Draft202012Validator(schema)

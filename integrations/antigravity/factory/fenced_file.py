@@ -20,21 +20,23 @@ def identity(st):
 
 
 @contextmanager
-def fixed_file(root, root_identity, directory_identity, file_identity, before):
+def fixed_file(root, root_identity, directory_identity, file_identity, before, *, directory='docs', filename='owned.txt'):
+    if (directory, filename) not in {('docs', 'owned.txt'), ('ui', 'owned.md')}:
+        raise FenceDenied('FIXTURE_PATH_NOT_SUPPORTED')
     if not supported():
         raise FenceDenied("DESCRIPTOR_CONFINEMENT_UNAVAILABLE")
     flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
     root_fd = os.open(root, flags)
     try:
-        docs_fd = os.open("docs", flags, dir_fd=root_fd)
+        docs_fd = os.open(directory, flags, dir_fd=root_fd)
         try:
-            fd = os.open("owned.txt", os.O_RDWR | os.O_NOFOLLOW | os.O_NONBLOCK,
+            fd = os.open(filename, os.O_RDWR | os.O_NOFOLLOW | os.O_NONBLOCK,
                          dir_fd=docs_fd)
             try:
                 def verify():
                     root_st = os.stat(root, follow_symlinks=False)
-                    docs_st = os.stat("docs", dir_fd=root_fd, follow_symlinks=False)
-                    named = os.stat("owned.txt", dir_fd=docs_fd, follow_symlinks=False)
+                    docs_st = os.stat(directory, dir_fd=root_fd, follow_symlinks=False)
+                    named = os.stat(filename, dir_fd=docs_fd, follow_symlinks=False)
                     opened = os.fstat(fd)
                     if (not stat.S_ISDIR(root_st.st_mode) or
                             not stat.S_ISDIR(docs_st.st_mode) or

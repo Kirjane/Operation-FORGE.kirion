@@ -184,6 +184,22 @@ class FixtureSkillRuntime:
         self._prepared[prepared] = prepared.plan_sha256
         return prepared
 
+    def composition_identity(self):
+        return {"registry": self._registry.identity, "configuration_sha256": digest(self._configs)}
+
+    def observe_reference_source(self, source, prepared):
+        """Observe only exact declared files in the pinned plan; never broaden scope."""
+        pins = [e["source"] for e in prepared._plan["selected"]]
+        activation = prepared._plan.get("frontend_activation")
+        if activation:
+            pins.extend([activation["declaration"], activation["profile"]])
+        for path in source["scope"]:
+            matches = [p for p in pins if p["path"] == path and all(p[k] == source[k] for k in
+                       ("repository_id", "repository_name", "commit_sha"))]
+            require(len(matches) == 1, "FIXTURE_REFERENCE_SCOPE_NOT_EXACT")
+            self._registry.read_declared_source(matches[0], [source])
+        return {k: source[k] for k in ("repository_id", "repository_name", "commit_sha")}
+
     def manual_context(self, packet, *, grant):
         """Export verified retrieved text; neither host activation nor receipt."""
         prepared = self.prepare(packet, grant=grant)

@@ -125,7 +125,11 @@ def is_supported_fixture_adapter(adapter):
 def fixture_adapter_binding(adapter):
     from .scoped_fixture import ScopedGitFixtureAdapter
     if type(adapter) is ScopedGitFixtureAdapter:
-        return {"kind": "SCOPED_GIT_FIXTURE", "root": str(adapter.repo), "base_sha": adapter.base_sha}
+        binding = {"kind": "SCOPED_GIT_FIXTURE", "root": str(adapter.repo), "base_sha": adapter.base_sha}
+        composition = adapter.composition_binding()
+        if composition is not None:
+            binding["composition"] = composition
+        return binding
     if type(adapter) is FixtureDispatchAdapter:
         return {"kind": "CALLBACK_FIXTURE"}
     raise SchedulerError("Unsupported fixture adapter.")
@@ -321,6 +325,9 @@ class ContractJournal(FactoryJournal):
             material["cognition"] = observed.get("cognition")
             if canonical_json(material["cognition"]) != canonical_json(packet["cognition"]):
                 failures.append("COGNITION_MISMATCH")
+        if "skill_plan_sha256" in observed:
+            material["skill_plan_sha256"] = observed["skill_plan_sha256"]
+            material["fixture_actor_sha256"] = observed["fixture_actor_sha256"]
         # Acceptance-bound dependency satisfaction is deferred. A fixture caller
         # cannot assert that an upstream mission was accepted.
         if packet["depends_on"]:

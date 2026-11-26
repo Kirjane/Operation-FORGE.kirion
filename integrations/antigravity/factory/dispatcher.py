@@ -357,7 +357,10 @@ class FleetDispatcher:
         result = journal.dispatch_fixture(packet, fixture_adapter)
         # Existing bounded historical fixture calls are preserved. They do not
         # establish that a selected skill was loaded by a host.
-        return {**result, "skill_consumption_status": "NOT_VERIFIED_BY_GENERIC_DISPATCH"}
+        consumed = (result.get("status") == "COMPLETED" and
+                    result.get("result", {}).get("skill_consumption", {}).get("status") == "FIXTURE_CONSUMED")
+        return {**result, "skill_consumption_status": "FIXTURE_CONSUMED" if consumed else
+                "NOT_VERIFIED_BY_GENERIC_DISPATCH"}
 
     def prepare_worker_skills(self, raw, runtime=None):
         """Generic composition seam: verify W1 packet against independently pinned skill plan."""

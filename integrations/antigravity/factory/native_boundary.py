@@ -69,7 +69,8 @@ class FixtureNativeBoundary:
         )
         if not eligible:
             return self._journal.block_unavailable_bridge(raw)
-        return self._journal.dispatch_fixture(raw, self._adapter)
+        from .dispatcher import FleetDispatcher
+        return FleetDispatcher().dispatch_worker(raw, journal=self._journal, fixture_adapter=self._adapter)
 
     def inspect_recovery(self, raw, reservation_id):
         receipt = self._journal.inspect_attempt(raw, reservation_id)

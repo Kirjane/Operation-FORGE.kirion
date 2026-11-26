@@ -70,6 +70,7 @@ from integrations.antigravity.factory.scheduler import (
 )
 
 BASE_SHA = "a864b88bda5f26c44709c9239dc73ae63abc78ad"
+SKILL_REGISTRY_SHA = "05da5f962c87e5ab7cc4b956ecbbb2d4e8a0de2b"
 NEXT_SHA = "d222222222222222222222222222222222222222"
 
 
@@ -172,7 +173,7 @@ class FactoryCoreTests(unittest.TestCase):
             dispatcher.create_isolated_context("Antigravity-Nox", "Code Writer")
 
         # Progressive skill selector caps at <= 8 files and resolves both core and plugin skills
-        csharp_bundle = select_skills_for_mission("csharp_aspnet", skill_source_sha=BASE_SHA)
+        csharp_bundle = select_skills_for_mission("csharp_aspnet", skill_source_sha=SKILL_REGISTRY_SHA)
         self.assertLessEqual(len(csharp_bundle["files"]), 8)
         self.assertIn(".agents/skills/kirion-core/SKILL.md", csharp_bundle["files"])
         self.assertIn("integrations/antigravity/plugins/kirion-forge/skills/kirion-csharp/SKILL.md", csharp_bundle["files"])
@@ -1246,7 +1247,7 @@ class FactoryCoreTests(unittest.TestCase):
                 ext_dispatcher.dispatch_worker(malicious_pkt, lambda p, c, w: {"ran": True})
         for profile_name in ("csharp_aspnet.json", "php_laravel.json", "salryn_high_integrity.json", "frontend_web.json"):
             prof = json.loads((PROFILES_ROOT / profile_name).read_text(encoding="utf-8"))
-            selected = select_skills_for_mission(prof["profile_id"], skill_source_sha=BASE_SHA)
+            selected = select_skills_for_mission(prof["profile_id"], skill_source_sha=SKILL_REGISTRY_SHA)
             selected_names = [Path(f).parent.name for f in selected["files"]]
             self.assertEqual(selected_names, prof["required_skills"], f"Profile/dispatcher mismatch for {profile_name}")
             self.assertLessEqual(len(selected["files"]), 8)
@@ -1624,7 +1625,9 @@ class FactoryCoreTests(unittest.TestCase):
         with self.assertRaises(AuthorityError):
             select_skills_for_mission("php_laravel", skill_source_sha=ZERO_SHA40)
         with self.assertRaises(AuthorityError):
-            select_skills_for_mission("php_laravel", skill_source_sha=BASE_SHA, extra_specialists=["../evil"])
+            select_skills_for_mission("php_laravel", skill_source_sha=SKILL_REGISTRY_SHA, extra_specialists=["../evil"])
+        with self.assertRaises(AuthorityError):
+            select_skills_for_mission("php_laravel", skill_source_sha=BASE_SHA)
         with tempfile.TemporaryDirectory() as tmp:
             troot = Path(tmp)
             fake_plugin = troot / "plugins" / "kirion-forge"

@@ -291,7 +291,7 @@ def select_skills_for_mission(
     plan = resolve_skill_plan(profile_key, skill_source_sha=skill_source_sha,
                              extra_specialists=extra_specialists, repo_root=repo_root, **options)
     return {"skill_source_sha": skill_source_sha,
-            "files": [entry["source"]["path"] for entry in plan["selected"]]}
+            "files": [entry["source"]["path"] for entry in plan["selected"] if entry["kind"] == "skill"]}
 
 
 class FleetDispatcher:

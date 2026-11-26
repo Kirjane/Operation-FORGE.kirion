@@ -551,5 +551,15 @@ def assert_assurance_applicable_envelope(envelope: dict[str, Any], oracle: dict[
             (evidence_type == "SOURCE" and level != "E1") or
             (gid in E5_RUNTIME_GATES and provenance not in {"DIRECTLY_OBSERVED", "REPRODUCED"})):
         raise QualityGateError("EVIDENCE_PROVENANCE_OR_SOURCE_MISMATCH")
+    # Crosswalk meaning is independent of gate floor. A passing build or
+    # automated unit test cannot be upgraded to runtime acceptance.
+    valid_runtime_type = evidence_type == "RUNTIME" or (gid == "G08" and evidence_type == "SECURITY")
+    if ((level == "E1" and (evidence_type != "SOURCE" or
+                            provenance not in {"DIRECTLY_OBSERVED", "REPRODUCED"})) or
+            (level == "E3" and provenance not in {"DIRECTLY_OBSERVED", "REPRODUCED"}) or
+            (level == "E4" and provenance not in {"AUTOMATED", "REPRODUCED"}) or
+            (level == "E5" and (not valid_runtime_type or
+                                provenance not in {"DIRECTLY_OBSERVED", "REPRODUCED"}))):
+        raise QualityGateError("EVIDENCE_PROVENANCE_OR_SOURCE_MISMATCH")
     if envelope["status"] not in {"PASS", "FAIL"}:
         raise QualityGateError("EVIDENCE_NOT_EXECUTED")

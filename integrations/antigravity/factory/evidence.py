@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import datetime as dt
 import hashlib
+import os
 import re
 import subprocess
 from pathlib import Path
@@ -104,8 +105,25 @@ class TrustedEvidenceRunner:
         digest = hashlib.sha256(raw_bytes).hexdigest()
         bucket = self.artifact_store_root / digest[:2]
         bucket.mkdir(parents=True, exist_ok=True)
+        if bucket.is_symlink() or bucket.resolve(strict=True) != bucket:
+            raise AuthorityError("ARTIFACT_BUCKET_UNSAFE")
         blob_path = bucket / f"{digest}.log"
-        blob_path.write_bytes(raw_bytes)
+        # Content-addressed objects are immutable. Never follow or overwrite
+        # a preexisting symlink, hardlink or different byte sequence.
+        try:
+            with blob_path.open("xb") as stream:
+                stream.write(raw_bytes)
+                stream.flush()
+                os.fsync(stream.fileno())
+        except FileExistsError:
+            pass
+        if (blob_path.is_symlink() or blob_path.resolve(strict=True) != blob_path or
+                not blob_path.is_file() or blob_path.stat().st_nlink != 1):
+            raise AuthorityError("ARTIFACT_PATH_UNSAFE")
+        with blob_path.open("rb") as stream:
+            stored = stream.read(len(raw_bytes) + 1)
+        if stored != raw_bytes:
+            raise AuthorityError("ARTIFACT_CONTENT_MISMATCH")
         return blob_path, len(raw_bytes), digest
 
     def capture_fixture_oracle_artifact(self, *, binding, observe_positive, observe_negative):
@@ -120,13 +138,13 @@ class TrustedEvidenceRunner:
         from .mission_contract import canonical_json
         if type(binding) is not dict or {"observed", "negative_observed"} & set(binding):
             raise AuthorityError("FIXTURE_OBSERVATION_BINDING_INVALID")
-        positive = observe_positive()
-        negative = observe_negative()
+        captured_binding = deepcopy(binding)
+        positive = deepcopy(observe_positive())
+        negative = deepcopy(observe_negative())
         if type(positive) is not dict or type(negative) is not dict:
             raise AuthorityError("FIXTURE_OBSERVATION_SHAPE_INVALID")
         return self._store_artifact(canonical_json({
-            **deepcopy(binding), "observed": deepcopy(positive),
-            "negative_observed": deepcopy(negative)}))
+            **captured_binding, "observed": positive, "negative_observed": negative}))
 
     def run_gate_command(
         self,

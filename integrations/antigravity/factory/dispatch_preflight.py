@@ -730,7 +730,8 @@ class ContractJournal(FactoryJournal):
                 return {"status": "RECORDED", "receipt_sha256": receipt["receipt_sha256"],
                         "execution_sha256": receipt["execution_sha256"], "applicability": "APPLICABLE", "applicable_verdict": receipt["verdict"], "fixture_only": True,
                         "promotion_authorized": False}
-        except (AuthorityError, ValueError, TypeError, KeyError, OSError, sqlite3.Error, RecursionError) as exc:
+        except (AuthorityError, ValueError, TypeError, KeyError, OSError, sqlite3.Error,
+                RecursionError, AttributeError, StopIteration, OverflowError) as exc:
             return assurance_denial(exc)
 
     def evaluate_assurance(self, raw, reservation_id, resolver=None):
@@ -744,7 +745,8 @@ class ContractJournal(FactoryJournal):
                 summary = evaluate_applicable_receipts(packet, receipts)
                 return {**summary, "reservation_id": reservation_id,
                         "receipt_sha256s": sorted(r["receipt_sha256"] for r in receipts)}
-        except (AuthorityError, ValueError, TypeError, KeyError, OSError, sqlite3.Error, RecursionError) as exc:
+        except (AuthorityError, ValueError, TypeError, KeyError, OSError, sqlite3.Error,
+                RecursionError, AttributeError, StopIteration, OverflowError) as exc:
             return assurance_denial(exc)
 
     def record_assurance_decision(self, raw, reservation_id, decision_raw, resolver=None):
@@ -769,7 +771,8 @@ class ContractJournal(FactoryJournal):
                 return {"status": "FIXTURE_SUPPORTED", "decision_sha256": decision_digest,
                         "fixture_only": True, "promotion_authorized": False,
                         "actual_product_outcome": "NOT_TESTED"}
-        except (AuthorityError, ValueError, TypeError, KeyError, OSError, sqlite3.Error, RecursionError) as exc:
+        except (AuthorityError, ValueError, TypeError, KeyError, OSError, sqlite3.Error,
+                RecursionError, AttributeError, StopIteration, OverflowError) as exc:
             return assurance_denial(exc)
 
     def inspect_assurance_decision(self, raw, reservation_id, resolver=None):
@@ -794,7 +797,8 @@ class ContractJournal(FactoryJournal):
                 return {"status": "FIXTURE_SUPPORTED", "decision_sha256": item["decision_sha256"],
                         "fixture_only": True, "promotion_authorized": False,
                         "actual_product_outcome": "NOT_TESTED"}
-        except (AuthorityError, ValueError, TypeError, KeyError, OSError, sqlite3.Error, RecursionError) as exc:
+        except (AuthorityError, ValueError, TypeError, KeyError, OSError, sqlite3.Error,
+                RecursionError, AttributeError, StopIteration, OverflowError) as exc:
             return assurance_denial(exc)
 
     def reconcile_unknown(self, raw, reservation_id, adapter):

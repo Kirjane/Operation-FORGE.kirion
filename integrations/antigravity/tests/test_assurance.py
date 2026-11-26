@@ -262,6 +262,26 @@ class AssuranceTests(unittest.TestCase):
         self.assertEqual(self.record(self.sign(receipt))["status"], "BLOCKED")
         self.assertNotIn("G04", self.summary()["failed_gates"])
 
+    def test_crosswalk_level_inflation_is_not_applicable(self):
+        from integrations.antigravity.factory.quality import assert_assurance_applicable_envelope, QualityGateError
+        oracle = next(o for o in self.packet["oracles"] if o["gate_id"] == "G04")
+        envelope = copy.deepcopy(self.receipt("G04")["envelope"])
+        for status in ("PASS", "FAIL"):
+            envelope.update(status=status, evidence_level="E5", certainty_ceiling="VERIFIED",
+                            provenance="DIRECTLY_OBSERVED")
+            with self.assertRaises(QualityGateError):
+                assert_assurance_applicable_envelope(envelope, oracle)
+
+    def test_artifact_store_never_overwrites_existing_wrong_bytes(self):
+        from integrations.antigravity.factory.authority import AuthorityError
+        raw = "fixture artifact content"
+        path, size, digest = self.runner._store_artifact(raw)
+        self.assertEqual(self.runner._store_artifact(raw), (path, size, digest))
+        path.write_bytes(b"tampered")
+        with self.assertRaises(AuthorityError):
+            self.runner._store_artifact(raw)
+        self.assertEqual(path.read_bytes(), b"tampered")
+
     def test_actual_wrong_reason_is_failure_not_pass(self):
         wrong = {"status": 403, "reason": "UNRELATED_DENIAL"}
         self.assertEqual(self.record(self.receipt(observed=wrong))["status"], "BLOCKED")

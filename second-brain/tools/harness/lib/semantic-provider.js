@@ -44,17 +44,17 @@ function validateSnapshotShape(snapshot){
   if(typeof snapshot.generated_at!=='string'||!snapshot.generated_at) errors.push('snapshot generated_at is required');
   if(typeof snapshot.data_source_id!=='string'||!snapshot.data_source_id) errors.push('snapshot data_source_id is required');
   if(typeof snapshot.source_repository!=='string'||!snapshot.source_repository) errors.push('snapshot source_repository is required');
-  if(!/^[a-f0-9]{64}$/.test(snapshot.control_plane_sha256||'')) errors.push('snapshot control_plane_sha256 must be SHA-256');
-  if(!/^[a-f0-9]{64}$/.test(snapshot.route_pack_sha256||'')) errors.push('snapshot route_pack_sha256 must be SHA-256');
+  if(typeof snapshot.control_plane_sha256!=='string'||!/^[a-f0-9]{64}$/.test(snapshot.control_plane_sha256)) errors.push('snapshot control_plane_sha256 must be SHA-256');
+  if(typeof snapshot.route_pack_sha256!=='string'||!/^[a-f0-9]{64}$/.test(snapshot.route_pack_sha256)) errors.push('snapshot route_pack_sha256 must be SHA-256');
   if(!Array.isArray(snapshot.documents)) errors.push('snapshot documents must be an array');
-  if(!/^[a-f0-9]{64}$/.test(snapshot.snapshot_sha256||'')) errors.push('snapshot snapshot_sha256 must be SHA-256');
+  if(typeof snapshot.snapshot_sha256!=='string'||!/^[a-f0-9]{64}$/.test(snapshot.snapshot_sha256)) errors.push('snapshot snapshot_sha256 must be SHA-256');
   const seen=new Set();
-  for(const [i,doc] of (snapshot.documents||[]).entries()){
-    if(!doc||typeof doc!=='object'){errors.push(`documents[${i}] must be an object`);continue;}
+  for(const [i,doc] of (Array.isArray(snapshot.documents)?snapshot.documents:[]).entries()){
+    if(!doc||typeof doc!=='object'||Array.isArray(doc)){errors.push(`documents[${i}] must be an object`);continue;}
     if(typeof doc.source_path!=='string'||!doc.source_path) errors.push(`documents[${i}] source_path is required`);
     else if(seen.has(doc.source_path)) errors.push(`duplicate source_path: ${doc.source_path}`); else seen.add(doc.source_path);
-    if(!/^[a-f0-9]{40}$/.test(doc.source_sha||'')) errors.push(`documents[${i}] source_sha must be a Git blob SHA`);
-    if(!/^[a-f0-9]{64}$/.test(doc.content_sha256||'')) errors.push(`documents[${i}] content_sha256 must be SHA-256`);
+    if(typeof doc.source_sha!=='string'||!/^[a-f0-9]{40}$/.test(doc.source_sha)) errors.push(`documents[${i}] source_sha must be a Git blob SHA`);
+    if(typeof doc.content_sha256!=='string'||!/^[a-f0-9]{64}$/.test(doc.content_sha256)) errors.push(`documents[${i}] content_sha256 must be SHA-256`);
     if(typeof doc.content!=='string'||!doc.content.trim()) errors.push(`documents[${i}] content is required`);
     if(typeof doc.page_id!=='string'||!doc.page_id) errors.push(`documents[${i}] page_id is required`);
     if(typeof doc.title!=='string'||!doc.title) errors.push(`documents[${i}] title is required`);
@@ -78,6 +78,7 @@ function readSnapshot(root,controlPlane,routePack,options={}){
   try{snapshot=JSON.parse(fs.readFileSync(file,'utf8'));}
   catch(err){return {status:'BLOCKED',provider:PROVIDERS.NOTION_SNAPSHOT,reason:'semantic snapshot invalid JSON',snapshot_path:file,errors:[err.message]};}
   const errors=validateSnapshotShape(snapshot);
+  if(errors.length) return {status:'BLOCKED',provider:PROVIDERS.NOTION_SNAPSHOT,reason:'semantic snapshot shape validation failed',snapshot_path:file,errors};
   const expectedDigest=snapshotDigest(snapshot);
   if(snapshot.snapshot_sha256!==expectedDigest) errors.push(`snapshot digest mismatch: expected ${expectedDigest}, found ${snapshot.snapshot_sha256}`);
   const cpDigest=configDigest(controlPlane);

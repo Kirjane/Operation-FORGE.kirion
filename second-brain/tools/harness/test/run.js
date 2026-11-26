@@ -415,3 +415,17 @@ console.log(`\n${count} harness tests passed.`);
 
 // W3A regression: preserve all existing tests and execute the focused suite.
 require('./reconstruction-risk');
+
+// W3B: stage checkpoints are separate from the stable session identity.
+test('W3B stage transitions compile and seal distinct context checkpoints',()=>{
+  const task=bugTask();const options={sessionKey:'w3b-test'};
+  let session=createSession(task,emptyEvidence(),{...options,throughStage:'BOOTSTRAP'});
+  const {session_id,run_id}=session;const initial=session.checkpoint.checkpoint_sha256;
+  const result=advanceSession(session,task,emptyEvidence(),'PRE_DESIGN',options);
+  assert.equal(result.status,'ADVANCED');session=result.session;
+  assert.equal(session.session_id,session_id);assert.equal(session.run_id,run_id);
+  assert.equal(session.checkpoint.stage,'PRE_DESIGN');assert.notEqual(session.checkpoint.checkpoint_sha256,initial);
+  assert.equal(session.context_sha256,session.checkpoint.context_sha256);
+  assert.equal(result.stage_context.checkpoint.checkpoint_sha256,session.checkpoint.checkpoint_sha256);
+  assert.equal(verifySessionIntegrity(session,options).valid,true);
+});

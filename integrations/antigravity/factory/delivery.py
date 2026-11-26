@@ -243,6 +243,17 @@ class NairuDeliveryBroker:
                 f"Gate summary missing required gates {missing_required} for {packet['risk_class']}; delivery denied."
             )
 
+    @staticmethod
+    def inspect_contract_delivery(raw, reservation_id, *, journal=None, resolver=None):
+        """A v2 delivery boundary may inspect W4 custody but cannot perform a remote effect."""
+        from .dispatch_preflight import ContractJournal
+        if type(journal) is not ContractJournal:
+            return {"status": "BLOCKED", "reason": "TRUSTED_CONTRACT_JOURNAL_UNAVAILABLE",
+                    "promotion_authorized": False, "remote_invoked": False}
+        assurance = journal.inspect_assurance_decision(raw, reservation_id, resolver)
+        return {"status": "BLOCKED", "reason": "TRUSTED_CONTRACT_DELIVERY_BRIDGE_UNAVAILABLE",
+                "assurance": assurance, "promotion_authorized": False, "remote_invoked": False}
+
     def prepare_and_record_delivery(
         self,
         *,
@@ -261,6 +272,8 @@ class NairuDeliveryBroker:
         path ownership, symlink/gitlink absence, gate results, and exact-SHA Nox review before atomically
         reserving and recording an idempotent delivery receipt.
         """
+        if isinstance(packet, dict) and packet.get("schema_version") == 2:
+            raise DeliveryBrokerError("TRUSTED_CONTRACT_DELIVERY_BRIDGE_UNAVAILABLE")
         verify_mission_packet(packet)
         # Historical injected verifiers exist for isolated tests only. The
         # default live path has no independently authorized v2 delivery bridge.

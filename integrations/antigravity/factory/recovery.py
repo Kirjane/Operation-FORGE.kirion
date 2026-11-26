@@ -19,6 +19,23 @@ class RecoveryManager:
     def __init__(self, journal: FactoryJournal) -> None:
         self.journal = journal
 
+    def inspect_contract_assurance(self, raw, reservation_id, resolver=None):
+        """Read-only v2 recovery path. Assurance cannot reconcile effects or authorize replay."""
+        from .dispatch_preflight import ContractJournal
+        from .assurance import assurance_denial
+        if type(self.journal) is not ContractJournal:
+            return {"status": "BLOCKED", "reason": "CONTRACT_JOURNAL_REQUIRED", "replay_permitted": False}
+        try:
+            attempt = self.journal.inspect_attempt(raw, reservation_id)
+        except (AuthorityError, ValueError, TypeError, KeyError, OSError, sqlite3.Error) as exc:
+            return {**assurance_denial(exc), "replay_permitted": False}
+        if attempt["status"] != "COMPLETED":
+            return {"status": "BLOCKED", "reason": "ATTEMPT_EFFECT_NOT_COMPLETED",
+                    "attempt": attempt, "replay_permitted": False}
+        return {"attempt": attempt,
+                "assurance": self.journal.inspect_assurance_decision(raw, reservation_id, resolver),
+                "replay_permitted": False}
+
     def backup_journal(self, backup_db_path: Path) -> Path:
         """Create a consistent online backup of the SQLite WAL journal database."""
         backup_db_path.parent.mkdir(parents=True, exist_ok=True)

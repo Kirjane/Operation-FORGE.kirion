@@ -361,6 +361,14 @@ class FleetDispatcher:
             return {"status": "BLOCKED", "reason": "TRUSTED_PREFLIGHT_BRIDGE_UNAVAILABLE"}
         return journal.dispatch_fixture(packet, fixture_adapter)
 
+    def record_worker_evidence(self, raw, reservation_id, receipt_raw, *, journal=None, resolver=None):
+        """Post-dispatch evidence custody, not a second execution/authorization path."""
+        from .dispatch_preflight import ContractJournal
+        from .assurance import assurance_denial, AssuranceError
+        if type(journal) is not ContractJournal:
+            return assurance_denial(AssuranceError("TRUSTED_CONTRACT_JOURNAL_UNAVAILABLE"))
+        return journal.record_assurance_evidence(raw, reservation_id, receipt_raw, resolver)
+
     @property
     def dispatch_history(self) -> list[dict[str, Any]]:
         return list(self._dispatch_history)

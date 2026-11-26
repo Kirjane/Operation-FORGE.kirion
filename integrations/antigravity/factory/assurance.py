@@ -30,6 +30,15 @@ def require(condition, reason):
         raise AssuranceError(reason)
 
 
+def assurance_denial(exc):
+    # Stable reason for deliberate denials; don't echo arbitrary provider errors
+    # or signed payload values (which can include sensitive material).
+    reason = str(exc) if isinstance(exc, AssuranceError) else "INVALID_OR_UNAVAILABLE_ASSURANCE"
+    return {"status": "BLOCKED", "overall_status": "BLOCKED", "reason": reason,
+            "fixture_only": True, "promotion_authorized": False,
+            "actual_product_outcome": "NOT_TESTED"}
+
+
 def strict_json(raw):
     require(type(raw) in (str, bytes), "RAW_JSON_REQUIRED")
     try:
@@ -84,7 +93,9 @@ class FixtureAssuranceResolver:
         require(type(plan) is dict, "TRUSTED_ASSURANCE_PLAN_UNAVAILABLE")
         expected = {"contract_sha256": contract_digest(packet), "revision": packet["revision"],
                     "reservation_id": attempt["reservation_id"], "grant_sha256": binding["grant_sha256"],
-                    "worker_actor_id": attempt["actor_id"], "run_id": packet["run_id"]}
+                    "worker_actor_id": attempt["actor_id"], "run_id": packet["run_id"],
+                    "attempt_result_sha256": digest_json(json.loads(attempt["result_json"])),
+                    "adapter_binding": binding.get("adapter_binding", {"kind": "CALLBACK_FIXTURE"})}
         require(all(same(plan.get(k), v) for k, v in expected.items()), "ASSURANCE_PLAN_BINDING_MISMATCH")
         require(plan["target"]["profile"] in {"SYNTHETIC", "MOCK"}, "REAL_TARGET_TRUST_UNAVAILABLE")
         require(plan["target"]["repo_id"] == packet["repo_id"] and
@@ -95,7 +106,7 @@ class FixtureAssuranceResolver:
         require(plan["author_actor_id"] == attempt["actor_id"], "AUTHOR_GRANT_MISMATCH")
         require(type(plan["oracles"]) is dict, "ORACLE_PLAN_UNAVAILABLE")
         now = dt.datetime.now(dt.timezone.utc)
-        require(utc(plan["observed_at_utc"]) <= now < utc(plan["expires_at_utc"]),
+        require(utc(plan["observed_at_utc"]) <= now < utc(plan["expires_at_utc"]) <= utc(binding["valid_until_utc"]),
                 "ASSURANCE_PLAN_STALE")
         # Independently supplied current readback, not target/runtime from ingress.
         actual = self._observe(deepcopy(plan))
@@ -175,7 +186,7 @@ class FixtureAssuranceResolver:
                              "runtime_sha256": plan["runtime_sha256"], "nonce": record["nonce"],
                              "reservation_id": attempt["reservation_id"], "outcome_ids": oracle["outcome_ids"],
                              "negative_scenario": oracle["negative_control"]}
-        require(set(artifact) == set(artifact_expected) | {"observed", "negative_observed", "review"},
+        require(set(artifact) == set(artifact_expected) | {"observed", "negative_observed", "review", "finding_proofs"},
                 "OBSERVATION_SHAPE_MISMATCH")
         require(all(same(artifact[k], v) for k, v in artifact_expected.items()), "OBSERVATION_BINDING_MISMATCH")
         # Fixed exact structured comparator; all required observation keys must
@@ -190,6 +201,8 @@ class FixtureAssuranceResolver:
         require(env["status"] == verdict and env["exit_code"] is not None and
                 (verdict != "PASS" or env["exit_code"] == 0), "ORACLE_RESULT_MISMATCH")
         review = artifact["review"]
+        proofs = artifact["finding_proofs"]
+        require(type(proofs) is dict, "FINDING_PROOFS_INVALID")
         if role == "REVIEWER":
             require(type(review) is dict, "REVIEW_RECEIPT_MISSING")
             validate_contract(review, "nox-result.schema.json")
@@ -200,14 +213,32 @@ class FixtureAssuranceResolver:
             finding_ids = [f["id"] for f in review["findings"]]
             require(len(finding_ids) == len(set(finding_ids)), "DUPLICATE_FINDING")
             # Independently configured known finding inventory cannot be omitted.
-            require(set(configured["known_findings"]) <= set(finding_ids), "KNOWN_FINDING_OMITTED")
+            known = configured["known_findings"]
+            require(type(known) is dict and set(known) <= set(finding_ids), "KNOWN_FINDING_OMITTED")
+            required_proofs = set()
+            for finding in review["findings"]:
+                fid = finding["id"]
+                if fid in known:
+                    require(all(same(finding[k], v) for k, v in known[fid].items()),
+                            "KNOWN_FINDING_IDENTITY_MISMATCH")
+                if finding["severity"] in {"P0", "P1", "P2"}:
+                    if finding["disposition"] == "FIXED":
+                        required_proofs.add(fid)
+                        require(type(proofs.get(fid)) is str and proofs[fid] in review["evidence_inspected"],
+                                "FINDING_FIX_PROOF_MISSING")
+                    elif finding["disposition"] == "AUTHORIZED_DISPOSITION":
+                        required_proofs.add(fid)
+                        require(finding["severity"] == "P2" and fid in configured["authorized_dispositions"] and
+                                proofs.get(fid) == configured["authorized_dispositions"][fid],
+                                "FINDING_DISPOSITION_AUTHORITY_MISSING")
+            require(set(proofs) == required_proofs, "FINDING_PROOF_SCOPE_MISMATCH")
             if verdict == "PASS":
                 NoxReviewEngine().assert_review_valid_for_sha(review, plan["candidate_sha"],
                                                               expected_mission_id=packet["mission_id"])
         else:
-            require(review is None, "WRITER_CANNOT_ISSUE_REVIEW")
+            require(review is None and not proofs, "WRITER_CANNOT_ISSUE_REVIEW")
         return {"record": record, "receipt_sha256": digest_json(record), "verdict": verdict,
-                "review": review, "fixture_only": True}
+                "review": review, "finding_proofs": proofs, "fixture_only": True}
 
     def verify_decision(self, packet, attempt, binding, raw, receipts):
         decision = strict_json(raw)

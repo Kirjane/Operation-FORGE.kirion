@@ -664,6 +664,137 @@ class ContractJournal(FactoryJournal):
                     "next_action": "OPERATOR_RECONCILIATION_REQUIRED" if status in
                     {"RESERVED", "RUNNING", "UNKNOWN"} else "SEPARATE_AUTHORIZATION_REQUIRED"}
 
+    def _assurance_context(self, conn, raw, reservation_id, resolver):
+        from .assurance import FixtureAssuranceResolver, require
+        require(type(resolver) is FixtureAssuranceResolver, "TRUSTED_ASSURANCE_RESOLVER_UNAVAILABLE")
+        packet = parse_mission_packet(raw)
+        require(packet["schema_version"] == 2, "HISTORICAL_PACKET_NOT_ASSURANCE_AUTHORITY")
+        self._assert_chain(conn)
+        attempt, binding = self._reservation_binding(conn, packet, reservation_id, {"COMPLETED"})
+        require(not conn.execute("""SELECT 1 FROM contract_attempts WHERE mission_id=?
+                 AND (status IN ('RESERVED','RUNNING','UNKNOWN') OR revision>?
+                 OR (revision=? AND ordinal>?))""",
+                 (packet["mission_id"], packet["revision"], packet["revision"], attempt["ordinal"])).fetchone(),
+                "ATTEMPT_SUPERSEDED_OR_EFFECT_UNRESOLVED")
+        events = []
+        for row in conn.execute("""SELECT payload_json FROM journal_events WHERE mission_id=?
+                    AND run_id=? AND event_type='DISPATCH_COMPLETED'""", (packet["mission_id"], packet["run_id"])):
+            event = json.loads(row[0])
+            if event.get("reservation_id") == reservation_id:
+                events.append(event)
+        require(len(events) == 1 and events[0].get("contract_sha256") == attempt["digest"] and
+                events[0].get("actor_id") == attempt["actor_id"] and
+                canonical_json(events[0].get("result")) == attempt["result_json"],
+                "COMPLETION_RECEIPT_MISMATCH")
+        return packet, attempt, binding
+
+    def _assurance_records(self, conn, packet, attempt, binding, resolver):
+        from .assurance import require
+        verified = []
+        seen = set()
+        for row in conn.execute("""SELECT payload_json FROM journal_events WHERE mission_id=?
+                    AND event_type='ASSURANCE_EVIDENCE' ORDER BY seq""", (packet["mission_id"],)):
+            item = json.loads(row[0])
+            if item.get("reservation_id") != attempt["reservation_id"]:
+                continue
+            require(item.get("contract_sha256") == attempt["digest"] and item.get("revision") == attempt["revision"],
+                    "EVIDENCE_CUSTODY_BINDING_MISMATCH")
+            receipt = resolver.verify_receipt(packet, attempt, binding, canonical_json(item["receipt"]))
+            require(receipt["receipt_sha256"] == item["receipt_sha256"] and receipt["record"]["nonce"] not in seen,
+                    "EVIDENCE_CUSTODY_DIGEST_OR_REPLAY_MISMATCH")
+            seen.add(receipt["record"]["nonce"])
+            verified.append(receipt)
+        return verified
+
+    def _assert_assurance_nonce_unused(self, conn, record):
+        from .assurance import require
+        for row in conn.execute("""SELECT payload_json FROM journal_events WHERE
+                    event_type IN ('ASSURANCE_EVIDENCE','ASSURANCE_FIXTURE_DECISION')"""):
+            item = json.loads(row[0])
+            prior = item.get("receipt", item.get("decision"))
+            require(prior["nonce"] != record["nonce"], "REPLAYED_ASSURANCE_NONCE")
+
+    def record_assurance_evidence(self, raw, reservation_id, receipt_raw, resolver=None):
+        """Authenticate and read back an applicable receipt before append-only custody."""
+        from .assurance import assurance_denial
+        try:
+            with self._transaction() as conn:
+                packet, attempt, binding = self._assurance_context(conn, raw, reservation_id, resolver)
+                receipt = resolver.verify_receipt(packet, attempt, binding, receipt_raw)
+                self._assert_assurance_nonce_unused(conn, receipt["record"])
+                self._event(conn, packet, attempt["digest"], "ASSURANCE_EVIDENCE",
+                            {"reservation_id": reservation_id, "receipt_sha256": receipt["receipt_sha256"],
+                             "receipt": receipt["record"], "fixture_only": True})
+                return {"status": "RECORDED", "receipt_sha256": receipt["receipt_sha256"],
+                        "applicable_verdict": receipt["verdict"], "fixture_only": True,
+                        "promotion_authorized": False}
+        except (AuthorityError, ValueError, TypeError, KeyError, OSError, sqlite3.Error, RecursionError) as exc:
+            return assurance_denial(exc)
+
+    def evaluate_assurance(self, raw, reservation_id, resolver=None):
+        """Existing journal is the only supported aggregate/custody evaluation path."""
+        from .assurance import assurance_denial, evaluate_applicable_receipts
+        try:
+            with self._transaction() as conn:
+                packet, attempt, binding = self._assurance_context(conn, raw, reservation_id, resolver)
+                resolver.plan(packet, attempt, binding)
+                receipts = self._assurance_records(conn, packet, attempt, binding, resolver)
+                summary = evaluate_applicable_receipts(packet, receipts)
+                return {**summary, "reservation_id": reservation_id,
+                        "receipt_sha256s": sorted(r["receipt_sha256"] for r in receipts)}
+        except (AuthorityError, ValueError, TypeError, KeyError, OSError, sqlite3.Error, RecursionError) as exc:
+            return assurance_denial(exc)
+
+    def record_assurance_decision(self, raw, reservation_id, decision_raw, resolver=None):
+        """Separate acceptance issuer, exact current receipt set; fixture only."""
+        from .assurance import assurance_denial, evaluate_applicable_receipts, require
+        try:
+            with self._transaction() as conn:
+                packet, attempt, binding = self._assurance_context(conn, raw, reservation_id, resolver)
+                receipts = self._assurance_records(conn, packet, attempt, binding, resolver)
+                summary = evaluate_applicable_receipts(packet, receipts)
+                require(summary["overall_status"] == "PASS", "REQUIRED_ASSURANCE_UNSATISFIED")
+                decision = resolver.verify_decision(packet, attempt, binding, decision_raw, receipts)
+                self._assert_assurance_nonce_unused(conn, decision)
+                for row in conn.execute("""SELECT payload_json FROM journal_events WHERE mission_id=?
+                            AND event_type='ASSURANCE_FIXTURE_DECISION'""", (packet["mission_id"],)):
+                    require(json.loads(row[0]).get("reservation_id") != reservation_id,
+                            "ATTEMPT_DECISION_ALREADY_RECORDED")
+                decision_digest = digest_json(decision)
+                self._event(conn, packet, attempt["digest"], "ASSURANCE_FIXTURE_DECISION",
+                            {"reservation_id": reservation_id, "decision_sha256": decision_digest,
+                             "decision": decision, "fixture_only": True})
+                return {"status": "FIXTURE_SUPPORTED", "decision_sha256": decision_digest,
+                        "fixture_only": True, "promotion_authorized": False,
+                        "actual_product_outcome": "NOT_TESTED"}
+        except (AuthorityError, ValueError, TypeError, KeyError, OSError, sqlite3.Error, RecursionError) as exc:
+            return assurance_denial(exc)
+
+    def inspect_assurance_decision(self, raw, reservation_id, resolver=None):
+        """Revalidate current evidence and decision on readback, never grant live rights."""
+        from .assurance import assurance_denial, evaluate_applicable_receipts, require
+        try:
+            with self._transaction() as conn:
+                packet, attempt, binding = self._assurance_context(conn, raw, reservation_id, resolver)
+                receipts = self._assurance_records(conn, packet, attempt, binding, resolver)
+                require(evaluate_applicable_receipts(packet, receipts)["overall_status"] == "PASS",
+                        "REQUIRED_ASSURANCE_UNSATISFIED")
+                decisions = []
+                for row in conn.execute("""SELECT payload_json FROM journal_events WHERE mission_id=?
+                            AND event_type='ASSURANCE_FIXTURE_DECISION'""", (packet["mission_id"],)):
+                    item = json.loads(row[0])
+                    if item.get("reservation_id") == reservation_id:
+                        decisions.append(item)
+                require(len(decisions) == 1, "INDEPENDENT_DECISION_MISSING_OR_AMBIGUOUS")
+                item = decisions[0]
+                decision = resolver.verify_decision(packet, attempt, binding, canonical_json(item["decision"]), receipts)
+                require(item["decision_sha256"] == digest_json(decision), "DECISION_CUSTODY_MISMATCH")
+                return {"status": "FIXTURE_SUPPORTED", "decision_sha256": item["decision_sha256"],
+                        "fixture_only": True, "promotion_authorized": False,
+                        "actual_product_outcome": "NOT_TESTED"}
+        except (AuthorityError, ValueError, TypeError, KeyError, OSError, sqlite3.Error, RecursionError) as exc:
+            return assurance_denial(exc)
+
     def reconcile_unknown(self, raw, reservation_id, adapter):
         """Only an UNKNOWN claim may use configured fixture reconciliation.
 

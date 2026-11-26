@@ -108,6 +108,26 @@ class TrustedEvidenceRunner:
         blob_path.write_bytes(raw_bytes)
         return blob_path, len(raw_bytes), digest
 
+    def capture_fixture_oracle_artifact(self, *, binding, observe_positive, observe_negative):
+        """Capture structured outcomes from two trusted fixture probes.
+
+        Only trusted test composition may supply the probes or binding. This
+        does not execute a mission-provided command, authenticate a host or
+        qualify a real product. Persist the exact redacted observation bytes
+        through the existing evidence store.
+        """
+        from copy import deepcopy
+        from .mission_contract import canonical_json
+        if type(binding) is not dict or {"observed", "negative_observed"} & set(binding):
+            raise AuthorityError("FIXTURE_OBSERVATION_BINDING_INVALID")
+        positive = observe_positive()
+        negative = observe_negative()
+        if type(positive) is not dict or type(negative) is not dict:
+            raise AuthorityError("FIXTURE_OBSERVATION_SHAPE_INVALID")
+        return self._store_artifact(canonical_json({
+            **deepcopy(binding), "observed": deepcopy(positive),
+            "negative_observed": deepcopy(negative)}))
+
     def run_gate_command(
         self,
         *,

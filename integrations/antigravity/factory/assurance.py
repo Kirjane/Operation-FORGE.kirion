@@ -72,6 +72,20 @@ def signed_material(record):
     return canonical_json({k: v for k, v in record.items() if k != "signature"}).encode("utf-8")
 
 
+def execution_projection(record):
+    """Canonical execution identity, independent of issuer signature.
+
+    A trusted fixture capture provider resolves this material by reservation,
+    oracle and nonce, from its own observation rather than from receipt ingress.
+    """
+    env = record["envelope"]
+    return {"schema_version": 1,
+            "binding": {k: v for k, v in record.items()
+                        if k not in {"signature", "execution_sha256", "envelope"}},
+            "envelope_sha256": digest_json(env), "artifact_sha256": env["artifact_sha256"],
+            "artifact_size_bytes": env["artifact_size_bytes"]}
+
+
 class FixtureAssuranceResolver:
     """Explicit synthetic trust boundary; not constructible from mission ingress.
 
@@ -80,11 +94,12 @@ class FixtureAssuranceResolver:
     this class, its keys or the observer to an untrusted worker process.
     """
 
-    def __init__(self, *, plans, issuers, artifact_store_root: Path, observe):
+    def __init__(self, *, plans, issuers, artifact_store_root: Path, observe, resolve_execution=None):
         self._plans = deepcopy(plans)
         self._issuers = deepcopy(issuers)
         self._root = artifact_store_root.resolve()
         self._observe = observe
+        self._resolve_execution = resolve_execution
         actors = [v["actor_id"] for v in self._issuers.values()]
         keys = [v["key"] for v in self._issuers.values()]
         contexts = [v["context_id"] for v in self._issuers.values()]
@@ -159,6 +174,19 @@ class FixtureAssuranceResolver:
                     "SELF_APPROVAL_DENIED")
         return issuer
 
+    def verify_execution(self, record):
+        """A correct issuer signature is insufficient to prove execution."""
+        require(callable(self._resolve_execution), "TRUSTED_EXECUTION_OBSERVATION_UNAVAILABLE")
+        try:
+            actual = self._resolve_execution(record["reservation_id"], record["oracle_id"], record["nonce"])
+        except Exception as exc:
+            raise AssuranceError("TRUSTED_EXECUTION_OBSERVATION_UNAVAILABLE") from exc
+        require(type(actual) is dict, "TRUSTED_EXECUTION_OBSERVATION_MISSING")
+        expected = execution_projection(record)
+        require(same(actual, expected) and digest_json(actual) == record["execution_sha256"],
+                "EXECUTION_RECEIPT_BINDING_MISMATCH")
+        return record["execution_sha256"]
+
     def verify_receipt(self, packet, attempt, binding, raw):
         record = strict_json(raw)
         validate_contract(record, "assurance-receipt.schema.json")
@@ -188,6 +216,7 @@ class FixtureAssuranceResolver:
         require(record["issuer_role"] == role, "WRONG_ISSUER_ROLE")
         issuer = self.verify_issuer(record, plan, role, dt.datetime.now(dt.timezone.utc))
         require(oracle["oracle_id"] in issuer["oracles"], "ISSUER_ORACLE_SCOPE_MISMATCH")
+        execution_sha256 = self.verify_execution(record)
         require(EVIDENCE_LEVEL_ORDER[env["evidence_level"]] <= EVIDENCE_LEVEL_ORDER[issuer["max_level"]]
                 <= EVIDENCE_LEVEL_ORDER["E5"], "EVIDENCE_CEILING_EXCEEDED")
         target = configured["target"]
@@ -299,6 +328,7 @@ class FixtureAssuranceResolver:
         else:
             require(review is None and not proofs, "WRITER_CANNOT_ISSUE_REVIEW")
         return {"record": record, "receipt_sha256": digest_json(record), "verdict": verdict,
+                "execution_sha256": execution_sha256,
                 "review": review, "finding_proofs": proofs,
                 "finding_fix_oracles": configured.get("finding_fix_oracles", {}), "fixture_only": True}
 

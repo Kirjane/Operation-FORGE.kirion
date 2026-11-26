@@ -700,7 +700,8 @@ class ContractJournal(FactoryJournal):
             require(item.get("contract_sha256") == attempt["digest"] and item.get("revision") == attempt["revision"],
                     "EVIDENCE_CUSTODY_BINDING_MISMATCH")
             receipt = resolver.verify_receipt(packet, attempt, binding, canonical_json(item["receipt"]))
-            require(receipt["receipt_sha256"] == item["receipt_sha256"] and receipt["record"]["nonce"] not in seen,
+            require(receipt["receipt_sha256"] == item["receipt_sha256"] and
+                    receipt["execution_sha256"] == item.get("execution_sha256") and receipt["record"]["nonce"] not in seen,
                     "EVIDENCE_CUSTODY_DIGEST_OR_REPLAY_MISMATCH")
             seen.add(receipt["record"]["nonce"])
             verified.append(receipt)
@@ -724,9 +725,10 @@ class ContractJournal(FactoryJournal):
                 self._assert_assurance_nonce_unused(conn, receipt["record"])
                 self._event(conn, packet, attempt["digest"], "ASSURANCE_EVIDENCE",
                             {"reservation_id": reservation_id, "receipt_sha256": receipt["receipt_sha256"],
+                             "execution_sha256": receipt["execution_sha256"],
                              "receipt": receipt["record"], "fixture_only": True})
                 return {"status": "RECORDED", "receipt_sha256": receipt["receipt_sha256"],
-                        "applicability": "APPLICABLE", "applicable_verdict": receipt["verdict"], "fixture_only": True,
+                        "execution_sha256": receipt["execution_sha256"], "applicability": "APPLICABLE", "applicable_verdict": receipt["verdict"], "fixture_only": True,
                         "promotion_authorized": False}
         except (AuthorityError, ValueError, TypeError, KeyError, OSError, sqlite3.Error, RecursionError) as exc:
             return assurance_denial(exc)

@@ -11,7 +11,8 @@ import unittest
 import uuid
 from pathlib import Path
 
-from integrations.antigravity.factory.assurance import FixtureAssuranceResolver, signed_material
+from integrations.antigravity.factory.assurance import (FixtureAssuranceResolver, signed_material,
+                                                        execution_projection, evaluate_applicable_receipts)
 from integrations.antigravity.factory.delivery import NairuDeliveryBroker
 from integrations.antigravity.factory.dispatch_preflight import ContractJournal, FixtureDispatchAdapter
 from integrations.antigravity.factory.dispatcher import FleetDispatcher
@@ -90,6 +91,7 @@ class AssuranceTests(unittest.TestCase):
                                     "revoked": False, "valid_from_utc": timestamp(-60),
                                     "expires_at_utc": timestamp(3600), "contracts": [self.digest],
                                     "oracles": [o["oracle_id"] for o in self.packet["oracles"]], "max_level": "E5"}
+        self.executions = {}
         self.resolver = self.make_resolver()
 
     def observation(self):
@@ -102,7 +104,9 @@ class AssuranceTests(unittest.TestCase):
         observed = copy.deepcopy(self.observation())
         return FixtureAssuranceResolver(plans={self.reservation: self.plan}, issuers=self.issuers,
                     artifact_store_root=self.runner.artifact_store_root,
-                    observe=observe or (lambda _: copy.deepcopy(observed)))
+                    observe=observe or (lambda _: copy.deepcopy(observed)),
+                    resolve_execution=lambda reservation, oracle, nonce:
+                        copy.deepcopy(self.executions.get((reservation, oracle, nonce))))
 
     def sign(self, record, issuer=None):
         record["signature"] = hmac.new(self.issuers[issuer or record["issuer_id"]]["key"],
@@ -115,7 +119,7 @@ class AssuranceTests(unittest.TestCase):
                 "issued_at_utc": timestamp(), "expires_at_utc": timestamp(60)}
 
     def receipt(self, gate="G01", *, observed=None, negative=None, review=None, proofs=None,
-                mutate_artifact=None, verdict="PASS"):
+                mutate_artifact=None, verdict="PASS", register_execution=True):
         o = next(o for o in self.packet["oracles"] if o["gate_id"] == gate)
         c = self.plan["oracles"][o["oracle_id"]]
         issuer = "reviewer" if gate == "G13" else "writer"
@@ -141,7 +145,10 @@ class AssuranceTests(unittest.TestCase):
         artifact = copy.deepcopy(artifact)
         if mutate_artifact:
             mutate_artifact(artifact)
-        path, size, digest = self.runner._store_artifact(canonical_json(artifact))
+        positive = artifact.pop("observed")
+        negative = artifact.pop("negative_observed")
+        path, size, digest = self.runner.capture_fixture_oracle_artifact(
+            binding=artifact, observe_positive=lambda: positive, observe_negative=lambda: negative)
         level = o["minimum_evidence_level"]
         record["envelope"] = {
             "schema_version": 1, "run_id": self.packet["run_id"], "mission_id": self.packet["mission_id"],
@@ -154,6 +161,13 @@ class AssuranceTests(unittest.TestCase):
             "evidence_level": level, "evidence_type": o["evidence_type"],
             "provenance": "DIRECTLY_OBSERVED" if level == "E1" else "AUTOMATED",
             "certainty_ceiling": FORGE_LEVEL_TO_CERTAINTY_CEILING[level], "redacted": True}
+        execution = execution_projection(record)
+        record["execution_sha256"] = digest_json(execution)
+        if register_execution:
+            # This is trusted test composition, separate from the receipt
+            # issuer. Ingress and sign() cannot create an observed execution.
+            key = (record["reservation_id"], record["oracle_id"], record["nonce"])
+            self.executions[key] = copy.deepcopy(execution)
         return self.sign(record)
 
     def record(self, receipt, resolver=None):
@@ -263,6 +277,30 @@ class AssuranceTests(unittest.TestCase):
             self.assertEqual(self.record(receipt)["status"], "BLOCKED")
         self.assertEqual(self.record(self.receipt())["status"], "RECORDED")
 
+    def test_signed_receipt_without_independent_execution_is_unverified(self):
+        receipt = self.receipt(register_execution=False)
+        result = self.record(receipt)
+        self.assertEqual(result["reason"], "TRUSTED_EXECUTION_OBSERVATION_MISSING")
+        self.assertIn("G01", self.summary()["missing_gates"])
+        receipt = self.receipt()
+        receipt["nonce"] = uuid.uuid4().hex
+        receipt["execution_sha256"] = digest_json(execution_projection(receipt))
+        self.assertEqual(self.record(self.sign(receipt))["reason"], "TRUSTED_EXECUTION_OBSERVATION_MISSING")
+
+    def test_optional_nonapplicable_gate_is_not_pass(self):
+        from integrations.antigravity.factory.mission_contract import validate_mission_contract
+        packet = copy.deepcopy(self.packet)
+        packet["required_gates"].remove("G04")
+        packet["non_applicable_gates"] = {"G04": "No applicable static/security check in this fixture"}
+        packet["oracles"] = [o for o in packet["oracles"] if o["gate_id"] != "G04"]
+        packet["objective"]["outcomes"][0]["oracle_ids"].remove("oracle-G04")
+        validate_mission_contract(packet)
+        result = evaluate_applicable_receipts(packet, [])
+        self.assertNotIn("G04", result["passed_gates"])
+        self.assertNotIn("G04", result["missing_gates"])
+        self.assertIn("G04", result["documented_non_applicable"])
+        self.assertEqual(result["overall_status"], "BLOCKED")
+
     def test_signature_replay_conflict_and_tampered_artifact(self):
         receipt = self.receipt()
         forged = copy.deepcopy(receipt)
@@ -282,7 +320,7 @@ class AssuranceTests(unittest.TestCase):
     def test_unsafe_artifact_and_wrong_issuer(self):
         receipt = self.receipt()
         receipt["envelope"]["artifact_path"] = str(self.root / "outside.log")
-        self.assertEqual(self.record(self.sign(receipt))["reason"], "ARTIFACT_PATH_MISMATCH")
+        self.assertEqual(self.record(self.sign(receipt))["reason"], "EXECUTION_RECEIPT_BINDING_MISMATCH")
         receipt = self.receipt()
         receipt.update(issuer_id="reviewer", issuer_actor_id="reviewer-actor", issuer_context_id="reviewer-context")
         self.assertEqual(self.record(self.sign(receipt))["status"], "BLOCKED")

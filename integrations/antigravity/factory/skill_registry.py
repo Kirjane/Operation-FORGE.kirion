@@ -371,6 +371,7 @@ class SkillRegistry:
                 "max_context_bytes": max_bytes, "prior_context_bytes": context_used_bytes,
                 "max_reference_files": max_reference_files, "max_documents": max_documents,
                 "reference_bytes": sum(x["source"]["bytes"] for x in selected if x["kind"] == "reference"),
-                "skill_bytes": used - context_used_bytes, "total_context_bytes": used,
+                "skill_bytes": sum(x["source"]["bytes"] for x in selected if x["kind"] == "skill"),
+                "total_retrieved_bytes": used - context_used_bytes, "total_context_bytes": used,
                 "status": "RETRIEVED_NOT_LOADED", "promotion_authorized": False}
         return plan, contents

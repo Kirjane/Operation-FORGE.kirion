@@ -37,7 +37,9 @@ def native_workflow_entry(workflow, host, ingress):
     reason = ("TRUSTED_NATIVE_PREFLIGHT_BRIDGE_UNAVAILABLE"
               if type(workflow) is str and workflow in WORKFLOWS
               else "UNKNOWN_NATIVE_WORKFLOW")
+    from .workflow_stages import workflow_stages
     return {"status": "BLOCKED", "reason": reason,
+            "supervised_stages": workflow_stages(workflow),
             "capabilities": resolve_native_capabilities(host),
             "invoked": False, "promotion_authorized": False}
 
@@ -78,6 +80,10 @@ class FixtureNativeBoundary:
             raise AuthorityError("RECOVERY_ADAPTER_BINDING_MISMATCH")
         return {**receipt, "observation": self._adapter.inspect_local_effect(),
                 "replay_permitted": False, "promotion_authorized": False}
+
+    def inspect_consumption(self, raw, reservation_id):
+        return self._adapter.inspect_skill_consumption(parse_mission_packet(raw),
+                self._journal.inspect_attempt(raw, reservation_id))
 
     def record_evidence(self, raw, reservation_id, receipt_raw):
         return self._journal.record_assurance_evidence(

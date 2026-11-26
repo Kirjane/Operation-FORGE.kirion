@@ -357,8 +357,10 @@ class FleetDispatcher:
         result = journal.dispatch_fixture(packet, fixture_adapter)
         # Existing bounded historical fixture calls are preserved. They do not
         # establish that a selected skill was loaded by a host.
-        consumed = (result.get("status") == "COMPLETED" and
-                    result.get("result", {}).get("skill_consumption", {}).get("status") == "FIXTURE_CONSUMED")
+        from .scoped_fixture import ScopedGitFixtureAdapter
+        consumed = (type(fixture_adapter) is ScopedGitFixtureAdapter and
+                    fixture_adapter.composition_binding() is not None and not result.get("cached") and
+                    result.get("status") == "COMPLETED")
         return {**result, "skill_consumption_status": "FIXTURE_CONSUMED" if consumed else
                 "NOT_VERIFIED_BY_GENERIC_DISPATCH"}
 

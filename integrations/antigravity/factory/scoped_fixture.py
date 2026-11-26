@@ -123,6 +123,21 @@ class ScopedGitFixtureAdapter(FixtureDispatchAdapter):
         return {"skill_read_result": read_result, "skill_consumption": receipt,
                 "skill_receipt_sha256": digest(receipt)}
 
+    def inspect_skill_consumption(self, packet, attempt):
+        """Historical readback; verifies the original grant, not fresh authority."""
+        from .dispatch_preflight import fixture_adapter_binding
+        if attempt["status"] != "COMPLETED" or attempt["adapter_binding"] != fixture_adapter_binding(self):
+            raise AuthorityError("Skill completion custody mismatch.")
+        if self._skill_runtime is None:
+            return {"status": "NOT_VERIFIED_BY_GENERIC_DISPATCH", "promotion_authorized": False}
+        grant = deepcopy(self._grants.get(contract_digest(packet)))
+        if grant is None:
+            raise AuthorityError("Original fixture grant unavailable.")
+        effect = self.verify_skill_result(packet, grant, attempt["result"])
+        return {"status": "FIXTURE_CONSUMPTION_VERIFIED", "receipt_sha256": attempt["result"]["skill_receipt_sha256"],
+                "effect": effect["effect"], "fixture_only": True, "native_loading_verified": False,
+                "promotion_authorized": False, "replay_permitted": False}
+
     def verify_skill_result(self, packet, grant, result):
         prepared = self._prepare_skills(packet, grant)
         if prepared is None:

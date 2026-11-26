@@ -200,11 +200,14 @@ class FixtureSkillRuntime:
             self._registry.read_declared_source(matches[0], [source])
         return {k: source[k] for k in ("repository_id", "repository_name", "commit_sha")}
 
-    def manual_context(self, packet, *, grant):
+    def manual_context(self, packet, *, grant=None):
         """Export verified retrieved text; neither host activation nor receipt."""
         prepared = self.prepare(packet, grant=grant)
         require(prepared._plan["host"] == "chatgpt", "MANUAL_CHATGPT_CONTEXT_REQUIRED")
-        return {"plan": prepared.summary(), "documents": [
+        cfg = self._configs[contract_digest(packet)]
+        brain = cfg.get("brain_stage_context")
+        return {"plan": prepared.summary(), "brain_documents": deepcopy(brain["documents"]) if brain else [],
+                "documents": [
                     {"id": e["id"], "source": e["source"], "content": prepared._contents[e["id"]].decode("utf-8")}
                     for e in prepared._plan["selected"]],
                 "status": "RETRIEVED_NOT_LOADED", "invoked": False,

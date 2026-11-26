@@ -693,6 +693,22 @@ class ContractJournal(FactoryJournal):
                 events[0].get("actor_id") == attempt["actor_id"] and
                 canonical_json(events[0].get("result")) == attempt["result_json"],
                 "COMPLETION_RECEIPT_MISMATCH")
+        composition = binding.get("adapter_binding", {}).get("composition")
+        if composition is not None:
+            from .skill_registry import digest as skill_digest
+            result = json.loads(attempt["result_json"])
+            receipt = result.get("skill_consumption", {})
+            # Exact journal-completed result has already passed the scoped
+            # adapter's signature/effect readback. This is custody, not
+            # a new independent oracle or acceptance assertion.
+            require(receipt.get("status") == "FIXTURE_CONSUMED" and
+                    receipt.get("binding", {}).get("contract_sha256") == attempt["digest"] and
+                    receipt.get("binding", {}).get("run_id") == attempt["run_id"] and
+                    receipt.get("binding", {}).get("actor_id") == attempt["actor_id"] and
+                    receipt.get("binding", {}).get("grant_sha256") == binding["grant_sha256"] and
+                    result.get("skill_receipt_sha256") == skill_digest(receipt) and
+                    receipt.get("result_sha256") == skill_digest(result.get("skill_read_result")),
+                    "SKILL_CONSUMPTION_CUSTODY_MISMATCH")
         return packet, attempt, binding
 
     def _assurance_records(self, conn, packet, attempt, binding, resolver):

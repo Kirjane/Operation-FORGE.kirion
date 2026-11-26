@@ -36,9 +36,16 @@ function requiredSemanticPaths(route,routePack={}){
   return out;
 }
 
+function safeSourcePath(value){
+  return typeof value==='string'&&value.length>0&&!/[\\\\:\x00-\x1f\x7f]/.test(value)&&
+    value.split('/').every(part=>part&&part!=='.'&&part!=='..'&&part.toLowerCase()!=='.git'&&!/[. ]$/.test(part));
+}
 function validateSnapshotShape(snapshot){
   const errors=[];
   if(!snapshot||typeof snapshot!=='object'||Array.isArray(snapshot)) return ['snapshot must be an object'];
+  const snapshotKeys=new Set(['version','provider','generated_at','notion_api_version','data_source_id','source_repository','control_plane_sha256','route_pack_sha256','documents','snapshot_sha256']);
+  for(const key of Object.keys(snapshot)) if(!snapshotKeys.has(key)) errors.push(`unknown snapshot field: ${key}`);
+  if(snapshot.notion_api_version!==undefined&&(typeof snapshot.notion_api_version!=='string'||!snapshot.notion_api_version.trim())) errors.push('invalid notion_api_version');
   if(snapshot.version!==1) errors.push('snapshot version must be 1');
   if(snapshot.provider!==PROVIDERS.NOTION_SNAPSHOT) errors.push('snapshot provider must be NOTION_SNAPSHOT');
   if(typeof snapshot.generated_at!=='string'||!snapshot.generated_at) errors.push('snapshot generated_at is required');
@@ -51,7 +58,9 @@ function validateSnapshotShape(snapshot){
   const seen=new Set();
   for(const [i,doc] of (Array.isArray(snapshot.documents)?snapshot.documents:[]).entries()){
     if(!doc||typeof doc!=='object'||Array.isArray(doc)){errors.push(`documents[${i}] must be an object`);continue;}
-    if(typeof doc.source_path!=='string'||!doc.source_path) errors.push(`documents[${i}] source_path is required`);
+    const documentKeys=new Set(['page_id','title','notion_url','source_path','source_sha','content_sha256','content']);
+    for(const key of Object.keys(doc)) if(!documentKeys.has(key)) errors.push(`documents[${i}] unknown field: ${key}`);
+    if(!safeSourcePath(doc.source_path)) errors.push(`documents[${i}] source_path must be canonical and repository-relative`);
     else if(seen.has(doc.source_path)) errors.push(`duplicate source_path: ${doc.source_path}`); else seen.add(doc.source_path);
     if(typeof doc.source_sha!=='string'||!/^[a-f0-9]{40}$/.test(doc.source_sha)) errors.push(`documents[${i}] source_sha must be a Git blob SHA`);
     if(typeof doc.content_sha256!=='string'||!/^[a-f0-9]{64}$/.test(doc.content_sha256)) errors.push(`documents[${i}] content_sha256 must be SHA-256`);
@@ -64,8 +73,13 @@ function validateSnapshotShape(snapshot){
 }
 
 function workingBlobSha(root,sourcePath){
+  if(!safeSourcePath(sourcePath)) return {ok:false,reason:'source path is not canonical'};
   const full=path.join(root,...sourcePath.split('/'));
   if(!fs.existsSync(full)) return {ok:false,reason:'source path does not exist'};
+  try{
+    const physicalRoot=fs.realpathSync(root),physicalFile=fs.realpathSync(full),relative=path.relative(physicalRoot,physicalFile);
+    if(relative!==sourcePath.split('/').join(path.sep)||!fs.statSync(physicalFile).isFile()) return {ok:false,reason:'source path is not a confined regular file'};
+  }catch(err){return {ok:false,reason:'source path cannot be resolved'};}
   const r=runGit(root,['hash-object','--',sourcePath]);
   if(!r.ok||!/^[a-f0-9]{40}$/.test(r.stdout)) return {ok:false,reason:r.error||r.stderr||'git hash-object failed'};
   return {ok:true,sha:r.stdout};

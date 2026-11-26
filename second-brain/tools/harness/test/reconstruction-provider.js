@@ -117,6 +117,6 @@ test('T-C03 CLI bootstrap and JSONL expose real compiled budget status',()=>fixt
 // QUAL-01: malformed but JSON-valid provider snapshots must never throw.
 test('QUAL-01 malformed snapshot containers and document content fail closed',()=>fixture('LOW',({root,write,snapshot,compile})=>{
   write('Root.md','root');const valid=snapshot();
-  const malformed=[null,[],42,'snapshot',{}, {...valid,documents:{}},{...valid,documents:'text'},{...valid,documents:[null]},{...valid,documents:[[]]},{...valid,documents:[{...valid.documents[0],content:{}}]},{...valid,documents:[{...valid.documents[0],content_sha256:[valid.documents[0].content_sha256]}]}];
+  const malformed=[null,[],42,'snapshot',{}, {...valid,documents:{}},{...valid,documents:'text'},{...valid,documents:[null]},{...valid,documents:[[]]},{...valid,documents:[{...valid.documents[0],content:{}}]},{...valid,documents:[{...valid.documents[0],content_sha256:[valid.documents[0].content_sha256]}]},{...valid,documents:[{...valid.documents[0],source_path:'../outside.md'}]},{...valid,unknown:{nested:true}}];
   for(const value of malformed){write('snapshot.json',JSON.stringify(value));const outcome=compile('NOTION_SNAPSHOT');assert.equal(outcome.status,'BLOCKED');assert.deepEqual(outcome.documents,[]);assert(outcome.errors.length);}
 }));

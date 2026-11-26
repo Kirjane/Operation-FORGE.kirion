@@ -594,6 +594,11 @@ class ContractJournal(FactoryJournal):
             from .scoped_fixture import ScopedGitFixtureAdapter
             if type(adapter) is ScopedGitFixtureAdapter:
                 adapter.verify_result(packet, result)
+                # Observation is not a grant. Recheck the exact reserved grant
+                # after the effect verification; loss of authority is UNKNOWN.
+                reason = self._invocation_block_reason(packet, attempt, binding, adapter)
+                if reason:
+                    raise SchedulerError(reason)
             self._change_attempt(conn, packet, reservation_id, {"RUNNING"}, "COMPLETED", result)
 
     def dispatch_fixture(self, raw, adapter):

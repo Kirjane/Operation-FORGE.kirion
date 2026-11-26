@@ -444,6 +444,19 @@ class WorktreeSandbox:
             if observed.returncode or (Path(observed.stdout.strip()).resolve() != wt_path.resolve()
                                       if args[0] == "rev-parse" else observed.stdout.strip() != expected):
                 raise PolicyViolationError("Observed worktree root or branch drift.")
+        def common_dir(root):
+            observed = subprocess.run(["git", "rev-parse", "--git-common-dir"], cwd=root,
+                                      capture_output=True, text=True, env=sanitize_worker_env())
+            if observed.returncode:
+                raise PolicyViolationError("Cannot establish Git common directory.")
+            return (root / observed.stdout.strip()).resolve()
+        if common_dir(wt_path) != common_dir(self.source_repo):
+            raise PolicyViolationError("Worktree is not registered to the authorized source repository.")
+        if packet.get("schema_version") == 2:
+            ancestry = subprocess.run(["git", "merge-base", "--is-ancestor", base_sha, "HEAD"],
+                                      cwd=wt_path, capture_output=True, env=sanitize_worker_env())
+            if ancestry.returncode:
+                raise PolicyViolationError("Observed worktree does not descend from the contract base.")
         for item in wt_path.rglob("*"):
             rel_parts = item.relative_to(wt_path).parts
             if rel_parts and rel_parts[0] == ".git":

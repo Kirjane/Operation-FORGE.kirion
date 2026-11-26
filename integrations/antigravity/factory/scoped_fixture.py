@@ -139,9 +139,17 @@ class ScopedGitFixtureAdapter(FixtureDispatchAdapter):
         if result.get("acceptance") != "NOT_EVALUATED":
             raise AuthorityError("Fixture cannot supply acceptance.")
         if "WRITE_OWNED" not in packet["allowed_operations"]:
-            self._assert_clean_target(packet)
-            if result.get("effect") != "READ_ONLY" or result.get("observed", {}).get("target", {}).get("base_sha") != self.base_sha:
+            observed = self._observe_git(packet)
+            claimed = result.get("observed")
+            if result.get("effect") != "READ_ONLY" or not isinstance(claimed, dict):
                 raise AuthorityError("Read receipt does not bind actual fixture.")
+            def material(envelope):
+                return {"target": envelope.get("target"), "sources": envelope.get("sources"),
+                        "oracles": envelope.get("oracles"), "capabilities": {
+                            key: {k: v for k, v in cap.items() if k not in {"observed_at_utc", "valid_until_utc"}}
+                            for key, cap in envelope.get("capabilities", {}).items()}}
+            if material(observed) != material(claimed):
+                raise AuthorityError("Read receipt diverges from observed fixture source.")
             return
         if (self.repo.is_symlink() or Path(self._git("rev-parse", "--show-toplevel")).resolve() != self.repo
                 or self._git("rev-parse", "HEAD") != self.base_sha
@@ -193,7 +201,7 @@ class ScopedGitFixtureAdapter(FixtureDispatchAdapter):
                           "acceptance": "NOT_EVALUATED"}
             self.leases.release_worker_leases(packet["mission_id"], worker)
             return result
-        except (AuthorityError, OSError, subprocess.SubprocessError) as exc:
+        except (AuthorityError, OSError, subprocess.SubprocessError, _PreInvocationBlocked) as exc:
             if not entered:
                 self.leases.release_worker_leases(packet["mission_id"], worker)
                 raise _PreInvocationBlocked("FIXTURE_OWNERSHIP_OR_TARGET_CHANGED") from exc

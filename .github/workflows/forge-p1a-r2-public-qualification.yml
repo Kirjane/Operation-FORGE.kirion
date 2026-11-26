@@ -1,0 +1,337 @@
+name: FORGE P1a R2 public qualification
+on:
+  push:
+    branches: [infra/forge-p1a-hosted-qualification]
+    paths: ['.forge-qualification/R2-STATIC-READY']
+permissions: {}
+jobs:
+  public-qualification:
+    if: github.actor_id == '291564617'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - name: Verify exact candidate and construct disposable runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          D=$(mktemp -d)
+          echo "P1A_DIR=$D" >> "$GITHUB_ENV"
+          mkdir -p "$D"/{source,probe,root,output}
+          # Release is a separate Maintainer push after the authenticated static review.
+          test "$GITHUB_REPOSITORY" = 'Kirjane/Operation-FORGE.kirion'
+          test "$GITHUB_REF" = 'refs/heads/infra/forge-p1a-hosted-qualification'
+          export GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null GIT_TERMINAL_PROMPT=0
+          git -c core.hooksPath=/dev/null init --bare --quiet "$D/repo"
+          git -C "$D/repo" fetch --quiet --no-tags --depth=1 https://github.com/Kirjane/Operation-FORGE.kirion.git "$GITHUB_SHA"
+          git -C "$D/repo" cat-file blob "$GITHUB_SHA:.forge-qualification/R2-STATIC-READY" > "$D/release"
+          grep -Ex '1bccfe63821e3af09131f89a1efd98d3edd490ec [0-9]{10}' "$D/release"
+          test "$(wc -l < "$D/release")" = 1
+          cat "$D/release"
+          # A text marker alone is insufficient. Authenticate the actual public review
+          # and reject stale or superseded verdicts before any candidate import.
+          python3 -I -B - "$D/release" <<'PY'
+          import json, pathlib, re, sys, urllib.request
+          API="https://api.github.com/repos/Kirjane/Operation-FORGE.kirion"
+          C="1bccfe63821e3af09131f89a1efd98d3edd490ec"
+          reviewer=339503629
+          def require(ok,msg):
+              if not ok: raise RuntimeError("FAIL_CLOSED: "+msg)
+          def get(path):
+              req=urllib.request.Request(API+path,headers={"Accept":"application/vnd.github+json","User-Agent":"FORGE-public-review-gate"})
+              with urllib.request.urlopen(req,timeout=20) as r:
+                  return json.load(r)
+          def validate(comment,comment_id):
+              require(comment.get("id")==comment_id,"receipt identity")
+              require(comment.get("user",{}).get("id")==reviewer,"independent reviewer identity")
+              require(comment.get("issue_url")==API+"/issues/37","governing issue")
+              lines=comment.get("body","").splitlines()
+              require(lines.count("FORGE_STATIC_VERDICT=STATIC_PREQUALIFICATION_READY")==1,"explicit static readiness")
+              require(lines.count("FORGE_CANDIDATE="+C)==1,"exact candidate")
+              require(len([line for line in lines if line.startswith("FORGE_STATIC_VERDICT=")])==1,"ambiguous disposition")
+              require(len([line for line in lines if line.startswith("FORGE_CANDIDATE=")])==1,"ambiguous candidate")
+          # Self-check the gate's critical negative controls without network or candidate code.
+          fixture={"id":1,"user":{"id":reviewer},"issue_url":API+"/issues/37","body":"FORGE_STATIC_VERDICT=STATIC_PREQUALIFICATION_READY\nFORGE_CANDIDATE="+C}
+          validate(fixture,1)
+          for changed in [
+              {"id":2},{"user":{"id":335897759}},{"issue_url":API+"/issues/38"},
+              {"body":fixture["body"].replace(C,"0"*40)},
+              {"body":fixture["body"].replace("STATIC_PREQUALIFICATION_READY","FIX_REQUIRED")},
+              {"body":fixture["body"]+"\nFORGE_STATIC_VERDICT=FIX_REQUIRED"}
+          ]:
+              try: validate(dict(fixture,**changed),1)
+              except RuntimeError: pass
+              else: raise RuntimeError("gate negative control failed")
+          print("RELEASE_GATE_SELFTEST 6/6")
+          candidate,receipt=pathlib.Path(sys.argv[1]).read_text().strip().split()
+          require(candidate==C and re.fullmatch(r"[0-9]{10}",receipt) is not None,"marker")
+          receipt_id=int(receipt)
+          comment=get("/issues/comments/"+receipt)
+          validate(comment,receipt_id)
+          # A newer Nox comment on this candidate must be reconciled first.
+          # Ascending pagination after the receipt's creation; fail closed on overflow.
+          from urllib.parse import quote
+          since=quote(comment["created_at"],safe="")
+          for page in range(1,11):
+              batch=get("/issues/37/comments?since="+since+"&per_page=100&page="+str(page))
+              require(isinstance(batch,list),"comment pagination")
+              for later in batch:
+                  if later.get("id",0)>receipt_id and later.get("user",{}).get("id")==reviewer:
+                      require(C not in later.get("body",""),"newer candidate review requires reconciliation")
+              if len(batch)<100: break
+          else: raise RuntimeError("review pagination exceeded")
+          require(get("/branches/experiment/forge-p1a-contract-compatibility")["commit"]["sha"]==C,"candidate branch drift")
+          print("AUTHENTICATED_STATIC_RELEASE",receipt_id,C)
+          PY
+          F=928d08edc691dfaeccd4929d2a6566d1f3a3a789
+          C=1bccfe63821e3af09131f89a1efd98d3edd490ec
+          git -C "$D/repo" fetch --quiet --no-tags --depth=3 https://github.com/Kirjane/Operation-FORGE.kirion.git "$C"
+          test "$(git -C "$D/repo" rev-parse FETCH_HEAD)" = "$C"
+          R=deeeddd95c785b7d23ef7af6e75d165beff99634
+          test "$(git -C "$D/repo" rev-list --parents -n 1 "$C")" = "$C $R"
+          test "$(git -C "$D/repo" rev-list --parents -n 1 "$R")" = "$R $F"
+          test "$(git -C "$D/repo" rev-parse "$R^{tree}")" = '1a90797f72a13c362f9f9851e77627d09e7684b4'
+          test "$(git -C "$D/repo" rev-parse "$C^{tree}")" = '03216302f3c6c9e172209b7915c1bbb5111a16a7'
+          test "$(git -C "$D/repo" rev-parse "$F^{tree}")" = '5c3c6a5557b9faa7f7dfbb66d226afa38f17d4b4'
+          git -C "$D/repo" diff-tree --no-commit-id --name-status --no-renames -r "$F" "$C" > "$D/diff"
+          git -C "$D/repo" diff-tree --no-commit-id --name-status --no-renames -r "$R" "$C" > "$D/successor-diff"
+          export D F C
+          python3 -I -B - <<'PY'
+          import ast, base64, hashlib, json, os, pathlib, subprocess
+          d=pathlib.Path(os.environ["D"]); c=os.environ["C"]; prefix="experiments/contract_compatibility/"
+          expected={
+              "README.md":(6690,"8fe2cbcbc8e795a5fff7230ff9fdc70165a8aa25d56c14589e8448b32107fa2e","9b3609071d985d539ba2215c6e5599d499d39ee1"),
+              "record.schema.json":(75585,"04c44eb4fcc8634e8b3659c4fe95919443f2e7236542924d0c8f7ad301f8d060","1ceb42412dfd8f14eeb8c18d4a83a206a3bdc9b5"),
+              "contract_records.py":(47385,"63c6e43f51a03c44643fa2d8c673da7bf83cae21aee9ae4ed1876c1dddd91fe2","2bd4a074c3e8a00b80cbfc839996a52f58c120f3"),
+              "vectors.json":(4725515,"da69134eec26977258d8a066fe807a9414a8f15deebacd9932ba893ef12d9a2b","9187a1c8de53d07be1b55a3dd17371b95dd24ea1"),
+              "test_contract_records.py":(38545,"575d379d4a4c1cfdbfc0e8c66ef70943a8adb37cfb1b5d614e3f61cc740dde76","ab171dffe0cfcfad54028b124762fae7d62373e2"),
+          }
+          def req(ok,msg):
+              if not ok: raise RuntimeError("FAIL_CLOSED: "+msg)
+          def git(*args): return subprocess.check_output(["git","-C",str(d/"repo"),*args])
+          diff=(d/"diff").read_text().splitlines()
+          req(len(diff)==5 and set(diff)=={"A\t"+prefix+n for n in expected},"exact diff")
+          successor=(d/"successor-diff").read_text().splitlines()
+          req(len(successor)==3 and set(successor)=={"M\t"+prefix+n for n in ("README.md","contract_records.py","test_contract_records.py")},"exact successor diff")
+          for n,(size,digest,blob) in expected.items():
+              p=prefix+n
+              req(git("ls-tree",c,"--",p).decode().strip()=="100644 blob "+blob+"\t"+p,"mode/blob "+n)
+              data=git("cat-file","blob",blob)
+              req(len(data)==size and hashlib.sha256(data).hexdigest()==digest,"bytes "+n)
+              (d/"source"/n).write_bytes(data)
+              print("EXACT_SOURCE",n,size,digest,blob)
+          for n,allowed in [("contract_records.py",{"__future__","json","hashlib","re"}),("test_contract_records.py",{"__future__","unittest","pathlib","json","hashlib","re","contract_records"})]:
+              tree=ast.parse((d/"source"/n).read_bytes(),filename=n)
+              for node in ast.walk(tree):
+                  if isinstance(node,ast.Import): req(all(a.name in allowed for a in node.names),"import")
+                  if isinstance(node,ast.ImportFrom): req(node.level==0 and node.module in allowed,"from import")
+                  req(not isinstance(node,ast.Assert),"assert")
+              print("STATIC_IMPORT_CHECK",n)
+          wrapper=json.loads((d/"source"/"vectors.json").read_bytes())
+          source=wrapper["public_vectors_utf8"].encode("utf-8")
+          req(hashlib.sha256(source).hexdigest()=="c4cdbf36c9ded8ef8d54ef692c63ef4ef0dc454be7130859e59feb6656781ab3","public oracle")
+          public=json.loads(source)
+          raw=public["raw_vectors"]; semantic=public["semantic_cases"]
+          ids=[x["case_id"] for x in raw+semantic]
+          req(len(raw)==47 and len(semantic)==76 and len(set(ids))==123,"oracle inventory")
+          for case in raw:
+              b=bytes.fromhex(wrapper["raw_hex_by_case"][case["case_id"]])
+              req(len(b)==case["raw_bytes"] and hashlib.sha256(b).hexdigest()==case["raw_sha256"],"raw case")
+          (d/"public-ids.json").write_text(json.dumps(ids))
+          print("PUBLIC_ORACLE_VERIFIED 123")
+          PY
+          printf '%s\n' 'benign synthetic source' > "$D/source/sentinel.txt"
+          cat > "$D/probe/test_benign.py" <<'PY'
+          import unittest
+          class Benign(unittest.TestCase):
+              def test_arithmetic(self):
+                  self.assertEqual(2+2,4)
+          PY
+          cat > "$D/probe/launcher.py" <<'PY'
+          import ctypes, errno, fcntl, hashlib, os, pathlib, resource, socket, stat, sys, unittest
+          P=pathlib.Path
+          def require(ok,msg):
+              if not ok: raise RuntimeError("FAIL_CLOSED: "+str(msg))
+          opt,mode=sys.argv[1:]
+          require(mode in ("benign","fault","candidate"),"mode")
+          require(opt in ("0","1") and sys.flags.optimize==int(opt),"optimization")
+          require(os.getuid()==65534 and os.geteuid()==65534 and os.getgid()==65534 and not os.getgroups(),"dedicated unprivileged identity")
+          require(sys.flags.isolated and sys.flags.no_site and sys.dont_write_bytecode,"python flags")
+          require(set(os.environ)<= {"PATH","LANG","LC_CTYPE"},"environment")
+          require(all(not P(p).exists() for p in ["/home","/root","/run","/mnt","/var","/etc","/proc/self"]),"host mounts")
+          require(stat.S_ISCHR(os.fstat(77).st_mode),"controlled fd")
+          libc=ctypes.CDLL(None,use_errno=True)
+          libc.close_range.argtypes=[ctypes.c_uint,ctypes.c_uint,ctypes.c_int]
+          require(libc.close_range(3,0xffffffff,0)==0,"close_range")
+          require(stat.S_ISCHR(os.fstat(0).st_mode) and os.major(os.fstat(0).st_rdev)==1 and os.minor(os.fstat(0).st_rdev)==3,"stdin")
+          require(all(stat.S_ISREG(os.fstat(i).st_mode) for i in (1,2)),"log descriptors")
+          for i in range(3,resource.getrlimit(resource.RLIMIT_NOFILE)[0]):
+              try: fcntl.fcntl(i,fcntl.F_GETFD)
+              except OSError as e: require(e.errno==errno.EBADF,"fd scan")
+              else: raise RuntimeError("inherited descriptor")
+          require(libc.prctl(39,0,0,0,0)==1 and all(libc.prctl(23,i,0,0,0)==0 for i in range(41)),"NNP/bounding caps")
+          cap=ctypes.CDLL("libcap.so.2")
+          cap.cap_get_proc.restype=ctypes.c_void_p
+          cap.cap_to_text.argtypes=[ctypes.c_void_p,ctypes.c_void_p]
+          cap.cap_to_text.restype=ctypes.c_void_p
+          cap.cap_free.argtypes=[ctypes.c_void_p]
+          x=cap.cap_get_proc(); require(bool(x),"caps")
+          y=cap.cap_to_text(x,None); require(bool(y) and ctypes.string_at(y)==b"=","effective caps")
+          require(cap.cap_free(y)==0 and cap.cap_free(x)==0,"cap free")
+          lib=ctypes.CDLL("libseccomp.so.2")
+          lib.seccomp_init.argtypes=[ctypes.c_uint32]; lib.seccomp_init.restype=ctypes.c_void_p
+          lib.seccomp_syscall_resolve_name.argtypes=[ctypes.c_char_p]; lib.seccomp_syscall_resolve_name.restype=ctypes.c_int
+          lib.seccomp_rule_add.argtypes=[ctypes.c_void_p,ctypes.c_uint32,ctypes.c_int,ctypes.c_uint]; lib.seccomp_rule_add.restype=ctypes.c_int
+          lib.seccomp_load.argtypes=[ctypes.c_void_p]; lib.seccomp_load.restype=ctypes.c_int
+          lib.seccomp_release.argtypes=[ctypes.c_void_p]
+          allowed="read write close openat newfstatat fstat stat lstat statx lseek pread64 readv writev getdents64 readlink readlinkat access faccessat faccessat2 getcwd brk mmap munmap mprotect mremap madvise futex rt_sigaction rt_sigprocmask rt_sigreturn sigaltstack clock_gettime clock_getres gettimeofday getrandom getpid gettid getuid geteuid getgid getegid uname sysinfo sched_getaffinity prlimit64 getrlimit fcntl ioctl arch_prctl rseq set_robust_list set_tid_address exit exit_group prctl".split()
+          ctx=lib.seccomp_init(0x00050000|errno.EPERM); require(bool(ctx),"seccomp init")
+          try:
+              for name in allowed:
+                  nr=lib.seccomp_syscall_resolve_name(name.encode()); require(nr>=0,name)
+                  rc=lib.seccomp_rule_add(ctx,0xdead0000 if mode=="fault" else 0x7fff0000,nr,0)
+                  if mode=="fault":
+                      print("INDUCED_RULE_FAILURE",rc,flush=True)
+                      require(rc!=0,"fault unexpectedly accepted")
+                      raise RuntimeError("EXPECTED_RULE_FAILURE")
+                  require(rc==0,("rule",name,rc))
+              require(lib.seccomp_load(ctx)==0,"filter load")
+          finally: lib.seccomp_release(ctx)
+          require(libc.prctl(21,0,0,0,0)==2,"filter")
+          print("FILTER_MODE=2 DEFAULT_DENY_ALLOWLIST",len(allowed),flush=True)
+          def deny(label,fn,errors):
+              try: fn()
+              except OSError as e: require(e.errno in errors,(label,e.errno)); print(label,"DENIED",e.errno,flush=True)
+              else: raise RuntimeError(label+" unexpected success")
+          for path in ("/source/denied","/usr/forge-denied","/probe/denied","/outside"):
+              deny("WRITE "+path,lambda path=path:P(path).write_text("benign"),{errno.EROFS})
+          deny("SOCKET",lambda:socket.socket(socket.AF_INET,socket.SOCK_STREAM),{errno.EPERM})
+          deny("FORK",os.fork,{errno.EPERM})
+          deny("EXEC",lambda:os.execve("/no-such-program",["no-such-program"],{}),{errno.EPERM})
+          deny("UNLINK_SOURCE",lambda:os.unlink("/source/sentinel.txt"),{errno.EPERM,errno.EROFS})
+          deny("MKDIR",lambda:os.mkdir("/outside"),{errno.EPERM,errno.EROFS})
+          deny("CHMOD",lambda:os.chmod("/source/sentinel.txt",0o600),{errno.EPERM,errno.EROFS})
+          libc.mount.argtypes=[ctypes.c_char_p,ctypes.c_char_p,ctypes.c_char_p,ctypes.c_ulong,ctypes.c_void_p]
+          ctypes.set_errno(0)
+          require(libc.mount(b"none",b"/no-such-target",b"tmpfs",0,None)==-1 and ctypes.get_errno()==errno.EPERM,"mount deny")
+          print("MOUNT_DENIED",flush=True)
+          P("/scratch/sentinel").write_text("scratch only")
+          sys.path.insert(0,"/probe")
+          result=unittest.main(module=None,argv=["unittest","-v","test_benign"],exit=False).result
+          require(result.wasSuccessful() and result.testsRun==1,"benign test")
+          print("BENIGN_DISPATCH_PASS OPT",opt,"PYTHON",sys.version,"INTERPRETER_SHA256",hashlib.sha256(P(sys.executable).read_bytes()).hexdigest(),flush=True)
+          candidate_ok=True
+          if mode=="candidate":
+              # Same process has passed all denial checks and benign dispatch.
+              class Receipt(unittest.TextTestResult):
+                  def addSubTest(self,test,subtest,err):
+                      print("SUBTEST", "PASS" if err is None else "FAIL", str(subtest),flush=True)
+                      super().addSubTest(test,subtest,err)
+              sys.path.insert(0,"/source")
+              suite=unittest.defaultTestLoader.discover("/source",pattern="test_contract_records.py",top_level_dir="/source")
+              print("CANDIDATE_DISPATCH",opt,suite.countTestCases(),flush=True)
+              result=unittest.TextTestRunner(verbosity=2,resultclass=Receipt).run(suite)
+              candidate_ok=result.wasSuccessful() and not result.skipped and not result.expectedFailures and result.testsRun==27
+              print("CANDIDATE_RESULT",opt,"tests",result.testsRun,"failures",len(result.failures),"errors",len(result.errors),"skips",len(result.skipped),"expected_failures",len(result.expectedFailures),flush=True)
+          for name,m in sorted(sys.modules.items()):
+              f=getattr(m,"__file__",None)
+              if f:
+                  p=P(f).resolve()
+                  require(p.is_relative_to("/usr") or p.is_relative_to("/probe") or (mode=="candidate" and p.is_relative_to("/source")),("origin",name,str(p)))
+                  require(not str(p).endswith(".pyc"),"pyc")
+                  if p.is_file(): print("RUNTIME_ORIGIN",name,str(p),hashlib.sha256(p.read_bytes()).hexdigest())
+          if mode=="candidate":
+              require(candidate_ok,"candidate tests")
+              print("CANDIDATE_PASS",opt,flush=True)
+          else:
+              print("PREFLIGHT_PASS NO_CANDIDATE_EXECUTION",flush=True)
+          PY
+          cat > "$D/probe/run.sh" <<'SH'
+          #!/bin/bash
+          set -euo pipefail
+          D=$1; opt=$2; mode=$3; R=$D/root
+          mount --make-rprivate /
+          mount -t tmpfs -o size=16m,nosuid,nodev tmpfs "$R"
+          mkdir -p "$R"/{usr,source,probe,scratch}
+          ln -s usr/lib "$R/lib"; ln -s usr/lib64 "$R/lib64"; ln -s usr/bin "$R/bin"
+          mount --bind /usr "$R/usr"; mount -o remount,bind,ro,nosuid,nodev "$R/usr"
+          for n in source probe; do
+            mount --bind "$D/$n" "$R/$n"
+            mount -o remount,bind,ro,nosuid,nodev,noexec "$R/$n"
+          done
+          chown 65534:65534 "$D/output"; chmod 0700 "$D/output"
+          mount --bind "$D/output" "$R/scratch"; mount -o remount,bind,rw,nosuid,nodev,noexec "$R/scratch"
+          mount -o remount,ro,nosuid,nodev "$R"
+          links=$(ip -brief link); echo "$links"
+          test "$(echo "$links" | awk 'END{print NR}')" = 1
+          test "$(echo "$links" | awk '{print $1,$2}')" = 'lo DOWN'
+          for path in "$R" "$R/usr" "$R/source" "$R/probe" "$R/scratch"; do
+            test "$(findmnt -n -o TARGET --target "$path")" = "$path"
+            opts=$(findmnt -n -o OPTIONS --target "$path")
+            echo "MOUNT $path $opts"
+            flags='nosuid nodev ro'
+            case "$path" in "$R/source"|"$R/probe") flags="$flags noexec";; "$R/scratch") flags='nosuid nodev rw noexec';; esac
+            for f in $flags; do case ",$opts," in *",$f,"*) ;; *) exit 66;; esac; done
+          done
+          test "$(findmnt -R -n -o TARGET "$R" | wc -l)" = 5
+          args=(); if test "$opt" = 1; then args+=(-O); fi
+          ulimit -n 1024
+          exec 77</dev/null
+          exec chroot "$R" /usr/bin/setpriv --reuid=65534 --regid=65534 --clear-groups --no-new-privs --bounding-set=-all --inh-caps=-all --ambient-caps=-all /usr/bin/env -i PATH=/usr/bin LANG=C /usr/bin/python3 "${args[@]}" -I -B -S -X pycache_prefix=/probe/nonexistent-cache /probe/launcher.py "$opt" "$mode"
+          SH
+          sha256sum "$D/source/sentinel.txt" "$D/probe/"* 
+      - name: Execute both modes under same-job isolation controls
+        shell: bash
+        run: |
+          set -euo pipefail
+          D=$P1A_DIR
+          printf 'ImageOS=%s ImageVersion=%s\n' "${ImageOS:-unknown}" "${ImageVersion:-unknown}"
+          uname -srmo
+          dpkg-query -W python3 libseccomp2 libcap2 util-linux
+          sha256sum /usr/bin/python3
+          test "$(sha256sum /usr/bin/python3 | cut -d" " -f1)" = e50d468e8b0adfb05733f5b87b3cff34829c4a8c1aea50c865aa8bdfe4bb150f
+          before=$(sha256sum "$D/source/"*)
+          for opt in 0 1; do
+            sudo -n unshare --mount --net --fork /bin/bash "$D/probe/run.sh" "$D" "$opt" benign </dev/null >"$D/normal-$opt.log" 2>&1 || { cat "$D/normal-$opt.log"; exit 1; }
+            cat "$D/normal-$opt.log"
+            grep -F 'PREFLIGHT_PASS NO_CANDIDATE_EXECUTION' "$D/normal-$opt.log"
+            set +e
+            sudo -n unshare --mount --net --fork /bin/bash "$D/probe/run.sh" "$D" "$opt" fault </dev/null >"$D/fault-$opt.log" 2>&1
+            rc=$?
+            set -e
+            cat "$D/fault-$opt.log"
+            test "$rc" -ne 0
+            grep -F 'EXPECTED_RULE_FAILURE' "$D/fault-$opt.log"
+            if grep -F 'BENIGN_DISPATCH_PASS' "$D/fault-$opt.log"; then exit 1; fi
+          done
+          overall=0
+          for opt in 0 1; do
+            set +e
+            sudo -n unshare --mount --net --fork /bin/bash "$D/probe/run.sh" "$D" "$opt" candidate </dev/null >"$D/candidate-$opt.log" 2>&1
+            rc=$?
+            set -e
+            cat "$D/candidate-$opt.log"
+            echo "CANDIDATE_EXIT $opt $rc"
+            if test "$rc" -ne 0; then overall=1; fi
+          done
+          test "$before" = "$(sha256sum "$D/source/"*)"
+          python3 -I -B - "$D" <<'PY'
+          import hashlib,json,pathlib,sys
+          d=pathlib.Path(sys.argv[1]); ids=json.loads((d/"public-ids.json").read_text())
+          for opt in (0,1):
+              log=(d/("candidate-"+str(opt)+".log")).read_text()
+              lines=[x for x in log.splitlines() if x.startswith("SUBTEST ")]
+              good=[x for x in lines if x.startswith("SUBTEST PASS ")]
+              passed=[]
+              for cid in ids:
+                  if any("case_id="+repr(cid) in x and ("test_all_raw_cases" in x or "test_all_semantic_cases" in x) for x in good): passed.append(cid)
+              print("PUBLIC_CASES_PASSED",opt,len(passed),"/",len(ids))
+              print("MISSING_OR_FAILED",opt,json.dumps(sorted(set(ids)-set(passed))))
+              for line in log.splitlines():
+                  if line.startswith("RUNTIME_ORIGIN "):
+                      _,_,path,expected=line.split(" ",3)
+                      p=pathlib.Path(path) if path.startswith("/usr/") else d/path.lstrip("/")
+                      if not p.is_file() or hashlib.sha256(p.read_bytes()).hexdigest()!=expected: raise RuntimeError("runtime/source origin drift "+path)
+              if len(passed)!=len(ids): raise RuntimeError("public case coverage")
+          PY
+          test "$overall" = 0
+          echo 'PUBLIC_QUALIFICATION_COMPLETE; PRIVATE_HOLDOUT_NOT_RUN'

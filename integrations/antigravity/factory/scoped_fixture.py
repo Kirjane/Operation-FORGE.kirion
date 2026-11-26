@@ -134,6 +134,32 @@ class ScopedGitFixtureAdapter(FixtureDispatchAdapter):
                          "valid_until_utc": (now + dt.timedelta(seconds=30)).isoformat()}
         return {"target": target, "sources": sources, "oracles": oracles, "capabilities": caps}
 
+    def verify_result(self, packet, result):
+        """Re-observe the fixed effect before durable completion; no claimed diff is sufficient."""
+        if result.get("acceptance") != "NOT_EVALUATED":
+            raise AuthorityError("Fixture cannot supply acceptance.")
+        if "WRITE_OWNED" not in packet["allowed_operations"]:
+            self._assert_clean_target(packet)
+            if result.get("effect") != "READ_ONLY" or result.get("observed", {}).get("target", {}).get("base_sha") != self.base_sha:
+                raise AuthorityError("Read receipt does not bind actual fixture.")
+            return
+        if (self.repo.is_symlink() or Path(self._git("rev-parse", "--show-toplevel")).resolve() != self.repo
+                or self._git("rev-parse", "HEAD") != self.base_sha
+                or self._git("symbolic-ref", "--short", "HEAD") != self.branch
+                or self._git("remote")):
+            raise AuthorityError("Fixture identity changed before completion.")
+        target = assert_canonical_path_inside_worktree(self.repo, self.repo / self.owned_file)
+        raw = self._git("diff", "--raw", "-z", "--no-renames", self.base_sha)
+        changed, forbidden = parse_git_raw_z_diff(raw)
+        others = self._git("ls-files", "--others", "-z")
+        if (forbidden or others or changed != [self.owned_file] or target.read_bytes() != b"after\n"
+                or result != {"effect": "LOCAL_FIXTURE_WRITE_OBSERVED", "changed_paths": changed,
+                    "base_sha": self.base_sha, "oracle_blob_sha": self.oracle_blob_sha,
+                    "before_sha256": hashlib.sha256(b"before\n").hexdigest(),
+                    "after_sha256": hashlib.sha256(target.read_bytes()).hexdigest(),
+                    "acceptance": "NOT_EVALUATED"}):
+            raise AuthorityError("Fixture result does not match observed effects.")
+
     def invoke(self, packet, *, before_invoke):
         # Re-observe the actual source and target, not a caller observation.
         try:

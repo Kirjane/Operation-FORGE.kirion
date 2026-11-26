@@ -122,6 +122,15 @@ def is_supported_fixture_adapter(adapter):
     return type(adapter) in (FixtureDispatchAdapter, ScopedGitFixtureAdapter)
 
 
+def fixture_adapter_binding(adapter):
+    from .scoped_fixture import ScopedGitFixtureAdapter
+    if type(adapter) is ScopedGitFixtureAdapter:
+        return {"kind": "SCOPED_GIT_FIXTURE", "root": str(adapter.repo), "base_sha": adapter.base_sha}
+    if type(adapter) is FixtureDispatchAdapter:
+        return {"kind": "CALLBACK_FIXTURE"}
+    raise SchedulerError("Unsupported fixture adapter.")
+
+
 def fixture_operations(adapter):
     from .scoped_fixture import ScopedGitFixtureAdapter
     return {"READ", "WRITE_OWNED"} if type(adapter) is ScopedGitFixtureAdapter else {"READ", "REVIEW_READONLY"}
@@ -488,7 +497,8 @@ class ContractJournal(FactoryJournal):
                         {"reservation_id": reservation, "ordinal": ordinal, "prerequisite_fingerprint": fingerprint,
                          "actor_id": grant["actor_id"], "worker_id": grant["worker_id"],
                          "host_id": grant["host_id"], "grant_sha256": grant_sha256,
-                         "valid_until_utc": valid_until.isoformat(), "fixture_only": True})
+                         "valid_until_utc": valid_until.isoformat(), "fixture_only": True,
+                         "adapter_binding": fixture_adapter_binding(adapter)})
             return {"status": "RESERVED", "reservation_id": reservation, "ordinal": ordinal,
                     "contract_sha256": digest, "revision": revision, "cached": False, "fixture_only": True}
 
@@ -529,6 +539,8 @@ class ContractJournal(FactoryJournal):
         return attempt, binding
 
     def _invocation_block_reason(self, packet, attempt, binding, adapter):
+        if binding.get("adapter_binding", {"kind": "CALLBACK_FIXTURE"}) != fixture_adapter_binding(adapter):
+            return "DISPATCH_ADAPTER_BINDING_MISMATCH"
         now = dt.datetime.now(dt.timezone.utc)
         grant = adapter.resolve_grant(packet, attempt["digest"], now)
         if (not grant or digest_json(grant) != binding["grant_sha256"]
@@ -573,11 +585,15 @@ class ContractJournal(FactoryJournal):
         with self._transaction() as conn:
             self._assert_chain(conn)
             grant = adapter.resolve_grant(packet, digest, dt.datetime.now(dt.timezone.utc))
-            attempt = conn.execute("SELECT * FROM contract_attempts WHERE reservation_id=?",
-                                   (reservation_id,)).fetchone()
-            if not grant or not attempt or (grant["worker_id"], grant["actor_id"], grant["attempt_ordinal"]) != (
+            attempt, binding = self._reservation_binding(conn, packet, reservation_id, {"RUNNING"})
+            if not grant or (grant["worker_id"], grant["actor_id"], grant["attempt_ordinal"]) != (
                     attempt["worker_id"], attempt["actor_id"], attempt["ordinal"]):
                 raise SchedulerError("Completion actor or authorized attempt mismatch.")
+            if binding.get("adapter_binding", {"kind": "CALLBACK_FIXTURE"}) != fixture_adapter_binding(adapter):
+                raise SchedulerError("Completion adapter binding mismatch.")
+            from .scoped_fixture import ScopedGitFixtureAdapter
+            if type(adapter) is ScopedGitFixtureAdapter:
+                adapter.verify_result(packet, result)
             self._change_attempt(conn, packet, reservation_id, {"RUNNING"}, "COMPLETED", result)
 
     def dispatch_fixture(self, raw, adapter):
@@ -627,6 +643,22 @@ class ContractJournal(FactoryJournal):
         return {"status": "COMPLETED", "fixture_only": True, "result": result,
                 "reservation_id": reservation, "contract_sha256": claim["contract_sha256"]}
 
+    def inspect_attempt(self, raw, reservation_id):
+        """Read-only recovery receipt; never converts elapsed time into replay authority."""
+        packet = parse_mission_packet(raw)
+        with self._transaction() as conn:
+            self._assert_chain(conn)
+            attempt, binding = self._reservation_binding(conn, packet, reservation_id,
+                {"RESERVED", "RUNNING", "UNKNOWN", "NO_EFFECT", "COMPLETED", "RECONCILED"})
+            status = attempt["status"]
+            return {"reservation_id": reservation_id, "contract_sha256": attempt["digest"],
+                    "status": status, "fixture_only": True,
+                    "adapter_binding": binding.get("adapter_binding", {"kind": "CALLBACK_FIXTURE"}),
+                    "result": json.loads(attempt["result_json"]) if attempt["result_json"] else None,
+                    "replay_permitted": False,
+                    "next_action": "OPERATOR_RECONCILIATION_REQUIRED" if status in
+                    {"RESERVED", "RUNNING", "UNKNOWN"} else "SEPARATE_AUTHORIZATION_REQUIRED"}
+
     def reconcile_unknown(self, raw, reservation_id, adapter):
         """Only an UNKNOWN claim may use configured fixture reconciliation.
 
@@ -650,7 +682,9 @@ class ContractJournal(FactoryJournal):
                 or evidence.get("quiescent") is not True or evidence.get("effect") not in ("NO_EFFECT", "EFFECT_OBSERVED")
                 or not _nonempty(evidence.get("evidence_ref"))):
                 raise SchedulerError("Unresolved effect; no replay permitted.")
-            attempt = self._require_attempt(conn, packet, reservation_id, {"UNKNOWN"})
+            attempt, binding = self._reservation_binding(conn, packet, reservation_id, {"UNKNOWN"})
+            if binding.get("adapter_binding", {"kind": "CALLBACK_FIXTURE"}) != fixture_adapter_binding(adapter):
+                raise SchedulerError("Reconciliation adapter binding mismatch; actual fixture effects require operator reconciliation.")
             if (grant["worker_id"], grant["actor_id"], grant["attempt_ordinal"]) != (
                     attempt["worker_id"], attempt["actor_id"], attempt["ordinal"]):
                 raise SchedulerError("Reconciliation actor or authorized attempt mismatch.")

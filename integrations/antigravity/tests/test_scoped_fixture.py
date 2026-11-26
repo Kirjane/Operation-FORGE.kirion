@@ -92,3 +92,41 @@ class ScopedFixtureTests(unittest.TestCase):
         self.authorize()
         self.assertEqual(self.dispatch()["status"], "BLOCKED")
         self.assertEqual((self.adapter.repo / self.adapter.owned_file).read_bytes(), b"before\n")
+
+    def test_uncertain_write_stays_blocked_and_cannot_use_callback_reconciliation(self):
+        from unittest.mock import patch
+        from integrations.antigravity.factory.authority import AuthorityError
+        from integrations.antigravity.factory.dispatch_preflight import FixtureDispatchAdapter
+        from integrations.antigravity.factory.scheduler import SchedulerError
+        from integrations.antigravity.tests.test_dispatch_preflight import make_observation
+        import sqlite3
+
+        self.make_writer()
+        self.authorize()
+        real_git = self.adapter._git
+
+        def fail_after_write(*args):
+            if args[0] == "diff":
+                raise AuthorityError("Injected post-effect observation failure")
+            return real_git(*args)
+
+        with patch.object(self.adapter, "_git", side_effect=fail_after_write):
+            with self.assertRaises(AuthorityError):
+                self.dispatch()
+        self.assertEqual((self.adapter.repo / self.adapter.owned_file).read_bytes(), b"after\n")
+        with sqlite3.connect(self.journal.db_path) as conn:
+            reservation = conn.execute("SELECT reservation_id FROM contract_attempts").fetchone()[0]
+        raw = json.dumps(self.packet)
+        receipt = self.journal.inspect_attempt(raw, reservation)
+        self.assertEqual(receipt["status"], "UNKNOWN")
+        self.assertFalse(receipt["replay_permitted"])
+        self.assertEqual(self.dispatch()["status"], "UNKNOWN")
+        grant = make_grant(self.packet)
+        fallback = FixtureDispatchAdapter(grants={contract_digest(self.packet): grant},
+            trusted_verifiers={self.packet["verifier"]}, observe=lambda p: make_observation(p, grant),
+            handler=lambda p: {}, reconciliations={reservation: {
+                "contract_sha256": contract_digest(self.packet), "reservation_id": reservation,
+                "quiescent": True, "effect": "NO_EFFECT", "evidence_ref": "synthetic-only"}})
+        with self.assertRaises(SchedulerError):
+            self.journal.reconcile_unknown(raw, reservation, fallback)
+        self.assertEqual(self.journal.inspect_attempt(raw, reservation)["status"], "UNKNOWN")

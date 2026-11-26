@@ -376,7 +376,7 @@ class WorktreeSandbox:
         self.source_repo = source_repo.resolve()
         self.sandbox_root = sandbox_root.resolve()
         self.sandbox_root.mkdir(parents=True, exist_ok=True)
-        self._created_worktrees: set[Path] = set()
+        self._created_worktrees: dict[Path, tuple[str, str]] = {}
 
     def create_worktree(self, branch_name: str, base_sha: str, worktree_name: str) -> Path:
         if not is_valid_git_sha(base_sha):
@@ -402,8 +402,13 @@ class WorktreeSandbox:
         if wt_path.exists() or (self.sandbox_root / worktree_name).is_symlink():
             raise PolicyViolationError("Existing worktree path requires explicit reconciliation; refusing replacement.")
 
+        existing_ref = subprocess.run(["git", "show-ref", "--verify", "--hash", "refs/heads/" + branch_name],
+                                      cwd=self.source_repo, capture_output=True, text=True, env=sanitize_worker_env())
+        if existing_ref.returncode == 0 and existing_ref.stdout.strip() != base_sha:
+            raise PolicyViolationError("Existing branch does not equal authorized base; refusing reset.")
+        branch_args = [str(wt_path), branch_name] if existing_ref.returncode == 0 else ["-b", branch_name, str(wt_path), base_sha]
         p = subprocess.run(
-            ["git", "-c", "core.autocrlf=false", "worktree", "add", "-b", branch_name, str(wt_path), base_sha],
+            ["git", "-c", "core.autocrlf=false", "worktree", "add", *branch_args],
             cwd=self.source_repo,
             capture_output=True,
             text=True,
@@ -412,7 +417,7 @@ class WorktreeSandbox:
         if p.returncode != 0:
             raise AuthorityError(f"git worktree add failed: {p.stderr.strip()}")
 
-        self._created_worktrees.add(wt_path)
+        self._created_worktrees[wt_path] = (branch_name, base_sha)
         return wt_path
 
     def inspect_and_validate_worktree(
@@ -428,6 +433,17 @@ class WorktreeSandbox:
 
         if wt_path.is_symlink() or wt_path.resolve().parent != self.sandbox_root or wt_path.resolve() not in self._created_worktrees:
             raise PolicyViolationError("Worktree was not created by this sandbox instance.")
+        branch, original_base = self._created_worktrees[wt_path.resolve()]
+        if packet.get("schema_version") == 2 and (packet["base_sha"] != base_sha or original_base != base_sha
+                                                   or packet["permitted_branch"] != branch):
+            raise PolicyViolationError("Contract target does not bind the created worktree.")
+        for args, expected in ((["rev-parse", "--show-toplevel"], str(wt_path.resolve())),
+                               (["symbolic-ref", "--short", "HEAD"], branch)):
+            observed = subprocess.run(["git", *args], cwd=wt_path, capture_output=True, text=True,
+                                      env=sanitize_worker_env())
+            if observed.returncode or (Path(observed.stdout.strip()).resolve() != wt_path.resolve()
+                                      if args[0] == "rev-parse" else observed.stdout.strip() != expected):
+                raise PolicyViolationError("Observed worktree root or branch drift.")
         for item in wt_path.rglob("*"):
             rel_parts = item.relative_to(wt_path).parts
             if rel_parts and rel_parts[0] == ".git":
@@ -461,7 +477,7 @@ class WorktreeSandbox:
             )
 
         untracked_p = subprocess.run(
-            ["git", "-c", "core.quotepath=false", "ls-files", "--others", "--exclude-standard", "-z"],
+            ["git", "-c", "core.quotepath=false", "ls-files", "--others", "-z"],
             cwd=wt_path,
             capture_output=True,
             text=True,
@@ -498,4 +514,4 @@ class WorktreeSandbox:
                                 capture_output=True, text=True, env=sanitize_worker_env())
         if result.returncode:
             raise PolicyViolationError("Worktree removal denied; reconcile unregistered state first.")
-        self._created_worktrees.discard(target)
+        del self._created_worktrees[target]

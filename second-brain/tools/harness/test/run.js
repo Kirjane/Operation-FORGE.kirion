@@ -443,6 +443,37 @@ test('W3B implementation and delivery checkpoints carry their stage manifests',(
   assert.equal(verifySessionIntegrity(session,options).valid,true);
 });
 
+test('W3B missing newly activated delivery seed blocks transition without losing prior stage',()=>{
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'w3b-stage-fixture-'));
+  try{
+    const write=(name,value)=>{const p=path.join(root,name);fs.mkdirSync(path.dirname(p),{recursive:true});fs.writeFileSync(p,typeof value==='string'?value:JSON.stringify(value),'utf8');};
+    write('harness/HARNESS_MANIFEST.json',{...cfg.manifest,control_roots:['mesh/root.md']});
+    write('harness/config/lane-registry.json',{families:{fixture:[{id:'design',path:'mesh/design.md'},{id:'implementation',path:'mesh/implementation.md'},{id:'delivery',path:'mesh/delivery.md'},{id:'deployment',path:'mesh/deployment.md'}]}});
+    write('harness/config/task-types.json',cfg.taskTypes);write('harness/config/risk-model.json',cfg.risk);
+    write('harness/config/routing-rules.json',{always:[],by_task:{BUG_FIX:['design','implementation','delivery','deployment']},by_signal:{},by_mode:{},stage_scope:{design:'PRE_DESIGN',implementation:'PRE_IMPLEMENTATION',delivery:'PRE_DELIVERY',deployment:'POST_DEPLOY'}});
+    write('harness/config/gates.json',cfg.gates);
+    write('harness/config/evidence-levels.json',require(path.join(repo,'harness/config/evidence-levels.json')));
+    write('harness/notion/control-plane.json',require(path.join(repo,'harness/notion/control-plane.json')));
+    write('harness/notion/route-pack.json',{always:[],by_lane:{}});
+    for(const name of ['root','design','implementation','deployment']) write('mesh/'+name+'.md','fixture '+name);
+    const options={root,semanticProvider:'GIT',sessionKey:'w3b-reduced-fixture'};
+    const task=bugTask(),evidence={version:1,claims:{'verification.automated':{status:'PASS',levels:['TESTED']},'delivery.source_state':{status:'PASS',levels:['DURABLE']}}};
+    let session=createSession(task,emptyEvidence(),options);
+    for(const stage of ['PRE_DESIGN','PRE_IMPLEMENTATION']){
+      const result=advanceSession(session,task,evidence,stage,options);assert.equal(result.status,'ADVANCED');session=result.session;
+    }
+    const blocked=advanceSession(session,task,evidence,'PRE_DELIVERY',options);
+    assert.equal(blocked.status,'BLOCKED');assert.equal(blocked.session.current_stage,'PRE_IMPLEMENTATION');
+    assert(blocked.stage_context.checkpoint.context_manifest.missing_required.includes('mesh/delivery.md'));
+    assert.equal(blocked.stage_context.documents.length,0);
+    write('mesh/delivery.md','fixture delivery');
+    const resumed=advanceSession(blocked.session,task,evidence,'PRE_DELIVERY',options);
+    assert.equal(resumed.status,'ADVANCED');assert.equal(resumed.session.session_id,session.session_id);
+    const deployed=advanceSession(resumed.session,task,evidence,'POST_DEPLOY',options);
+    assert.equal(deployed.status,'ADVANCED');assert(deployed.stage_context.documents.some(d=>d.path==='mesh/deployment.md'));
+  }finally{fs.rmSync(root,{recursive:true,force:true});}
+});
+
 console.log(`\n${count} harness tests passed.`);
 
 // W3A regression: preserve all existing tests and execute the focused suite.

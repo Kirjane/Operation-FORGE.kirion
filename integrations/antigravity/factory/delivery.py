@@ -68,6 +68,7 @@ class NairuDeliveryBroker:
         self.db_path = db_path
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self.actor_verifier = actor_verifier or probe_live_github_actor
+        self._fixture_verifier = actor_verifier is not None
         self._init_db()
 
     def _connect(self) -> sqlite3.Connection:
@@ -261,6 +262,10 @@ class NairuDeliveryBroker:
         reserving and recording an idempotent delivery receipt.
         """
         verify_mission_packet(packet)
+        # Historical injected verifiers exist for isolated tests only. The
+        # default live path has no independently authorized v2 delivery bridge.
+        if not self._fixture_verifier:
+            raise DeliveryBrokerError("TRUSTED_CONTRACT_DELIVERY_BRIDGE_UNAVAILABLE")
         assert_operation_allowed(packet, "DELIVER_DRAFT_PR", actor_persona="Antigravity-Maintainer")
         actor = self.verify_actor_identity()
 

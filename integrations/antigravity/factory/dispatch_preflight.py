@@ -117,6 +117,16 @@ class FixtureDispatchAdapter:
         return deepcopy(self._reconciliations.get(reservation_id))
 
 
+def is_supported_fixture_adapter(adapter):
+    from .scoped_fixture import ScopedGitFixtureAdapter
+    return type(adapter) in (FixtureDispatchAdapter, ScopedGitFixtureAdapter)
+
+
+def fixture_operations(adapter):
+    from .scoped_fixture import ScopedGitFixtureAdapter
+    return {"READ", "WRITE_OWNED"} if type(adapter) is ScopedGitFixtureAdapter else {"READ", "REVIEW_READONLY"}
+
+
 class ContractJournal(FactoryJournal):
     """Existing hash-chain journal with isolated contract storage and a legacy-write fence.
 
@@ -395,7 +405,7 @@ class ContractJournal(FactoryJournal):
             return self._blocked(conn, packet, digest, "TRUSTED_PREFLIGHT_BRIDGE_UNAVAILABLE", {})
 
     def reserve_dispatch(self, raw: str | bytes, adapter: FixtureDispatchAdapter) -> dict[str, Any]:
-        if type(adapter) is not FixtureDispatchAdapter:
+        if not is_supported_fixture_adapter(adapter):
             raise SchedulerError("Trusted fixture boundary unavailable.")
         packet = parse_mission_packet(raw)
         digest = contract_digest(packet)
@@ -407,7 +417,7 @@ class ContractJournal(FactoryJournal):
             if grant is None:
                 return self._blocked(conn, packet, digest, "GRANT_UNRESOLVED", {})
             # This slice cannot perform commands, writes or actual runtime observation.
-            if (not set(packet["allowed_operations"]) <= {"READ", "REVIEW_READONLY"}
+            if (not set(packet["allowed_operations"]) <= fixture_operations(adapter)
                 or any(o["target_profile"] == "REAL" or o["evaluation_kind"] == "COMMAND"
                        for o in packet["oracles"])):
                 return self._blocked(conn, packet, digest, "LIVE_EFFECT_UNQUALIFIED", {})
@@ -437,7 +447,7 @@ class ContractJournal(FactoryJournal):
                 grant = current_grant
                 failures, material, capability_expiries = self._prerequisites(
                     conn, packet, digest, grant, observed, now)
-            except (AuthorityError, TypeError, ValueError, KeyError):
+            except (AuthorityError, TypeError, ValueError, KeyError, OSError):
                 return self._blocked(conn, packet, digest, "INVALID_OBSERVATION", {})
             if failures:
                 return self._blocked(conn, packet, digest, "|".join(failures), material)
@@ -556,7 +566,7 @@ class ContractJournal(FactoryJournal):
                      "fixture_only": True, "result": result})
 
     def complete_dispatch(self, raw, reservation_id, result, adapter):
-        if type(adapter) is not FixtureDispatchAdapter or not isinstance(result, dict):
+        if not is_supported_fixture_adapter(adapter) or not isinstance(result, dict):
             raise SchedulerError("Trusted completion boundary and object result required.")
         packet = parse_mission_packet(raw)
         digest = contract_digest(packet)

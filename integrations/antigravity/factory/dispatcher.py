@@ -344,7 +344,7 @@ class FleetDispatcher:
         journal: Any = None,
         fixture_adapter: Any = None,
     ) -> dict[str, Any]:
-        from .dispatch_preflight import ContractJournal, FixtureDispatchAdapter
+        from .dispatch_preflight import ContractJournal, is_supported_fixture_adapter
         from .mission_contract import parse_mission_packet
 
         if isinstance(packet, dict):
@@ -354,7 +354,7 @@ class FleetDispatcher:
         parsed = parse_mission_packet(packet)
         if parsed["schema_version"] != 2:
             return {"status": "BLOCKED", "reason": "LEGACY_PACKET_NOT_DISPATCH_AUTHORITY"}
-        if (type(journal) is not ContractJournal or type(fixture_adapter) is not FixtureDispatchAdapter
+        if (type(journal) is not ContractJournal or not is_supported_fixture_adapter(fixture_adapter)
                 or handler is not None or worktree_path is not None):
             if type(journal) is ContractJournal:
                 return journal.block_unavailable_bridge(packet)

@@ -8,6 +8,7 @@ import shutil
 import sqlite3
 import subprocess
 from pathlib import Path
+from contextlib import contextmanager
 from typing import Any
 
 from .authority import AuthorityError, is_valid_git_sha
@@ -284,6 +285,38 @@ class LeaseManager:
         finally:
             conn.close()
 
+    @contextmanager
+    def hold_owned_paths(self, packet, worker_id, acquired, paths):
+        """Fence cooperating lease users for one bounded local operation.
+
+        This lock is not an OS sandbox or a native host authorization.
+        A stale lease or a path outside the declared ownership never enters.
+        """
+        assert_paths_within_ownership(packet, paths)
+        expected = {item["lease_id"]: item["version"] for item in acquired}
+        conn = self._connect()
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+            now = dt.datetime.now(dt.timezone.utc).timestamp()
+            rows = conn.execute(
+                "SELECT * FROM leases WHERE repo_name=? AND mission_id=? AND worker_id=?",
+                (packet["repo_name"], packet["mission_id"], worker_id)).fetchall()
+            active = [row for row in rows if row["released"] == 0 and row["expires_at_epoch"] > now
+                      and expected.get(row["lease_id"]) == row["version"]]
+            if not expected or set(expected) != {row["lease_id"] for row in active}:
+                raise LeaseConflictError("Missing, stale or expired ownership lease.")
+            if not all(any(row["target_kind"] == "PATH" and path_matches_prefix(path, row["target_value"])
+                           for row in active) for path in paths):
+                raise LeaseConflictError("Operation lacks a current path lease.")
+            yield
+            conn.execute("COMMIT")
+        except BaseException:
+            if conn.in_transaction:
+                conn.execute("ROLLBACK")
+            raise
+        finally:
+            conn.close()
+
     def heartbeat(
         self,
         lease_id: str,
@@ -365,13 +398,11 @@ class WorktreeSandbox:
         if wt_path == self.sandbox_root:
             raise PolicyViolationError("worktree_name cannot resolve to sandbox_root itself.")
 
-        if wt_path.exists():
-            subprocess.run(["git", "worktree", "remove", "--force", str(wt_path)], cwd=self.source_repo, capture_output=True)
-            if wt_path.exists():
-                shutil.rmtree(wt_path, ignore_errors=True)
+        if wt_path.exists() or (self.sandbox_root / worktree_name).is_symlink():
+            raise PolicyViolationError("Existing worktree path requires explicit reconciliation; refusing replacement.")
 
         p = subprocess.run(
-            ["git", "worktree", "add", "-B", branch_name, str(wt_path), base_sha],
+            ["git", "-c", "core.autocrlf=false", "worktree", "add", "-b", branch_name, str(wt_path), base_sha],
             cwd=self.source_repo,
             capture_output=True,
             text=True,
@@ -380,7 +411,6 @@ class WorktreeSandbox:
         if p.returncode != 0:
             raise AuthorityError(f"git worktree add failed: {p.stderr.strip()}")
 
-        subprocess.run(["git", "config", "core.autocrlf", "false"], cwd=wt_path, capture_output=True, check=False)
         return wt_path
 
     def inspect_and_validate_worktree(
@@ -453,6 +483,10 @@ class WorktreeSandbox:
         return changed
 
     def remove_worktree(self, wt_path: Path) -> None:
-        subprocess.run(["git", "worktree", "remove", "--force", str(wt_path)], cwd=self.source_repo, capture_output=True)
-        if wt_path.exists():
-            shutil.rmtree(wt_path, ignore_errors=True)
+        target = wt_path.resolve()
+        if wt_path.is_symlink() or target.parent != self.sandbox_root or target == self.source_repo:
+            raise PolicyViolationError("Refusing removal outside a direct sandbox worktree.")
+        result = subprocess.run(["git", "worktree", "remove", str(target)], cwd=self.source_repo,
+                                capture_output=True, text=True, env=sanitize_worker_env())
+        if result.returncode:
+            raise PolicyViolationError("Worktree removal denied; reconcile dirty or unregistered state first.")

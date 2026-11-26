@@ -1,0 +1,30 @@
+name: FORGE P1a hosted capability probe
+
+on:
+  push:
+    branches: [infra/forge-p1a-hosted-qualification]
+    paths:
+      - '.github/workflows/forge-p1a-host-probe.yml'
+
+permissions: {}
+
+jobs:
+  host-probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Measure runner capability (no checkout or candidate execution)
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s\n' 'P1A_HOST_CAPABILITY_PROBE_ONLY'
+          uname -srmo
+          /usr/bin/python3 --version
+          command -v unshare
+          command -v chroot
+          command -v setpriv
+          command -v mount
+          /usr/bin/python3 -I -B -c 'import ctypes; ctypes.CDLL("libseccomp.so.2"); print("LIBSECCOMP_AVAILABLE")'
+          sudo -n unshare --mount --net --pid --fork --mount-proc /bin/true
+          printf '%s\n' 'NAMESPACE_CAPABILITY_AVAILABLE'
+          printf '%s\n' 'NOT_CANDIDATE_QUALIFICATION'

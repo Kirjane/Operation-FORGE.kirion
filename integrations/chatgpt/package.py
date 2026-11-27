@@ -1,5 +1,5 @@
 """Reproducible, uninstalled exact-source ChatGPT candidate; no host mutation."""
-import argparse, hashlib, json, pathlib, subprocess, zipfile
+import argparse, hashlib, json, pathlib, re, subprocess, zipfile
 SOURCE="0e8765de6e0e87ea9b4503714f08fa650e1a79c6"
 TREE="80eaa7a4f879871e5df533203b8b60b563f8b782"
 PREFIX="integrations/antigravity/plugins/kirion-forge/"
@@ -7,18 +7,47 @@ BASE="integrations/chatgpt/"
 VEND="skills/forge-port/references/upstream/"
 PORT="skills/forge-port/references/port/"
 VERSION="0.3.0-rc.2"
+CONVERGED_BASE="919b37877bce55c0960787c8819b2c9788fd5c47"
+CONVERGED_VERSION="0.4.0-rc.1"
+
+
+def full_sha(value):
+    if not isinstance(value,str) or not re.fullmatch(r"[0-9a-f]{40}",value) or value=="0"*40:
+        raise SystemExit("full nonzero Git object SHA required")
+    return value
+
+
+def select_package_source(git,candidate,converged_tree=None):
+    """Historical and converged custody checks are separate, never a fallback."""
+    full_sha(candidate)
+    if git("rev-parse",SOURCE+"^{tree}").decode().strip()!=TREE:
+        raise SystemExit("wrong upstream tree")
+    if git("rev-parse",candidate+"^{commit}").decode().strip()!=candidate:
+        raise SystemExit("candidate commit mismatch")
+    if git("rev-parse","HEAD").decode().strip()!=candidate or git("status","--porcelain"):
+        raise SystemExit("clean exact candidate checkout required")
+    candidate_tree=full_sha(git("rev-parse",candidate+"^{tree}").decode().strip())
+    if converged_tree is None:
+        git("merge-base","--is-ancestor",SOURCE,candidate)
+        if any(not path.startswith(BASE) for path in git("diff","--name-only",SOURCE,candidate).decode().splitlines()):
+            raise SystemExit("inherited source modified")
+        return SOURCE,TREE,VERSION
+    if full_sha(converged_tree)!=candidate_tree:
+        raise SystemExit("converged candidate tree mismatch")
+    git("merge-base","--is-ancestor",CONVERGED_BASE,candidate)
+    git("merge-base","--is-ancestor",SOURCE,candidate)
+    return candidate,candidate_tree,CONVERGED_VERSION
 
 def main():
     p=argparse.ArgumentParser()
     for key in ("repo","release-root","out"): p.add_argument("--"+key,type=pathlib.Path,required=True)
     p.add_argument("--candidate",required=True)
+    p.add_argument("--converged-tree",help="Explicit exact tree pin for converged source; omission retains historical policy.")
     a=p.parse_args()
     root=a.repo.resolve()
-    def git(*args): return subprocess.check_output(["git",*args],cwd=root)
-    if git("rev-parse",SOURCE+"^{tree}").decode().strip()!=TREE: raise SystemExit("wrong upstream tree")
-    if git("rev-parse","HEAD").decode().strip()!=a.candidate or git("status","--porcelain"): raise SystemExit("clean exact candidate checkout required")
-    subprocess.run(["git","merge-base","--is-ancestor",SOURCE,a.candidate],cwd=root,check=True)
-    if any(not path.startswith(BASE) for path in git("diff","--name-only",SOURCE,a.candidate).decode().splitlines()): raise SystemExit("inherited source modified")
+    def git(*args): return subprocess.check_output(["git","--no-replace-objects",*args],cwd=root)
+    source,tree,version=select_package_source(git,a.candidate,a.converged_tree)
+    converged=a.converged_tree is not None
     if a.out.resolve()==root or root in a.out.resolve().parents: raise SystemExit("archive must be outside checkout")
     files={}; custody={}; projected={}; counts=[0,0,0]
     def add(name,data,mode="100644"):
@@ -38,7 +67,12 @@ def main():
     def record(path,blob,data,mode,dest):
         add(dest,data,mode)
         custody[path]={"blob":blob,"sha256":hashlib.sha256(data).hexdigest(),"mode":mode,"package_path":dest}
-    for path,blob,data,mode in read_tree(SOURCE):
+    for path,blob,data,mode in read_tree(source):
+        # One custody row per source path. Converged adapter sources belong in
+        # their port projection, while shared doctrine uses the exact source tree.
+        if converged and path.startswith(BASE):
+            record(path,blob,data,mode,PORT+path)
+            continue
         record(path,blob,data,mode,VEND+path)
         native=None
         if path.startswith(".agents/skills/"):
@@ -51,8 +85,9 @@ def main():
         if native:
             add(native,data,mode); projected[native]=path
     if counts!=[16,16,10]: raise SystemExit("incomplete skill/persona inventory: "+str(counts))
-    for path,blob,data,mode in read_tree(a.candidate,[BASE]):
-        record(path,blob,data,mode,PORT+path)
+    if not converged:
+        for path,blob,data,mode in read_tree(a.candidate,[BASE]):
+            record(path,blob,data,mode,PORT+path)
     route=json.loads(files[PORT+BASE+"routing.json"][0])
     def alias(name,targets,description):
         for target in targets:
@@ -72,7 +107,7 @@ def main():
     for name in ("plugin.json",".codex-plugin/plugin.json"):
         original=json.loads((a.release_root/name).read_text(encoding="utf-8"))
         if original.get("name")!="kirion-forge-chatgpt" or original.get("version")!=route["baseline_version"]: raise SystemExit("wrong account baseline")
-        original["version"]=VERSION
+        original["version"]=version
         interface=original.get("extensions",{}).get("com.openai",{}).get("interface",{})
         if interface:
             interface["shortDescription"]="Evidence-gated software factory"
@@ -80,7 +115,7 @@ def main():
             interface["defaultPrompt"]=["Activate Forge for my repository. Verify authority and execute bounded work.","Continue a Forge mission from its GitHub issue or pull request.","Run non-accepting adversarial review of an exact candidate."]
         add(name,(json.dumps(original,ensure_ascii=False,indent=2)+"\n").encode())
     add("skills/forge-port/SKILL.md",b"""---\nname: forge-port\ndescription: Activate the exact inherited Forge engineering factory with bounded authenticated persona routing and evidence gates.\n---\nRead references/upstream/AGENTS.md, references/upstream/BOOTSTRAP_CHATGPT.md, references/upstream/arsenal/CHATGPT_BOOTSTRAP.md, references/port/integrations/chatgpt/README.md and references/port/integrations/chatgpt/routing.json. Resolve relative canonical paths in references/upstream. Canonical skills remain byte identical; explicit persona selection uses forge-persona-* (including integrator and qa), not the colliding engineering skill names. Automatically perform bounded same-context Nox review, repair and retest as authorized, and label it non-accepting. Use only actual authenticated GitHub connections; no credential substitution, invented hooks or context IDs. G13 independent model context, generic delivery and production promotion remain blocked until proven. Do not stop feasible candidate work merely because independent acceptance is pending. Never merge, release or self-accept.\n""")
-    add("skills/forge-port/references/SOURCE_MANIFEST.json",json.dumps({"upstream":SOURCE,"tree":TREE,"candidate":a.candidate,"files":custody,"projected":projected,"version":VERSION},sort_keys=True,indent=2).encode())
+    add("skills/forge-port/references/SOURCE_MANIFEST.json",json.dumps({"upstream":source,"tree":tree,"candidate":a.candidate,"files":custody,"projected":projected,"version":version,**({"packaging_mode":"CONVERGED_EXACT_SOURCE","historical_upstream":SOURCE,"historical_tree":TREE,"candidate_tree":tree} if converged else {})},sort_keys=True,indent=2).encode())
     add("README.md",b"# KIRION Forge ChatGPT qualification candidate\nUninstalled; no independent acceptance. Begin with skills/forge-port/SKILL.md. The complete upstream tree is vendored as inert exact-source reference material; Antigravity hooks are not native ChatGPT hooks.\n")
     with zipfile.ZipFile(a.out,"x",zipfile.ZIP_DEFLATED,compresslevel=9) as z:
         for name,(data,mode) in sorted(files.items()):

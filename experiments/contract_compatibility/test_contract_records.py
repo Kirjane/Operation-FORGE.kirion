@@ -433,9 +433,7 @@ class PublicOracleTests(unittest.TestCase):
         i=self._writer_input('cross-lineage-successor'); i['historical_decision_snapshots']=[]
         self._writer_result(self._attempt_result(i),'MODEL_UNKNOWN',reason='HISTORICAL_AUTHORITY_MISSING')
 
-    def test_r2_n5_assurance_cross_lineage_history(self):
-        # A separately supplied historical A floor/snapshot must be available
-        # when the selected B control attempt follows A.
+    def _cross_lineage_assurance(self):
         src=self._writer_input('cross-lineage-successor'); a=self._writer_input('both-controls')
         graph=src['graph']; second=src['proposed_attempt']; graph.append(second)
         lineage=second['scope']['lineage_id']
@@ -463,6 +461,12 @@ class PublicOracleTests(unittest.TestCase):
         acceptance['body']['contract_ref']=model.record_ref(b['contract']); acceptance['body']['decision_ref']=model.record_ref(b['decision'])
         acceptance['body']['reviewer_ref']=model.record_ref(reviewer); acceptance['body']['evidence_refs']=self._ordered(evidence_refs)
         a['graph']=graph
+        return a,src
+
+    def test_r2_n5_assurance_cross_lineage_history(self):
+        # A separately supplied historical A floor/snapshot must be available
+        # when the selected B control attempt follows A.
+        a,src=self._cross_lineage_assurance(); aux=a['auxiliary']
         self._writer_result(self._accept(a),'MODEL_UNKNOWN',reason='HISTORICAL_AUTHORITY_MISSING')
         aux['historical_context_floors']=self._copy(src['historical_context_floors'])
         aux['historical_decision_snapshots']=self._copy(src['historical_decision_snapshots'])
@@ -548,3 +552,68 @@ class PublicOracleTests(unittest.TestCase):
                         if r['kind']=='capability' and r['scope']['lineage_id']=='fixture:public-b': r['body'][field]=mode
                     i=self._mutate_graph(self._writer_input('registered-distinct-operation'),change)
                     self._writer_result(self._attempt_result(i),'MODEL_UNKNOWN',reason='CAPABILITY_UNAVAILABLE')
+
+    # R3 residual witnesses, derived only from the unchanged public fixtures.
+    def _r3_historical_tick(self,i,tick,mode):
+        prior=next(r for r in i['graph'] if r['kind']=='attempt' and r['body']['attempt_ordinal']==1)
+        grant_ref=prior['body']['grant_ref']
+        def change(r):
+            if r['kind']=='grant' and r['record_id']==grant_ref['record_id'] and r['scope']==grant_ref['scope'] and r['revision']==grant_ref['revision']:
+                if mode=='future': r['body']['valid_from_tick']=tick+1
+                elif mode=='equal': r['body']['valid_from_tick']=tick
+                else: r['body']['expires_tick']=tick
+        return self._mutate_graph(i,change)
+
+    def test_r3_n5_attempt_historical_tick_bound(self):
+        for mode in ('future','equal','expired'):
+            with self.subTest(mode=mode):
+                i=self._writer_input('cross-lineage-successor')
+                self.assertEqual(i['evaluation_tick'],2)
+                i=self._r3_historical_tick(i,i['evaluation_tick'],mode)
+                self._writer_result(model.validate_graph(i['graph']+[i['proposed_attempt']]),'MODEL_CONSISTENT')
+                self._writer_result(self._attempt_result(i),'MODEL_REJECTED' if mode=='future' else 'MODEL_CONSISTENT',reason='HISTORICAL_GRANT_FUTURE' if mode=='future' else None)
+
+    def test_r3_n5_assurance_historical_tick_bound(self):
+        for mode in ('future','equal','expired'):
+            with self.subTest(mode=mode):
+                a,src=self._cross_lineage_assurance(); aux=a['auxiliary']
+                aux['historical_context_floors']=self._copy(src['historical_context_floors'])
+                aux['historical_decision_snapshots']=self._copy(src['historical_decision_snapshots'])
+                self.assertEqual(aux['evaluation_tick'],2)
+                a=self._r3_historical_tick(a,aux['evaluation_tick'],mode)
+                self._writer_result(model.validate_graph(a['graph']+[a['acceptance']]),'MODEL_CONSISTENT')
+                code='MODEL_REJECTED' if mode=='future' else 'MODEL_CONSISTENT'
+                reason='HISTORICAL_GRANT_FUTURE' if mode=='future' else None
+                self._writer_result(self._accept(a),code,reason=reason)
+                evidence=self._copy(next(r for r in a['graph'] if r['kind']=='evidence' and r['body']['control_case']=='POSITIVE'))
+                self._writer_result(model.evaluate_evidence(a['graph'],evidence,a['auxiliary']),code,reason=reason)
+
+    def _r3_wrong_selected_grant(self,case_id):
+        i=self._writer_input(case_id)
+        selected_ref=i['auxiliary']['expected_cases'][0]['attempt_ref']
+        attempt=next(r for r in i['graph'] if model.record_ref(r)==selected_ref)
+        cref=attempt['body']['contract_ref']; gref=attempt['body']['grant_ref']
+        pos=next(k for k,r in enumerate(i['graph']) if model.record_ref(r)==cref)
+        other=self._copy(i['graph'][pos]); other['record_id']='fixture:r3-other-contract'
+        i['graph'].insert(pos+1,other)
+        def change(r):
+            if r['kind']=='grant' and r['record_id']==gref['record_id'] and r['scope']==gref['scope'] and r['revision']==gref['revision']:
+                r['body']['contract_ref']=model.record_ref(other)
+        i=self._mutate_graph(i,change)
+        self._writer_result(model.validate_graph(i['graph']),'MODEL_CONSISTENT')
+        return i
+
+    def test_r3_n7_evidence_wrong_selected_grant_is_unknown(self):
+        i=self._r3_wrong_selected_grant('exact-positive-evidence')
+        self._writer_result(self._receipt(i),'MODEL_UNKNOWN',reason='EXPECTED_ATTEMPT_BINDING')
+        i['evidence']['body']['verdict']='UNKNOWN'
+        self._writer_result(self._receipt(i),'MODEL_UNKNOWN',reason='EXPECTED_ATTEMPT_BINDING')
+        i['auxiliary']['logical_index'][0]['tip_attempt_ref']=None
+        self._writer_result(self._receipt(i),'MODEL_REJECTED',reason='INDEX_TIP')
+
+    def test_r3_n7_acceptance_wrong_selected_grant_is_unknown(self):
+        i=self._r3_wrong_selected_grant('both-controls')
+        i['acceptance']['body']['verdict']='MODEL_UNKNOWN'
+        self._writer_result(self._accept(i),'MODEL_UNKNOWN',reason='EXPECTED_ATTEMPT_BINDING')
+        i['auxiliary']['logical_index'][0]['tip_attempt_ref']=None
+        self._writer_result(self._accept(i),'MODEL_REJECTED',reason='INDEX_TIP')

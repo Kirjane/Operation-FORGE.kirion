@@ -682,9 +682,10 @@ def _validated_chains(index,rows,canonical,repo_id,keys=None,resource_family=Non
     return by_key,chains
 
 
-def _validate_historical(chain,index,canonical,floor,snapshot,fm,sm):
+def _validate_historical(chain,index,canonical,floor,snapshot,fm,sm,evaluation_tick):
     for r in chain:
         rb=r['body']; c=_resolve(index,rb['contract_ref'])['body']; g=_resolve(index,rb['grant_ref'])['body']
+        require(g['valid_from_tick']<=evaluation_tick,'HISTORICAL_GRANT_FUTURE')
         f=fm.get(canonical_bytes(c['intent_ref'])); s=sm.get(canonical_bytes(c['approved_decision_ref']))
         if f is None and floor['intent_ref']==c['intent_ref']: f=floor
         if s is None and snapshot['head_ref']==c['approved_decision_ref']: s=snapshot
@@ -705,7 +706,7 @@ def evaluate_attempt(graph,proposed_attempt,logical_index,evaluation_tick,curren
         fm,sm=_history_inputs(historical_context_floors,historical_decision_snapshots,seen)
         rows,chains=_validated_chains(index,logical_index,canonical_ids,proposed_attempt['scope']['repo_id'],resource_family=_logical(b)[:2])
         for chain in chains.values():
-            _validate_historical(chain,index,canonical_ids,expected_context_floor,current_decision_snapshot,fm,sm)
+            _validate_historical(chain,index,canonical_ids,expected_context_floor,current_decision_snapshot,fm,sm,evaluation_tick)
         k=_logical(b); known(k in rows,'UNREGISTERED_OPERATION'); chain=chains.get(k,[]); tip=rows[k]['tip_attempt_ref']
         require(b['predecessor_attempt_ref']==tip and b['attempt_ordinal']==len(chain)+1,'ATTEMPT_PREDECESSOR_OR_ORDINAL')
         require(all(x['body']['attempt_id']!=b['attempt_id'] for x in chain),'ATTEMPT_ID_DUPLICATE')
@@ -752,9 +753,13 @@ def _cases(contract,index,a,history,artifact=None):
     for key in keys:
         known(key in by_key and key in chains,'INDEX_MISSING')
         last=max(r['body']['attempt_ordinal'] for r in selected if _logical(r['body'])==key)
-        _validate_historical(chains[key][:last],index,a['canonical_ids'],a['expected_context_floor'],a['decision_snapshot'],*history)
+        # Actual predecessors must qualify independently of selected-case
+        # applicability, even if an earlier predecessor is also selected.
+        _validate_historical(chains[key][:last-1],index,a['canonical_ids'],a['expected_context_floor'],a['decision_snapshot'],*history,a['evaluation_tick'])
     for attempt in selected:
         try:
+            # Selected-only invalidity is inapplicable, not negative evidence.
+            _validate_historical([attempt],index,a['canonical_ids'],a['expected_context_floor'],a['decision_snapshot'],*history,a['evaluation_tick'])
             _attempt_grant(attempt,index,a['decision_snapshot'],a['evaluation_tick'],a['expected_context_floor'],a['canonical_ids'])
         except Invalid as exc:
             raise Unknown('EXPECTED_ATTEMPT_BINDING') from exc

@@ -59,6 +59,7 @@ def main(argv: list[str] | None = None) -> int:
         choices=["verify-plugin", "status", "test", "supervised-handoff", "inspect-candidate", "commands", "resolve-command"],
         help="Factory command to execute",
     )
+    parser.add_argument("--journal", type=Path, help="Read-only contract journal projection for status")
     parser.add_argument("--packet", type=Path)
     parser.add_argument("--context-config", type=Path)
     parser.add_argument("--source-root", type=Path, default=REPO_ROOT)
@@ -109,6 +110,11 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "verify-plugin":
         return cmd_verify_plugin()
     if args.command == "status":
+        if args.journal is not None:
+            from .operational_state import read_contract_board
+            result = read_contract_board(args.journal)
+            print(json.dumps(result, indent=2))
+            return 0 if result["status"] == "PROJECTED" else 1
         return cmd_status()
     if args.command == "test":
         return cmd_test()

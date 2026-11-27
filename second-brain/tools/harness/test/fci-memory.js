@@ -495,3 +495,30 @@ test('declared feature context is a live lifecycle gate, not a caller evidence c
     assert.strictEqual(buildTask(task,options).context.feature_context.code,'FCI_MANIFEST_MISMATCH');
   } finally {fs.rmSync(f.root,{recursive:true,force:true});}
 });
+
+test('host signed policy requires exact task pin and independently approved claim floor',()=>{
+  const f=makeFixture(),store=fs.mkdtempSync(path.join(os.tmpdir(),'fci-policy-'));
+  try{
+    const {canonicalJson}=require('../lib/io'),{buildTask}=require('../lib/runtime');
+    const {createFeatureContextHost,intentDigest,mac}=require('../lib/fci/host-policy');
+    const key=Buffer.alloc(32,7),policyFile=path.join(store,'policy.json');
+    const task={version:1,id:'approved-feature',intent:'Fix a rendering bug',type:'BUG_FIX',repository:{path:f.root},
+      feature_context:{feature_id:f.feature.feature_id,manifest_sha256:sha256(canonicalJson(f.feature))}};
+    const entry={intent_sha256:intentDigest(task,{top_level:f.root}),manifest_sha256:task.feature_context.manifest_sha256,
+      manifest:f.feature,required_claim_ids:['cashier-refunds'],predecessor:null,revoked:false,
+      attestations:[{kind:'authority',proof:authorityFor(f)({claim:f.feature.claims[0]})}]};
+    const payload={version:1,issued_at:Date.now()-1000,expires_at:Date.now()+60000,entries:[entry]};
+    const write=()=>fs.writeFileSync(policyFile,JSON.stringify({payload,mac:mac(key,payload)}));
+    write();
+    const featureContextHost=createFeatureContextHost({policyFile,key,allowedRoots:[f.root]});
+    const options={semanticProvider:'GIT',featureContextHost,requireFeaturePolicy:true};
+    assert.strictEqual(buildTask(task,options).context.feature_context.evidence_ready,true);
+    const missing={...task};delete missing.feature_context;
+    assert.strictEqual(buildTask(missing,options).context.feature_context.code,'FCI_MANDATORY_PIN_MISSING');
+    assert.strictEqual(buildTask({...task,intent:'Different task'},options).context.feature_context.code,'FCI_POLICY_PIN_MISMATCH');
+    entry.required_claim_ids.push('unapproved-claim');write();
+    assert.strictEqual(buildTask(task,options).context.feature_context.evidence_ready,false);
+    entry.required_claim_ids.pop();entry.revoked=true;write();
+    assert.strictEqual(buildTask(task,options).context.feature_context.evidence_ready,false);
+  } finally {fs.rmSync(f.root,{recursive:true,force:true});fs.rmSync(store,{recursive:true,force:true});}
+});

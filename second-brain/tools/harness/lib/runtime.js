@@ -30,13 +30,23 @@ function semanticOptions(cfg,options={}){
 // A task carries only a content-addressed reference. Host-side lookup and
 // attesters are composition dependencies, never request-supplied callbacks.
 function compileFeatureContext(task,target,options){
-  if(!task.feature_context) return null;
   const pin=task.feature_context;
-  const blocked=code=>({status:'BLOCKED',code,feature_id:pin.feature_id,
-    manifest_sha256:pin.manifest_sha256,authority_granted:false,evidence_ready:false});
   const host=options.featureContextHost;
+  const policyRequired=Boolean((options.requireFeaturePolicy||typeof host?.policyForTask==='function')&&task.repository?.path);
+  if(!pin&&!policyRequired) return null;
+  const blocked=code=>({status:'BLOCKED',code,feature_id:pin?.feature_id||null,
+    manifest_sha256:pin?.manifest_sha256||null,authority_granted:false,evidence_ready:false});
+  if(policyRequired&&!pin)return blocked('FCI_MANDATORY_PIN_MISSING');
   if(!host || typeof host.loadManifest!=='function') return blocked('FCI_HOST_UNAVAILABLE');
   try {
+    let policy=null;
+    if(policyRequired){
+      if(typeof host.policyForTask!=='function')return blocked('FCI_POLICY_UNAVAILABLE');
+      policy=host.policyForTask(task,target);
+      if(!policy||policy.feature_id!==pin.feature_id||policy.manifest_sha256!==pin.manifest_sha256||
+         !Array.isArray(policy.required_claim_ids)||!policy.required_claim_ids.length)
+        return blocked('FCI_POLICY_PIN_MISMATCH');
+    }
     const raw=host.loadManifest(pin.feature_id,pin.manifest_sha256);
     if(validateFeature(raw)) return blocked('FCI_MANIFEST_INVALID');
     const feature=JSON.parse(JSON.stringify(raw));
@@ -51,12 +61,18 @@ function compileFeatureContext(task,target,options){
        !host.allowed_roots.some(root=>typeof root==='string' &&
          fs.realpathSync(path.resolve(root))===fs.realpathSync(target.top_level)))
       return blocked('FCI_TARGET_NOT_ALLOWLISTED');
+    if(task.repository?.sha&&task.repository.sha!==target.head)return blocked('FCI_TASK_HEAD_MISMATCH');
+    if(policy&&(!policy.required_claim_ids.every(id=>feature.required_claim_ids?.includes(id))||
+       policy.contract_revision!==feature.contract.revision))return blocked('FCI_POLICY_FLOOR_MISMATCH');
     const resolved=resolveFeatureContext(feature,{allowed_roots:[target.top_level],verifiers:host.verifiers});
     if(resolved.status!=='RESOLVED'||resolved.action_gate?.evidence_ready!==true)
       return blocked(resolved.code||resolved.action_gate?.code||'FCI_CONTEXT_UNVERIFIED');
+    if(policy&&(!policy.required_claim_ids.every(id=>resolved.claims.some(c=>c.id===id&&c.status==='VERIFIED'))||
+       canonicalJson(host.policyForTask(task,target))!==canonicalJson(policy)))return blocked('FCI_POLICY_CHANGED_OR_CLAIM_UNVERIFIED');
     return {status:'EVIDENCE_READY',feature_id:pin.feature_id,manifest_sha256:pin.manifest_sha256,
       authority_granted:false,evidence_ready:true,repository:resolved.repository,
-      contract:resolved.contract,sources:resolved.sources,claims:resolved.claims};
+      contract:resolved.contract,sources:resolved.sources,claims:resolved.claims,
+      ...(policy?{policy}:{})};
   } catch {return blocked('FCI_HOST_RESOLUTION_FAILED');}
 }
 function buildTask(taskInput,options={}){

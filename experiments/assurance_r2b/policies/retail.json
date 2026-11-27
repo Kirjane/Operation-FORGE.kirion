@@ -1,0 +1,77 @@
+{
+  "schema_version": "r2a-0.2-synthetic-policy",
+  "classification": "SYNTHETIC_TEST_ONLY_NOT_PROJECT_AUTHORITY",
+  "policy_id": "R2A-SIM-RETAIL",
+  "repository": "Kirjane/Salryn",
+  "historical_references": [
+    "https://github.com/Kirjane/Salryn/pull/105",
+    "https://github.com/Kirjane/Salryn/issues/91"
+  ],
+  "gates": [
+    {
+      "id": "RETAIL_NONAUTHOR_SOURCE_REVIEW",
+      "applies_to": [
+        "SOURCE_REVIEWED",
+        "RELEASE_READY"
+      ],
+      "minimum_level": "E1",
+      "allowed_types": [
+        "SOURCE"
+      ],
+      "target_binding": "EXACT_SOURCE_SHA_AND_REVIEWER",
+      "required_issuer_channel": "SIMULATED_REVIEWER_API",
+      "required_observed_target": {
+        "kind": "source-tree",
+        "environment": "synthetic independent source review",
+        "data_authority": "source"
+      }
+    },
+    {
+      "id": "RETAIL_WINDOWS_LAB_ABC",
+      "applies_to": [
+        "RELEASE_READY"
+      ],
+      "minimum_level": "E5",
+      "allowed_types": [
+        "DEVICE",
+        "RUNTIME"
+      ],
+      "target_binding": "EXACT_INSTALLER_AND_DEVICE",
+      "required_issuer_channel": "SIMULATED_REVIEWER_API",
+      "required_observed_target": {
+        "kind": "runtime-entrypoint",
+        "environment": "synthetic Windows VHDX adversarial lab",
+        "data_authority": "installed-runtime",
+        "entrypoint": "windows://retail-installed",
+        "validation_scope": "Windows VHDX ACL adversarial A/B/C",
+        "device_matrix": [
+          "VHDX_A",
+          "VHDX_B",
+          "VHDX_C"
+        ]
+      },
+      "required_issuer_id": "lab-test-operator"
+    },
+    {
+      "id": "RETAIL_SIGNING_AUTHORIZATION",
+      "applies_to": [
+        "RELEASE_READY"
+      ],
+      "minimum_level": "E4",
+      "allowed_types": [
+        "BUILD",
+        "DEPLOYMENT"
+      ],
+      "target_binding": "SIGNING_POLICY_AND_ARTIFACT_SHA256",
+      "required_issuer_channel": "SIMULATED_GITHUB_ACTIONS",
+      "required_observed_target": {
+        "kind": "release-artifact",
+        "environment": "synthetic signing authorization",
+        "data_authority": "not-applicable",
+        "validation_scope": "installer signing authorization",
+        "signing_policy_ref": "R2B_SYNTHETIC_SIGNING_POLICY"
+      },
+      "required_issuer_id": "signing-fixture"
+    }
+  ]
+}

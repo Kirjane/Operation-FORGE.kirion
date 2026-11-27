@@ -1,0 +1,2945 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "NON_AUTHORITATIVE synthetic contract compatibility records",
+  "description": "Closed record variants only at root. Auxiliary and result shapes are definitions, never input record variants. Raw lexical, Unicode scalar, canonical byte ordering, size/depth/node, reference graph and semantic checks are implemented separately.",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/record_principal"
+    },
+    {
+      "$ref": "#/$defs/record_oracle"
+    },
+    {
+      "$ref": "#/$defs/record_intent"
+    },
+    {
+      "$ref": "#/$defs/record_decision"
+    },
+    {
+      "$ref": "#/$defs/record_context"
+    },
+    {
+      "$ref": "#/$defs/record_capability"
+    },
+    {
+      "$ref": "#/$defs/record_contract"
+    },
+    {
+      "$ref": "#/$defs/record_grant"
+    },
+    {
+      "$ref": "#/$defs/record_command"
+    },
+    {
+      "$ref": "#/$defs/record_attempt"
+    },
+    {
+      "$ref": "#/$defs/record_evidence"
+    },
+    {
+      "$ref": "#/$defs/record_acceptance"
+    }
+  ],
+  "$defs": {
+    "ref_principal": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "principal"
+          ]
+        },
+        "record_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        },
+        "scope": {
+          "type": "object",
+          "properties": {
+            "repo_id": {
+              "type": "string",
+              "pattern": "^fixture:[A-Za-z0-9._:-]{1,120}$"
+            },
+            "lineage_id": {
+              "type": "string",
+              "pattern": "^fixture:[A-Za-z0-9._:-]{1,120}$"
+            }
+          },
+          "required": [
+            "repo_id",
+            "lineage_id"
+          ],
+          "additionalProperties": false
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      },
+      "required": [
+        "kind",
+        "record_id",
+        "scope",
+        "revision",
+        "digest"
+      ],
+      "additionalProperties": false
+    },
+    "record_principal": {
+      "type": "object",
+      "properties": {
+        "domain": {
+          "type": "string",
+          "enum": [
+            "FORGE_P1A_MODEL"
+          ]
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "principal"
+          ]
+        },
+        "record_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        },
+        "scope": {
+          "type": "object",
+          "properties": {
+            "repo_id": {
+              "type": "string",
+              "pattern": "^fixture:[A-Za-z0-9._:-]{1,120}$"
+            },
+            "lineage_id": {
+              "type": "string",
+              "pattern": "^fixture:[A-Za-z0-9._:-]{1,120}$"
+            }
+          },
+          "required": [
+            "repo_id",
+            "lineage_id"
+          ],
+          "additionalProperties": false
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "body": {
+          "type": "object",
+          "properties": {
+            "subject_id": {
+              "type": "string",
+              "pattern": "^fixture:[A-Za-z0-9._:-]{1,120}$"
+            },
+            "issuer_id": {
+              "type": "string",
+              "pattern": "^fixture:[A-Za-z0-9._:-]{1,120}$"
+            },
+            "persona_id": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+            },
+            "role": {
+              "type": "string",
+              "enum": [
+                "ENGINEER",
+                "MAINTAINER",
+                "WRITER",
+                "REVIEWER"
+              ]
+            },
+            "specialization_ids": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+              },
+              "minItems": 0,
+              "maxItems": 256,
+              "uniqueItems": true,
+              "description": "Strict ascending canonical element byte order required by model."
+            },
+            "host_id": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+            },
+            "session_id": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+            },
+            "exposure": {
+              "type": "string",
+              "enum": [
+                "UNKNOWN",
+                "DECLARED_SHARED",
+                "DECLARED_SEPARATE"
+              ]
+            },
+            "prior_author": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "subject_id",
+            "issuer_id",
+            "persona_id",
+            "role",
+            "specialization_ids",
+            "host_id",
+            "session_id",
+            "exposure",
+            "prior_author"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "domain",
+        "version",
+        "kind",
+        "record_id",
+        "scope",
+        "revision",
+        "body"
+      ],
+      "additionalProperties": false
+    },
+    "ref_oracle": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "oracle"
+          ]
+        },
+        "record_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        },
+        "scope": {
+          "type": "object",
+          "properties": {
+            "repo_id": {
+              "type": "string",
+              "pattern": "^fixture:[A-Za-z0-9._:-]{1,120}$"
+            },
+            "lineage_id": {
+              "type": "string",
+              "pattern": "^fixture:[A-Za-z0-9._:-]{1,120}$"
+            }
+          },
+          "required": [
+            "repo_id",
+            "lineage_id"
+          ],
+          "additionalProperties": false
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      },
+      "required": [
+        "kind",
+        "record_id",
+        "scope",
+        "revision",
+        "digest"
+      ],
+      "additionalProperties": false
+    },
+    "record_oracle": {
+      "type": "object",
+      "properties": {
+        "domain": {
+          "type": "string",
+          "enum": [
+            "FORGE_P1A_MODEL"
+          ]
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "oracle"
+          ]
+        },
+        "record_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        },
+        "scope": {
+          "type": "object",
+          "properties": {
+            "repo_id": {
+              "type": "string",
+              "pattern": "^fixture:[A-Za-z0-9._:-]{1,120}$"
+            },
+            "lineage_id": {
+              "type": "string",
+              "pattern": "^fixture:[A-Za-z0-9._:-]{1,120}$"
+            }
+          },
+          "required": [
+            "repo_id",
+            "lineage_id"
+          ],
+          "additionalProperties": false
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "body": {
+          "type": "object",
+          "properties": {
+            "custodian_ref": {
+              "$ref": "#/$defs/ref_principal"
+            },
+            "outcome_id": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+            },
+            "target_id": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+            },
+            "environment": {
+              "type": "string",
+              "enum": [
+                "SYNTHETIC"
+              ]
+            },
+            "positive_observation": {
+              "type": "string",
+              "maxLength": 8192
+            },
+            "negative_observation": {
+              "type": "string",
+              "maxLength": 8192
+            },
+            "expected_error": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 8192
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "negative_expected_error": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 8192
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "invariant_ids": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+              },
+              "minItems": 0,
+              "maxItems": 256,
+              "uniqueItems": true,
+              "description": "Strict ascending canonical element byte order required by model."
+            },
+            "readback_required": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "custodian_ref",
+            "outcome_id",
+            "target_id",
+            "environment",
+            "positive_observation",
+            "negative_observation",
+            "expected_error",
+            "negative_expected_error",
+            "invariant_ids",
+            "readback_required"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "domain",
+        "version",
+        "kind",
+        "record_id",
+        "scope",
+        "revision",
+        "body"
+      ],
+      "additionalProperties": false
+    },
+    "ref_intent": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "intent"
+          ]
+        },
+        "record_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        },
+        "scope": {
+          "type": "object",
+          "properties": {
+            "repo_id": {
+              "type": "string",
+              "pattern": "^fixture:[A-Za-z0-9._:-]{1,120}$"
+            },
+            "lineage_id": {
+              "type": "string",
+              "pattern": "^fixture:[A-Za-z0-9._:-]{1,120}$"
+            }
+          },
+          "required": [
+            "repo_id",
+            "lineage_id"
+          ],
+          "additionalProperties": false
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      },
+      "required": [
+        "kind",
+        "record_id",
+        "scope",
+        "revision",
+        "digest"
+      ],
+      "additionalProperties": false
+    },
+    "record_intent": {
+      "type": "object",
+      "properties": {
+        "domain": {
+          "type": "string",
+          "enum": [
+            "FORGE_P1A_MODEL"
+          ]
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "intent"
+          ]
+        },
+        "record_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        },
+        "scope": {
+          "type": "object",
+          "properties": {
+            "repo_id": {
+              "type": "string",
+              "pattern": "^fixture:[A-Za-z0-9._:-]{1,120}$"
+            },
+            "lineage_id": {
+              "type": "string",
+              "pattern": "^fixture:[A-Za-z0-9._:-]{1,120}$"
+            }
+          },
+          "required": [
+            "repo_id",
+            "lineage_id"
+          ],
+          "additionalProperties": false
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "body": {
+          "type": "object",
+          "properties": {
+            "prior_intent_ref": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/ref_intent"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "outcomes": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "outcome_id": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+                  },
+                  "actor_id": {
+                    "type": "string",
+                    "pattern": "^fixture:[A-Za-z0-9._:-]{1,120}$"
+                  },
+                  "target_id": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+                  },
+                  "route": {
+                    "type": "string",
+                    "maxLength": 8192
+                  },
+                  "action": {
+                    "type": "string",
+                    "maxLength": 8192
+                  },
+                  "state": {
+                    "type": "string",
+                    "maxLength": 8192
+                  },
+                  "expected_result": {
+                    "type": "string",
+                    "maxLength": 8192
+                  },
+                  "expected_error": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 8192
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "oracle_ref": {
+                    "$ref": "#/$defs/ref_oracle"
+                  }
+                },
+                "required": [
+                  "outcome_id",
+                  "actor_id",
+                  "target_id",
+                  "route",
+                  "action",
+                  "state",
+                  "expected_result",
+                  "expected_error",
+                  "oracle_ref"
+                ],
+                "additionalProperties": false
+              },
+              "minItems": 1,
+              "maxItems": 256
+            },
+            "source_roles": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "source_id": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "PRESENTATION",
+                      "FUNCTIONAL",
+                      "SECURITY"
+                    ]
+                  },
+                  "source_digest": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{64}$"
+                  }
+                },
+                "required": [
+                  "source_id",
+                  "role",
+                  "source_digest"
+                ],
+                "additionalProperties": false
+              },
+              "minItems": 0,
+              "maxItems": 256,
+              "uniqueItems": true,
+              "description": "Strict ascending canonical element byte order required by model."
+            },
+            "constraints": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 8192
+              },
+              "minItems": 0,
+              "maxItems": 256
+            },
+            "non_goals": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 8192
+              },
+              "minItems": 0,
+              "maxItems": 256
+            },
+            "delivery_mode": {
+              "type": "string",
+              "enum": [
+                "DEMO",
+                "REAL_MODEL"
+              ]
+            },
+            "partial_policy": {
+              "type": "string",
+              "enum": [
+                "NONE",
+                "EXPLICIT"
+              ]
+            },
+            "partial_outcome_ids": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+              },
+              "minItems": 0,
+              "maxItems": 256,
+              "uniqueItems": true,
+              "description": "Strict ascending canonical element byte order required by model."
+            }
+          },
+          "required": [
+            "prior_intent_ref",
+            "outcomes",
+            "source_roles",
+            "constraints",
+            "non_goals",
+            "delivery_mode",
+            "partial_policy",
+            "partial_outcome_ids"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "domain",
+        "version",
+        "kind",
+        "record_id",
+        "scope",
+        "revision",
+        "body"
+      ],
+      "additionalProperties": false
+    },
+    "ref_decision": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "decision"
+          ]
+        },
+        "record_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        },
+        "scope": {
+          "type": "object",
+          "properties": {
+            "repo_id": {
+              "type": "string",
+              "pattern": "^fixture:[A-Za-z0-9._:-]{1,120}$"
+            },
+            "lineage_id": {
+              "type": "string",
+              "pattern": "^fixture:[A-Za-z0-9._:-]{1,120}$"
+            }
+          },
+          "required": [
+            "repo_id",
+            "lineage_id"
+          ],
+          "additionalProperties": false
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      },
+      "required": [
+        "kind",
+        "record_id",
+        "scope",
+        "revision",
+        "digest"
+      ],
+      "additionalProperties": false
+    },
+    "record_decision": {
+      "type": "object",
+      "properties": {
+        "domain": {
+          "type": "string",
+          "enum": [
+            "FORGE_P1A_MODEL"
+          ]
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "decision"
+          ]
+        },
+        "record_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        },
+        "scope": {
+          "type": "object",
+          "properties": {
+            "repo_id": {
+              "type": "string",
+              "pattern": "^fixture:[A-Za-z0-9._:-]{1,120}$"
+            },
+            "lineage_id": {
+              "type": "string",
+              "pattern": "^fixture:[A-Za-z0-9._:-]{1,120}$"
+            }
+          },
+          "required": [
+            "repo_id",
+            "lineage_id"
+          ],
+          "additionalProperties": false
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "body": {
+          "type": "object",
+          "properties": {
+            "previous_ref": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/ref_decision"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "APPROVE",
+                "REJECT",
+                "SUPERSEDE",
+                "REVOKE"
+              ]
+            },
+            "intent_ref": {
+              "$ref": "#/$defs/ref_intent"
+            },
+            "target_approval_ref": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/ref_decision"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "approver_ref": {
+              "$ref": "#/$defs/ref_principal"
+            },
+            "reason": {
+              "type": "string",
+              "maxLength": 8192
+            },
+            "expiry_tick": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "creation_tick": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          },
+          "required": [
+            "previous_ref",
+            "action",
+            "intent_ref",
+            "target_approval_ref",
+            "approver_ref",
+            "reason",
+            "expiry_tick",
+            "creation_tick"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "domain",
+        "version",
+        "kind",
+        "record_id",
+        "scope",
+        "revision",
+        "body"
+      ],
+      "additionalProperties": false
+    },
+    "ref_context": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "context"
+          ]
+        },
+        "record_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        },
+        "scope": {
+          "type": "object",
+          "properties": {
+            "repo_id": {
+              "type": "string",
+              "pattern": "^fixture:[A-Za-z0-9._:-]{1,120}$"
+            },
+            "lineage_id": {
+              "type": "string",
+              "pattern": "^fixture:[A-Za-z0-9._:-]{1,120}$"
+            }
+          },
+          "required": [
+            "repo_id",
+            "lineage_id"
+          ],
+          "additionalProperties": false
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      },
+      "required": [
+        "kind",
+        "record_id",
+        "scope",
+        "revision",
+        "digest"
+      ],
+      "additionalProperties": false
+    },
+    "record_context": {
+      "type": "object",
+      "properties": {
+        "domain": {
+          "type": "string",
+          "enum": [
+            "FORGE_P1A_MODEL"
+          ]
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "context"
+          ]
+        },
+        "record_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        },
+        "scope": {
+          "type": "object",
+          "properties": {
+            "repo_id": {
+              "type": "string",
+              "pattern": "^fixture:[A-Za-z0-9._:-]{1,120}$"
+            },
+            "lineage_id": {
+              "type": "string",
+              "pattern": "^fixture:[A-Za-z0-9._:-]{1,120}$"
+            }
+          },
+          "required": [
+            "repo_id",
+            "lineage_id"
+          ],
+          "additionalProperties": false
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "body": {
+          "type": "object",
+          "properties": {
+            "intent_ref": {
+              "$ref": "#/$defs/ref_intent"
+            },
+            "required_sources": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "source_id": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+                  },
+                  "source_digest": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{64}$"
+                  },
+                  "dependency_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+                    },
+                    "minItems": 0,
+                    "maxItems": 256,
+                    "uniqueItems": true,
+                    "description": "Strict ascending canonical element byte order required by model."
+                  }
+                },
+                "required": [
+                  "source_id",
+                  "source_digest",
+                  "dependency_ids"
+                ],
+                "additionalProperties": false
+              },
+              "minItems": 0,
+              "maxItems": 256,
+              "uniqueItems": true,
+              "description": "Strict ascending canonical element byte order required by model."
+            },
+            "selected_sources": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "source_id": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+                  },
+                  "source_digest": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{64}$"
+                  },
+                  "dependency_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+                    },
+                    "minItems": 0,
+                    "maxItems": 256,
+                    "uniqueItems": true,
+                    "description": "Strict ascending canonical element byte order required by model."
+                  }
+                },
+                "required": [
+                  "source_id",
+                  "source_digest",
+                  "dependency_ids"
+                ],
+                "additionalProperties": false
+              },
+              "minItems": 0,
+              "maxItems": 256,
+              "uniqueItems": true,
+              "description": "Strict ascending canonical element byte order required by model."
+            },
+            "stale_ids": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+              },
+              "minItems": 0,
+              "maxItems": 256,
+              "uniqueItems": true,
+              "description": "Strict ascending canonical element byte order required by model."
+            },
+            "omitted_optional_ids": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+              },
+              "minItems": 0,
+              "maxItems": 256,
+              "uniqueItems": true,
+              "description": "Strict ascending canonical element byte order required by model."
+            },
+            "budget_bytes": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "consumed_bytes": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "evidence_level": {
+              "type": "string",
+              "enum": [
+                "RETRIEVED",
+                "MODELED_READ",
+                "UNKNOWN"
+              ]
+            }
+          },
+          "required": [
+            "intent_ref",
+            "required_sources",
+            "selected_sources",
+            "stale_ids",
+            "omitted_optional_ids",
+            "budget_bytes",
+            "consumed_bytes",
+            "evidence_level"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "domain",
+        "version",
+        "kind",
+        "record_id",
+        "scope",
+        "revision",
+        "body"
+      ],
+      "additionalProperties": false
+    },
+    "ref_capability": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "capability"
+          ]
+        },
+        "record_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        },
+        "scope": {
+          "type": "object",
+          "properties": {
+            "repo_id": {
+              "type": "string",
+              "pattern": "^fixture:[A-Za-z0-9._:-]{1,120}$"
+            },
+            "lineage_id": {
+              "type": "string",
+              "pattern": "^fixture:[A-Za-z0-9._:-]{1,120}$"
+            }
+          },
+          "required": [
+            "repo_id",
+            "lineage_id"
+          ],
+          "additionalProperties": false
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      },
+      "required": [
+        "kind",
+        "record_id",
+        "scope",
+        "revision",
+        "digest"
+      ],
+      "additionalProperties": false
+    },
+    "record_capability": {
+      "type": "object",
+      "properties": {
+        "domain": {
+          "type": "string",
+          "enum": [
+            "FORGE_P1A_MODEL"
+          ]
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "capability"
+          ]
+        },
+        "record_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        },
+        "scope": {
+          "type": "object",
+          "properties": {
+            "repo_id": {
+              "type": "string",
+              "pattern": "^fixture:[A-Za-z0-9._:-]{1,120}$"
+            },
+            "lineage_id": {
+              "type": "string",
+              "pattern": "^fixture:[A-Za-z0-9._:-]{1,120}$"
+            }
+          },
+          "required": [
+            "repo_id",
+            "lineage_id"
+          ],
+          "additionalProperties": false
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "body": {
+          "type": "object",
+          "properties": {
+            "principal_ref": {
+              "$ref": "#/$defs/ref_principal"
+            },
+            "resource_id": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+            },
+            "operation_family_id": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+            },
+            "availability": {
+              "type": "string",
+              "enum": [
+                "AVAILABLE",
+                "UNAVAILABLE",
+                "UNKNOWN"
+              ]
+            },
+            "permission": {
+              "type": "string",
+              "enum": [
+                "AVAILABLE",
+                "UNAVAILABLE",
+                "UNKNOWN"
+              ]
+            },
+            "quota": {
+              "type": "string",
+              "enum": [
+                "AVAILABLE",
+                "UNAVAILABLE",
+                "UNKNOWN"
+              ]
+            },
+            "quiescence": {
+              "type": "string",
+              "enum": [
+                "AVAILABLE",
+                "UNAVAILABLE",
+                "UNKNOWN"
+              ]
+            },
+            "observation_tick": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "expires_tick": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          },
+          "required": [
+            "principal_ref",
+            "resource_id",
+            "operation_family_id",
+            "availability",
+            "permission",
+            "quota",
+            "quiescence",
+            "observation_tick",
+            "expires_tick"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "domain",
+        "version",
+        "kind",
+        "record_id",
+        "scope",
+        "revision",
+        "body"
+      ],
+      "additionalProperties": false
+    },
+    "ref_contract": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "contract"
+          ]
+        },
+        "record_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        },
+        "scope": {
+          "type": "object",
+          "properties": {
+            "repo_id": {
+              "type": "string",
+              "pattern": "^fixture:[A-Za-z0-9._:-]{1,120}$"
+            },
+            "lineage_id": {
+              "type": "string",
+              "pattern": "^fixture:[A-Za-z0-9._:-]{1,120}$"
+            }
+          },
+          "required": [
+            "repo_id",
+            "lineage_id"
+          ],
+          "additionalProperties": false
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      },
+      "required": [
+        "kind",
+        "record_id",
+        "scope",
+        "revision",
+        "digest"
+      ],
+      "additionalProperties": false
+    },
+    "record_contract": {
+      "type": "object",
+      "properties": {
+        "domain": {
+          "type": "string",
+          "enum": [
+            "FORGE_P1A_MODEL"
+          ]
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "contract"
+          ]
+        },
+        "record_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        },
+        "scope": {
+          "type": "object",
+          "properties": {
+            "repo_id": {
+              "type": "string",
+              "pattern": "^fixture:[A-Za-z0-9._:-]{1,120}$"
+            },
+            "lineage_id": {
+              "type": "string",
+              "pattern": "^fixture:[A-Za-z0-9._:-]{1,120}$"
+            }
+          },
+          "required": [
+            "repo_id",
+            "lineage_id"
+          ],
+          "additionalProperties": false
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "body": {
+          "type": "object",
+          "properties": {
+            "intent_ref": {
+              "$ref": "#/$defs/ref_intent"
+            },
+            "approved_decision_ref": {
+              "$ref": "#/$defs/ref_decision"
+            },
+            "principal_ref": {
+              "$ref": "#/$defs/ref_principal"
+            },
+            "context_ref": {
+              "$ref": "#/$defs/ref_context"
+            },
+            "resource_id": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+            },
+            "operation_family_id": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+            },
+            "allowed_effect_classes": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "READ",
+                  "LOCAL_ARTIFACT",
+                  "PROCESS_TEST",
+                  "NETWORK_READ",
+                  "COMMENT",
+                  "SOURCE_WRITE",
+                  "REF_WRITE",
+                  "REMOTE_EFFECT"
+                ]
+              },
+              "minItems": 0,
+              "maxItems": 256,
+              "uniqueItems": true,
+              "description": "Strict ascending canonical element byte order required by model."
+            },
+            "constraints": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+              },
+              "minItems": 0,
+              "maxItems": 256,
+              "uniqueItems": true,
+              "description": "Strict ascending canonical element byte order required by model."
+            },
+            "oracle_refs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/ref_oracle"
+              },
+              "minItems": 0,
+              "maxItems": 256,
+              "uniqueItems": true,
+              "description": "Strict ascending canonical element byte order required by model."
+            },
+            "protocol_floor_model": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          },
+          "required": [
+            "intent_ref",
+            "approved_decision_ref",
+            "principal_ref",
+            "context_ref",
+            "resource_id",
+            "operation_family_id",
+            "allowed_effect_classes",
+            "constraints",
+            "oracle_refs",
+            "protocol_floor_model"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "domain",
+        "version",
+        "kind",
+        "record_id",
+        "scope",
+        "revision",
+        "body"
+      ],
+      "additionalProperties": false
+    },
+    "ref_grant": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "grant"
+          ]
+        },
+        "record_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        },
+        "scope": {
+          "type": "object",
+          "properties": {
+            "repo_id": {
+              "type": "string",
+              "pattern": "^fixture:[A-Za-z0-9._:-]{1,120}$"
+            },
+            "lineage_id": {
+              "type": "string",
+              "pattern": "^fixture:[A-Za-z0-9._:-]{1,120}$"
+            }
+          },
+          "required": [
+            "repo_id",
+            "lineage_id"
+          ],
+          "additionalProperties": false
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      },
+      "required": [
+        "kind",
+        "record_id",
+        "scope",
+        "revision",
+        "digest"
+      ],
+      "additionalProperties": false
+    },
+    "record_grant": {
+      "type": "object",
+      "properties": {
+        "domain": {
+          "type": "string",
+          "enum": [
+            "FORGE_P1A_MODEL"
+          ]
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "grant"
+          ]
+        },
+        "record_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        },
+        "scope": {
+          "type": "object",
+          "properties": {
+            "repo_id": {
+              "type": "string",
+              "pattern": "^fixture:[A-Za-z0-9._:-]{1,120}$"
+            },
+            "lineage_id": {
+              "type": "string",
+              "pattern": "^fixture:[A-Za-z0-9._:-]{1,120}$"
+            }
+          },
+          "required": [
+            "repo_id",
+            "lineage_id"
+          ],
+          "additionalProperties": false
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "body": {
+          "type": "object",
+          "properties": {
+            "contract_ref": {
+              "$ref": "#/$defs/ref_contract"
+            },
+            "decision_ref": {
+              "$ref": "#/$defs/ref_decision"
+            },
+            "principal_ref": {
+              "$ref": "#/$defs/ref_principal"
+            },
+            "capability_ref": {
+              "$ref": "#/$defs/ref_capability"
+            },
+            "issuer_ref": {
+              "$ref": "#/$defs/ref_principal"
+            },
+            "allowed_effect_classes": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "READ",
+                  "LOCAL_ARTIFACT",
+                  "PROCESS_TEST",
+                  "NETWORK_READ",
+                  "COMMENT",
+                  "SOURCE_WRITE",
+                  "REF_WRITE",
+                  "REMOTE_EFFECT"
+                ]
+              },
+              "minItems": 0,
+              "maxItems": 256,
+              "uniqueItems": true,
+              "description": "Strict ascending canonical element byte order required by model."
+            },
+            "resource_id": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+            },
+            "operation_family_id": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+            },
+            "valid_from_tick": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "expires_tick": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "prior_grant_ref": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/ref_grant"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "contract_ref",
+            "decision_ref",
+            "principal_ref",
+            "capability_ref",
+            "issuer_ref",
+            "allowed_effect_classes",
+            "resource_id",
+            "operation_family_id",
+            "valid_from_tick",
+            "expires_tick",
+            "prior_grant_ref"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "domain",
+        "version",
+        "kind",
+        "record_id",
+        "scope",
+        "revision",
+        "body"
+      ],
+      "additionalProperties": false
+    },
+    "ref_command": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "command"
+          ]
+        },
+        "record_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        },
+        "scope": {
+          "type": "object",
+          "properties": {
+            "repo_id": {
+              "type": "string",
+              "pattern": "^fixture:[A-Za-z0-9._:-]{1,120}$"
+            },
+            "lineage_id": {
+              "type": "string",
+              "pattern": "^fixture:[A-Za-z0-9._:-]{1,120}$"
+            }
+          },
+          "required": [
+            "repo_id",
+            "lineage_id"
+          ],
+          "additionalProperties": false
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      },
+      "required": [
+        "kind",
+        "record_id",
+        "scope",
+        "revision",
+        "digest"
+      ],
+      "additionalProperties": false
+    },
+    "record_command": {
+      "type": "object",
+      "properties": {
+        "domain": {
+          "type": "string",
+          "enum": [
+            "FORGE_P1A_MODEL"
+          ]
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "command"
+          ]
+        },
+        "record_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        },
+        "scope": {
+          "type": "object",
+          "properties": {
+            "repo_id": {
+              "type": "string",
+              "pattern": "^fixture:[A-Za-z0-9._:-]{1,120}$"
+            },
+            "lineage_id": {
+              "type": "string",
+              "pattern": "^fixture:[A-Za-z0-9._:-]{1,120}$"
+            }
+          },
+          "required": [
+            "repo_id",
+            "lineage_id"
+          ],
+          "additionalProperties": false
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "body": {
+          "type": "object",
+          "properties": {
+            "command_id": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+            },
+            "command_version": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "origin_ref": {
+              "$ref": "#/$defs/ref_principal"
+            },
+            "intent_ref": {
+              "$ref": "#/$defs/ref_intent"
+            },
+            "expected_decision_ref": {
+              "$ref": "#/$defs/ref_decision"
+            },
+            "expected_stage": {
+              "type": "string",
+              "enum": [
+                "DISCOVERY",
+                "PLANNED",
+                "ASSIGNED",
+                "CANDIDATE",
+                "REVIEWED",
+                "ACCEPTED"
+              ]
+            },
+            "effect_class": {
+              "type": "string",
+              "enum": [
+                "READ",
+                "LOCAL_ARTIFACT",
+                "PROCESS_TEST",
+                "NETWORK_READ",
+                "COMMENT",
+                "SOURCE_WRITE",
+                "REF_WRITE",
+                "REMOTE_EFFECT"
+              ]
+            },
+            "arguments": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "maxLength": 8192
+                  },
+                  "value": {
+                    "type": "string",
+                    "maxLength": 8192
+                  }
+                },
+                "required": [
+                  "name",
+                  "value"
+                ],
+                "additionalProperties": false
+              },
+              "minItems": 0,
+              "maxItems": 256
+            },
+            "next_stage": {
+              "type": "string",
+              "enum": [
+                "DISCOVERY",
+                "PLANNED",
+                "ASSIGNED",
+                "CANDIDATE",
+                "REVIEWED",
+                "ACCEPTED"
+              ]
+            }
+          },
+          "required": [
+            "command_id",
+            "command_version",
+            "origin_ref",
+            "intent_ref",
+            "expected_decision_ref",
+            "expected_stage",
+            "effect_class",
+            "arguments",
+            "next_stage"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "domain",
+        "version",
+        "kind",
+        "record_id",
+        "scope",
+        "revision",
+        "body"
+      ],
+      "additionalProperties": false
+    },
+    "ref_attempt": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "attempt"
+          ]
+        },
+        "record_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        },
+        "scope": {
+          "type": "object",
+          "properties": {
+            "repo_id": {
+              "type": "string",
+              "pattern": "^fixture:[A-Za-z0-9._:-]{1,120}$"
+            },
+            "lineage_id": {
+              "type": "string",
+              "pattern": "^fixture:[A-Za-z0-9._:-]{1,120}$"
+            }
+          },
+          "required": [
+            "repo_id",
+            "lineage_id"
+          ],
+          "additionalProperties": false
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      },
+      "required": [
+        "kind",
+        "record_id",
+        "scope",
+        "revision",
+        "digest"
+      ],
+      "additionalProperties": false
+    },
+    "record_attempt": {
+      "type": "object",
+      "properties": {
+        "domain": {
+          "type": "string",
+          "enum": [
+            "FORGE_P1A_MODEL"
+          ]
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "attempt"
+          ]
+        },
+        "record_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        },
+        "scope": {
+          "type": "object",
+          "properties": {
+            "repo_id": {
+              "type": "string",
+              "pattern": "^fixture:[A-Za-z0-9._:-]{1,120}$"
+            },
+            "lineage_id": {
+              "type": "string",
+              "pattern": "^fixture:[A-Za-z0-9._:-]{1,120}$"
+            }
+          },
+          "required": [
+            "repo_id",
+            "lineage_id"
+          ],
+          "additionalProperties": false
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "body": {
+          "type": "object",
+          "properties": {
+            "grant_ref": {
+              "$ref": "#/$defs/ref_grant"
+            },
+            "contract_ref": {
+              "$ref": "#/$defs/ref_contract"
+            },
+            "business_operation_id": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+            },
+            "resource_id": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+            },
+            "operation_family_id": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+            },
+            "attempt_id": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+            },
+            "predecessor_attempt_ref": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/ref_attempt"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "expected_target_digest": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "requested_effect_class": {
+              "type": "string",
+              "enum": [
+                "READ",
+                "LOCAL_ARTIFACT",
+                "PROCESS_TEST",
+                "NETWORK_READ",
+                "COMMENT",
+                "SOURCE_WRITE",
+                "REF_WRITE",
+                "REMOTE_EFFECT"
+              ]
+            },
+            "observation_state": {
+              "type": "string",
+              "enum": [
+                "NO_EFFECT",
+                "UNKNOWN",
+                "EFFECT_OBSERVED",
+                "UNQUIESCED"
+              ]
+            },
+            "quiesced": {
+              "type": "boolean"
+            },
+            "attempt_ordinal": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            }
+          },
+          "required": [
+            "grant_ref",
+            "contract_ref",
+            "business_operation_id",
+            "resource_id",
+            "operation_family_id",
+            "attempt_id",
+            "predecessor_attempt_ref",
+            "expected_target_digest",
+            "requested_effect_class",
+            "observation_state",
+            "quiesced",
+            "attempt_ordinal"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "domain",
+        "version",
+        "kind",
+        "record_id",
+        "scope",
+        "revision",
+        "body"
+      ],
+      "additionalProperties": false
+    },
+    "ref_evidence": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "evidence"
+          ]
+        },
+        "record_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        },
+        "scope": {
+          "type": "object",
+          "properties": {
+            "repo_id": {
+              "type": "string",
+              "pattern": "^fixture:[A-Za-z0-9._:-]{1,120}$"
+            },
+            "lineage_id": {
+              "type": "string",
+              "pattern": "^fixture:[A-Za-z0-9._:-]{1,120}$"
+            }
+          },
+          "required": [
+            "repo_id",
+            "lineage_id"
+          ],
+          "additionalProperties": false
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      },
+      "required": [
+        "kind",
+        "record_id",
+        "scope",
+        "revision",
+        "digest"
+      ],
+      "additionalProperties": false
+    },
+    "record_evidence": {
+      "type": "object",
+      "properties": {
+        "domain": {
+          "type": "string",
+          "enum": [
+            "FORGE_P1A_MODEL"
+          ]
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "evidence"
+          ]
+        },
+        "record_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        },
+        "scope": {
+          "type": "object",
+          "properties": {
+            "repo_id": {
+              "type": "string",
+              "pattern": "^fixture:[A-Za-z0-9._:-]{1,120}$"
+            },
+            "lineage_id": {
+              "type": "string",
+              "pattern": "^fixture:[A-Za-z0-9._:-]{1,120}$"
+            }
+          },
+          "required": [
+            "repo_id",
+            "lineage_id"
+          ],
+          "additionalProperties": false
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "body": {
+          "type": "object",
+          "properties": {
+            "attempt_ref": {
+              "$ref": "#/$defs/ref_attempt"
+            },
+            "oracle_ref": {
+              "$ref": "#/$defs/ref_oracle"
+            },
+            "issuer_ref": {
+              "$ref": "#/$defs/ref_principal"
+            },
+            "artifact_digest": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "environment": {
+              "type": "string",
+              "enum": [
+                "SYNTHETIC"
+              ]
+            },
+            "observation": {
+              "type": "string",
+              "maxLength": 8192
+            },
+            "observed_error": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 8192
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "evidence_type": {
+              "type": "string",
+              "enum": [
+                "SOURCE",
+                "FIXTURE",
+                "MODELED_OBSERVATION"
+              ]
+            },
+            "verdict": {
+              "type": "string",
+              "enum": [
+                "MODELED_MATCH",
+                "MODELED_MISMATCH",
+                "UNKNOWN"
+              ]
+            },
+            "readback_digest": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "observed_target_id": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+            },
+            "control_case": {
+              "type": "string",
+              "enum": [
+                "POSITIVE",
+                "DISCONFIRMING"
+              ]
+            }
+          },
+          "required": [
+            "attempt_ref",
+            "oracle_ref",
+            "issuer_ref",
+            "artifact_digest",
+            "environment",
+            "observation",
+            "observed_error",
+            "evidence_type",
+            "verdict",
+            "readback_digest",
+            "observed_target_id",
+            "control_case"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "domain",
+        "version",
+        "kind",
+        "record_id",
+        "scope",
+        "revision",
+        "body"
+      ],
+      "additionalProperties": false
+    },
+    "ref_acceptance": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "acceptance"
+          ]
+        },
+        "record_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        },
+        "scope": {
+          "type": "object",
+          "properties": {
+            "repo_id": {
+              "type": "string",
+              "pattern": "^fixture:[A-Za-z0-9._:-]{1,120}$"
+            },
+            "lineage_id": {
+              "type": "string",
+              "pattern": "^fixture:[A-Za-z0-9._:-]{1,120}$"
+            }
+          },
+          "required": [
+            "repo_id",
+            "lineage_id"
+          ],
+          "additionalProperties": false
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      },
+      "required": [
+        "kind",
+        "record_id",
+        "scope",
+        "revision",
+        "digest"
+      ],
+      "additionalProperties": false
+    },
+    "record_acceptance": {
+      "type": "object",
+      "properties": {
+        "domain": {
+          "type": "string",
+          "enum": [
+            "FORGE_P1A_MODEL"
+          ]
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "acceptance"
+          ]
+        },
+        "record_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        },
+        "scope": {
+          "type": "object",
+          "properties": {
+            "repo_id": {
+              "type": "string",
+              "pattern": "^fixture:[A-Za-z0-9._:-]{1,120}$"
+            },
+            "lineage_id": {
+              "type": "string",
+              "pattern": "^fixture:[A-Za-z0-9._:-]{1,120}$"
+            }
+          },
+          "required": [
+            "repo_id",
+            "lineage_id"
+          ],
+          "additionalProperties": false
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "body": {
+          "type": "object",
+          "properties": {
+            "contract_ref": {
+              "$ref": "#/$defs/ref_contract"
+            },
+            "decision_ref": {
+              "$ref": "#/$defs/ref_decision"
+            },
+            "reviewer_ref": {
+              "$ref": "#/$defs/ref_principal"
+            },
+            "evidence_refs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/ref_evidence"
+              },
+              "minItems": 1,
+              "maxItems": 256,
+              "uniqueItems": true,
+              "description": "Strict ascending canonical element byte order required by model."
+            },
+            "artifact_digest": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "verdict": {
+              "type": "string",
+              "enum": [
+                "MODEL_CONSISTENT",
+                "MODEL_REJECTED",
+                "MODEL_UNKNOWN"
+              ]
+            }
+          },
+          "required": [
+            "contract_ref",
+            "decision_ref",
+            "reviewer_ref",
+            "evidence_refs",
+            "artifact_digest",
+            "verdict"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "domain",
+        "version",
+        "kind",
+        "record_id",
+        "scope",
+        "revision",
+        "body"
+      ],
+      "additionalProperties": false
+    },
+    "floor": {
+      "type": "object",
+      "properties": {
+        "intent_ref": {
+          "$ref": "#/$defs/ref_intent"
+        },
+        "required_sources": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "source_id": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+              },
+              "source_digest": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "dependency_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+                },
+                "minItems": 0,
+                "maxItems": 256,
+                "uniqueItems": true,
+                "description": "Strict ascending canonical element byte order required by model."
+              }
+            },
+            "required": [
+              "source_id",
+              "source_digest",
+              "dependency_ids"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 0,
+          "maxItems": 256,
+          "uniqueItems": true,
+          "description": "Strict ascending canonical element byte order required by model."
+        }
+      },
+      "required": [
+        "intent_ref",
+        "required_sources"
+      ],
+      "additionalProperties": false
+    },
+    "registry": {
+      "type": "object",
+      "properties": {
+        "COMMAND": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+          },
+          "minItems": 0,
+          "maxItems": 256,
+          "uniqueItems": true,
+          "description": "Strict ascending canonical element byte order required by model."
+        },
+        "RESOURCE": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+          },
+          "minItems": 0,
+          "maxItems": 256,
+          "uniqueItems": true,
+          "description": "Strict ascending canonical element byte order required by model."
+        },
+        "OPERATION_FAMILY": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+          },
+          "minItems": 0,
+          "maxItems": 256,
+          "uniqueItems": true,
+          "description": "Strict ascending canonical element byte order required by model."
+        }
+      },
+      "required": [
+        "COMMAND",
+        "RESOURCE",
+        "OPERATION_FAMILY"
+      ],
+      "additionalProperties": false
+    },
+    "alias": {
+      "type": "object",
+      "properties": {
+        "alias_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        },
+        "canonical_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        },
+        "namespace": {
+          "type": "string",
+          "enum": [
+            "COMMAND",
+            "RESOURCE",
+            "OPERATION_FAMILY"
+          ]
+        }
+      },
+      "required": [
+        "alias_id",
+        "canonical_id",
+        "namespace"
+      ],
+      "additionalProperties": false
+    },
+    "mapping": {
+      "type": "object",
+      "properties": {
+        "command_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        },
+        "command_version": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "expected_stage": {
+          "type": "string",
+          "enum": [
+            "DISCOVERY",
+            "PLANNED",
+            "ASSIGNED",
+            "CANDIDATE",
+            "REVIEWED",
+            "ACCEPTED"
+          ]
+        },
+        "next_stage": {
+          "type": "string",
+          "enum": [
+            "DISCOVERY",
+            "PLANNED",
+            "ASSIGNED",
+            "CANDIDATE",
+            "REVIEWED",
+            "ACCEPTED"
+          ]
+        },
+        "effect_class": {
+          "type": "string",
+          "enum": [
+            "READ",
+            "LOCAL_ARTIFACT",
+            "PROCESS_TEST",
+            "NETWORK_READ",
+            "COMMENT",
+            "SOURCE_WRITE",
+            "REF_WRITE",
+            "REMOTE_EFFECT"
+          ]
+        }
+      },
+      "required": [
+        "command_id",
+        "command_version",
+        "expected_stage",
+        "next_stage",
+        "effect_class"
+      ],
+      "additionalProperties": false
+    },
+    "index": {
+      "type": "object",
+      "properties": {
+        "resource_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        },
+        "operation_family_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        },
+        "business_operation_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        },
+        "tip_attempt_ref": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ref_attempt"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "resource_id",
+        "operation_family_id",
+        "business_operation_id",
+        "tip_attempt_ref"
+      ],
+      "additionalProperties": false
+    },
+    "case": {
+      "type": "object",
+      "properties": {
+        "contract_ref": {
+          "$ref": "#/$defs/ref_contract"
+        },
+        "attempt_ref": {
+          "$ref": "#/$defs/ref_attempt"
+        },
+        "oracle_ref": {
+          "$ref": "#/$defs/ref_oracle"
+        },
+        "outcome_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        },
+        "target_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        },
+        "artifact_digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "control_case": {
+          "type": "string",
+          "enum": [
+            "POSITIVE",
+            "DISCONFIRMING"
+          ]
+        },
+        "expected_issuer_ref": {
+          "$ref": "#/$defs/ref_principal"
+        },
+        "expected_readback_digest": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "contract_ref",
+        "attempt_ref",
+        "oracle_ref",
+        "outcome_id",
+        "target_id",
+        "artifact_digest",
+        "control_case",
+        "expected_issuer_ref",
+        "expected_readback_digest"
+      ],
+      "additionalProperties": false
+    },
+    "snapshot": {
+      "type": "object",
+      "properties": {
+        "events": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/record_decision"
+          },
+          "minItems": 0,
+          "maxItems": 256
+        },
+        "head_ref": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ref_decision"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "events",
+        "head_ref"
+      ],
+      "additionalProperties": false
+    },
+    "validation_result": {
+      "type": "object",
+      "properties": {
+        "domain": {
+          "const": "FORGE_P1A_MODEL"
+        },
+        "fixture_only": {
+          "const": true
+        },
+        "authority_granted": {
+          "const": false
+        },
+        "promotion_authorized": {
+          "const": false
+        },
+        "reason_codes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+          },
+          "uniqueItems": true
+        },
+        "result_kind": {
+          "const": "VALIDATION"
+        },
+        "result_code": {
+          "enum": [
+            "STRUCTURALLY_VALID",
+            "MODEL_CONSISTENT",
+            "MODEL_REJECTED",
+            "MODEL_UNKNOWN"
+          ]
+        },
+        "record_digest": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "domain",
+        "fixture_only",
+        "authority_granted",
+        "promotion_authorized",
+        "reason_codes",
+        "result_kind",
+        "result_code",
+        "record_digest"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "result_code": {
+                "enum": [
+                  "MODEL_REJECTED",
+                  "MODEL_UNKNOWN",
+                  "MODEL_CONFLICT"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "reason_codes": {
+                "minItems": 1
+              }
+            }
+          }
+        }
+      ]
+    },
+    "reducer_result": {
+      "type": "object",
+      "properties": {
+        "domain": {
+          "const": "FORGE_P1A_MODEL"
+        },
+        "fixture_only": {
+          "const": true
+        },
+        "authority_granted": {
+          "const": false
+        },
+        "promotion_authorized": {
+          "const": false
+        },
+        "reason_codes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+          },
+          "uniqueItems": true
+        },
+        "result_kind": {
+          "const": "DECISION_REDUCER"
+        },
+        "result_code": {
+          "enum": [
+            "MODEL_COMMITTED",
+            "MODEL_ALREADY_COMMITTED",
+            "MODEL_CONFLICT",
+            "MODEL_REJECTED",
+            "MODEL_UNKNOWN"
+          ]
+        },
+        "submitted_event_ref": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ref_decision"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "committed_event_ref": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ref_decision"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "previous_head_ref": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ref_decision"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "current_head_ref": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ref_decision"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "current_state": {
+          "enum": [
+            "EMPTY",
+            "APPROVED",
+            "REJECTED",
+            "SUPERSEDED_PENDING",
+            "REVOKED",
+            "EXPIRED",
+            "UNKNOWN"
+          ]
+        },
+        "evaluation_tick": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "submitted_event_is_current_approval": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "domain",
+        "fixture_only",
+        "authority_granted",
+        "promotion_authorized",
+        "reason_codes",
+        "result_kind",
+        "result_code",
+        "submitted_event_ref",
+        "committed_event_ref",
+        "previous_head_ref",
+        "current_head_ref",
+        "current_state",
+        "evaluation_tick",
+        "submitted_event_is_current_approval"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "result_code": {
+                "enum": [
+                  "MODEL_REJECTED",
+                  "MODEL_UNKNOWN",
+                  "MODEL_CONFLICT"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "reason_codes": {
+                "minItems": 1
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

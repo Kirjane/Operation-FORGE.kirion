@@ -1,0 +1,577 @@
+{
+  "format": "forge-source-import/v1",
+  "baseline": "928d08edc691dfaeccd4929d2a6566d1f3a3a789",
+  "authority_issue": 37,
+  "authority_comment": 7223961647,
+  "classification": "SOURCE_CANDIDATE_NOT_QUALIFIED",
+  "imports": [
+    {
+      "donor": "R4",
+      "commit": "10083ae9941551fdc88f7a572e82e12826845246",
+      "path": "experiments/contract_compatibility/README.md",
+      "blob": "9b3609071d985d539ba2215c6e5599d499d39ee1",
+      "mode": "100644",
+      "size": 6690
+    },
+    {
+      "donor": "R4",
+      "commit": "10083ae9941551fdc88f7a572e82e12826845246",
+      "path": "experiments/contract_compatibility/contract_records.py",
+      "blob": "32ff406c3ab218e9fd15e83c817e68548a8325c4",
+      "mode": "100644",
+      "size": 47898
+    },
+    {
+      "donor": "R4",
+      "commit": "10083ae9941551fdc88f7a572e82e12826845246",
+      "path": "experiments/contract_compatibility/record.schema.json",
+      "blob": "1ceb42412dfd8f14eeb8c18d4a83a206a3bdc9b5",
+      "mode": "100644",
+      "size": 75585
+    },
+    {
+      "donor": "R4",
+      "commit": "10083ae9941551fdc88f7a572e82e12826845246",
+      "path": "experiments/contract_compatibility/test_contract_records.py",
+      "blob": "d9ec84d52f99e21ead866ced045964088e7e6e59",
+      "mode": "100644",
+      "size": 44040
+    },
+    {
+      "donor": "R4",
+      "commit": "10083ae9941551fdc88f7a572e82e12826845246",
+      "path": "experiments/contract_compatibility/vectors.json",
+      "blob": "9187a1c8de53d07be1b55a3dd17371b95dd24ea1",
+      "mode": "100644",
+      "size": 4725515
+    },
+    {
+      "donor": "PR4",
+      "commit": "102c8786eea7ee6c3e1d4ea701d1ec48a68de23b",
+      "path": "memory/feature-context.md",
+      "blob": "f25a5fee66fb3fad4db81ab5b9989d629e02242e",
+      "mode": "100644",
+      "size": 7292
+    },
+    {
+      "donor": "PR4",
+      "commit": "102c8786eea7ee6c3e1d4ea701d1ec48a68de23b",
+      "path": "second-brain/harness/schema/claim-provenance.schema.json",
+      "blob": "0f182ea9e314ce1fa42db0a4ed352534036ed746",
+      "mode": "100644",
+      "size": 1600
+    },
+    {
+      "donor": "PR4",
+      "commit": "102c8786eea7ee6c3e1d4ea701d1ec48a68de23b",
+      "path": "second-brain/harness/schema/feature-context.schema.json",
+      "blob": "c6f6d0b03f9151333f8d1d81d4484870344ae521",
+      "mode": "100644",
+      "size": 2577
+    },
+    {
+      "donor": "PR4",
+      "commit": "102c8786eea7ee6c3e1d4ea701d1ec48a68de23b",
+      "path": "second-brain/tools/harness/lib/fci/freshness.js",
+      "blob": "f80ed4cff3d0f4b1861fccfe07f4f0ca8563d1cc",
+      "mode": "100644",
+      "size": 938
+    },
+    {
+      "donor": "PR4",
+      "commit": "102c8786eea7ee6c3e1d4ea701d1ec48a68de23b",
+      "path": "second-brain/tools/harness/lib/fci/guard.js",
+      "blob": "008606db99403e024bbf8f4d4fb425d6992d2d54",
+      "mode": "100644",
+      "size": 1071
+    },
+    {
+      "donor": "PR4",
+      "commit": "102c8786eea7ee6c3e1d4ea701d1ec48a68de23b",
+      "path": "second-brain/tools/harness/lib/fci/project.js",
+      "blob": "571c2139739a0b873259d64b717e6be926dbbae5",
+      "mode": "100644",
+      "size": 4287
+    },
+    {
+      "donor": "PR4",
+      "commit": "102c8786eea7ee6c3e1d4ea701d1ec48a68de23b",
+      "path": "second-brain/tools/harness/lib/fci/provenance.js",
+      "blob": "e7222e69c138ea379004c575fe8836d6e94deda7",
+      "mode": "100644",
+      "size": 4533
+    },
+    {
+      "donor": "PR4",
+      "commit": "102c8786eea7ee6c3e1d4ea701d1ec48a68de23b",
+      "path": "second-brain/tools/harness/lib/fci/resolve.js",
+      "blob": "0392012a13a71a89ad36d90d59c2fec4be701b56",
+      "mode": "100644",
+      "size": 7798
+    },
+    {
+      "donor": "PR4",
+      "commit": "102c8786eea7ee6c3e1d4ea701d1ec48a68de23b",
+      "path": "second-brain/tools/harness/test/fci-memory.js",
+      "blob": "462ad5f98b754aa9e23d51c66e45641f66c893f1",
+      "mode": "100644",
+      "size": 22183
+    },
+    {
+      "donor": "PR6",
+      "commit": "67e95d3e14628499ae9f17b1c02846c2882cd78a",
+      "path": "evals/fci-m02-pilot/README.md",
+      "blob": "10cf02635c8fce0a8fdc8cec6b191c883e42ee1d",
+      "mode": "100644",
+      "size": 11572
+    },
+    {
+      "donor": "PR6",
+      "commit": "67e95d3e14628499ae9f17b1c02846c2882cd78a",
+      "path": "evals/fci-m02-pilot/evaluator-oracle.json",
+      "blob": "5a8dfdcede11400e11618fabdcdabf9efed629a3",
+      "mode": "100644",
+      "size": 1334
+    },
+    {
+      "donor": "PR6",
+      "commit": "67e95d3e14628499ae9f17b1c02846c2882cd78a",
+      "path": "evals/fci-m02-pilot/fixture-packets.json",
+      "blob": "189dca09a0615600ea12086e5ef56502b43e5c3e",
+      "mode": "100644",
+      "size": 4424
+    },
+    {
+      "donor": "PR6",
+      "commit": "67e95d3e14628499ae9f17b1c02846c2882cd78a",
+      "path": "evals/fci-m02-pilot/human-adjudication.schema.json",
+      "blob": "4bda6944879d82eb132a070c4742e38bc6e26b1b",
+      "mode": "100644",
+      "size": 3687
+    },
+    {
+      "donor": "PR6",
+      "commit": "67e95d3e14628499ae9f17b1c02846c2882cd78a",
+      "path": "evals/fci-m02-pilot/make-fixtures.cjs",
+      "blob": "351dc3e3baea5bd6246f717af80fb01d7385c60c",
+      "mode": "100644",
+      "size": 8293
+    },
+    {
+      "donor": "PR6",
+      "commit": "67e95d3e14628499ae9f17b1c02846c2882cd78a",
+      "path": "evals/fci-m02-pilot/recorded-response.schema.json",
+      "blob": "9fac399d2def5a114d3183d5f76207659956ec67",
+      "mode": "100644",
+      "size": 5019
+    },
+    {
+      "donor": "PR6",
+      "commit": "67e95d3e14628499ae9f17b1c02846c2882cd78a",
+      "path": "evals/fci-m02-pilot/scenarios.json",
+      "blob": "924a0cff8821ba6350657bdb37df88cad3e6638b",
+      "mode": "100644",
+      "size": 8083
+    },
+    {
+      "donor": "PR6",
+      "commit": "67e95d3e14628499ae9f17b1c02846c2882cd78a",
+      "path": "evals/fci-m02-pilot/score.cjs",
+      "blob": "2565c3b964da5472766c0f194fd5beca47b3878d",
+      "mode": "100644",
+      "size": 26730
+    },
+    {
+      "donor": "PR10",
+      "commit": "b0355f326bd96bcb29db40e3e358cc8a7bac058e",
+      "path": "profiles/kirjane-labs/ENGINEERING_STACK_STANDARD.md",
+      "blob": "d0a103e7bd77321b96ccb63cab1e0e8922288432",
+      "mode": "100644",
+      "size": 9219
+    },
+    {
+      "donor": "PR10",
+      "commit": "b0355f326bd96bcb29db40e3e358cc8a7bac058e",
+      "path": "profiles/kirjane-labs/PROJECT_STACK_DECISION.template.md",
+      "blob": "83eb0190f2936ef27e4a71ea55d3ea7ba3a15f1c",
+      "mode": "100644",
+      "size": 2078
+    },
+    {
+      "donor": "PR10",
+      "commit": "b0355f326bd96bcb29db40e3e358cc8a7bac058e",
+      "path": "profiles/kirjane-labs/README.md",
+      "blob": "1d7a18e1597d7340be643f4805c2efc16a023836",
+      "mode": "100644",
+      "size": 1410
+    },
+    {
+      "donor": "PR16",
+      "commit": "2a5adf6f573f944d69e5afd97845cd280d7b564c",
+      "path": "integrations/chatgpt/CAPABILITY_MATRIX.json",
+      "blob": "aa24a76ff159118acaa68429248ca8c6d3c2c67c",
+      "mode": "100644",
+      "size": 4551
+    },
+    {
+      "donor": "PR16",
+      "commit": "2a5adf6f573f944d69e5afd97845cd280d7b564c",
+      "path": "integrations/chatgpt/README.md",
+      "blob": "7a9a1170c62b308d0e93cda510b4adcd6792c64f",
+      "mode": "100644",
+      "size": 1063
+    },
+    {
+      "donor": "PR16",
+      "commit": "2a5adf6f573f944d69e5afd97845cd280d7b564c",
+      "path": "integrations/chatgpt/connector_adapter.mjs",
+      "blob": "649a5bce49717315951b0bdbc8ea13a65e89b8c7",
+      "mode": "100644",
+      "size": 3732
+    },
+    {
+      "donor": "PR16",
+      "commit": "2a5adf6f573f944d69e5afd97845cd280d7b564c",
+      "path": "integrations/chatgpt/connector_adapter.test.mjs",
+      "blob": "836659e8f5c74d98e2fd9f10db91ab5eba36c1d8",
+      "mode": "100644",
+      "size": 5042
+    },
+    {
+      "donor": "PR16",
+      "commit": "2a5adf6f573f944d69e5afd97845cd280d7b564c",
+      "path": "integrations/chatgpt/engineering_service.py",
+      "blob": "b6133a1cda6584cbcc27a5823082d4a0b8011f45",
+      "mode": "100644",
+      "size": 38184
+    },
+    {
+      "donor": "PR16",
+      "commit": "2a5adf6f573f944d69e5afd97845cd280d7b564c",
+      "path": "integrations/chatgpt/evidence/R4-REPAIR-1.md",
+      "blob": "13f4e9163117166565636841eb007f7dec69cf3a",
+      "mode": "100644",
+      "size": 827
+    },
+    {
+      "donor": "PR16",
+      "commit": "2a5adf6f573f944d69e5afd97845cd280d7b564c",
+      "path": "integrations/chatgpt/evidence/R4-REPAIR-2.md",
+      "blob": "0a6e66966642410c64170f78a0b1e63bb70c097d",
+      "mode": "100644",
+      "size": 831
+    },
+    {
+      "donor": "PR16",
+      "commit": "2a5adf6f573f944d69e5afd97845cd280d7b564c",
+      "path": "integrations/chatgpt/evidence/R4-REPAIR-3.md",
+      "blob": "99f6fdb4b73f3a9ea0a624071e5ad5c5d1cb5d62",
+      "mode": "100644",
+      "size": 838
+    },
+    {
+      "donor": "PR16",
+      "commit": "2a5adf6f573f944d69e5afd97845cd280d7b564c",
+      "path": "integrations/chatgpt/evidence/R4-REPAIR-4.md",
+      "blob": "7a7fe572262b88420ad9bcb48a1ce15ae3ad9216",
+      "mode": "100644",
+      "size": 406
+    },
+    {
+      "donor": "PR16",
+      "commit": "2a5adf6f573f944d69e5afd97845cd280d7b564c",
+      "path": "integrations/chatgpt/evidence/R5-REPAIR-1.md",
+      "blob": "54e91eb5fbfe6b97db210544b6c13876489932c3",
+      "mode": "100644",
+      "size": 604
+    },
+    {
+      "donor": "PR16",
+      "commit": "2a5adf6f573f944d69e5afd97845cd280d7b564c",
+      "path": "integrations/chatgpt/evidence/R5-REPAIR-2.md",
+      "blob": "710b253ec316a14a5bb92300b36c405733b384d5",
+      "mode": "100644",
+      "size": 653
+    },
+    {
+      "donor": "PR16",
+      "commit": "2a5adf6f573f944d69e5afd97845cd280d7b564c",
+      "path": "integrations/chatgpt/evidence/R5-REPAIR-3.md",
+      "blob": "8902e921c58e2b52488ca6658ab82adf1adb4956",
+      "mode": "100644",
+      "size": 619
+    },
+    {
+      "donor": "PR16",
+      "commit": "2a5adf6f573f944d69e5afd97845cd280d7b564c",
+      "path": "integrations/chatgpt/evidence/R5-REPAIR-4.md",
+      "blob": "0da8e5123df0b7a40823a24d3d54611ab8402ba6",
+      "mode": "100644",
+      "size": 934
+    },
+    {
+      "donor": "PR16",
+      "commit": "2a5adf6f573f944d69e5afd97845cd280d7b564c",
+      "path": "integrations/chatgpt/evidence/initial-probes.json",
+      "blob": "26822b4ea157a4f11033808bea5d970c4d60a351",
+      "mode": "100644",
+      "size": 5766
+    },
+    {
+      "donor": "PR16",
+      "commit": "2a5adf6f573f944d69e5afd97845cd280d7b564c",
+      "path": "integrations/chatgpt/evidence/r3-start.json",
+      "blob": "6d27246df55446334d9811bacadea0d872318200",
+      "mode": "100644",
+      "size": 534
+    },
+    {
+      "donor": "PR16",
+      "commit": "2a5adf6f573f944d69e5afd97845cd280d7b564c",
+      "path": "integrations/chatgpt/evidence/source-inventory.json",
+      "blob": "49a30b027d2203ad660a86c80ae310eca5772742",
+      "mode": "100644",
+      "size": 19949
+    },
+    {
+      "donor": "PR16",
+      "commit": "2a5adf6f573f944d69e5afd97845cd280d7b564c",
+      "path": "integrations/chatgpt/host_autonomy.py",
+      "blob": "e60b2af20d2c7893d5ca1193a74306bf1158643f",
+      "mode": "100644",
+      "size": 16747
+    },
+    {
+      "donor": "PR16",
+      "commit": "2a5adf6f573f944d69e5afd97845cd280d7b564c",
+      "path": "integrations/chatgpt/host_bridge.py",
+      "blob": "c2e472129da3af9f41432b761a4ae7c95419d536",
+      "mode": "100644",
+      "size": 2345
+    },
+    {
+      "donor": "PR16",
+      "commit": "2a5adf6f573f944d69e5afd97845cd280d7b564c",
+      "path": "integrations/chatgpt/operator_asgi.py",
+      "blob": "24b60c246d92b0955fb8656e69e282979f4970a4",
+      "mode": "100644",
+      "size": 4671
+    },
+    {
+      "donor": "PR16",
+      "commit": "2a5adf6f573f944d69e5afd97845cd280d7b564c",
+      "path": "integrations/chatgpt/package.py",
+      "blob": "8bb17ff25ceababe74ecc48da52d5a6533e004ba",
+      "mode": "100644",
+      "size": 8074
+    },
+    {
+      "donor": "PR16",
+      "commit": "2a5adf6f573f944d69e5afd97845cd280d7b564c",
+      "path": "integrations/chatgpt/pilot-fixture/README.md",
+      "blob": "68cd0154e26814018c7408d63ae79dff9fb4ba75",
+      "mode": "100644",
+      "size": 675
+    },
+    {
+      "donor": "PR16",
+      "commit": "2a5adf6f573f944d69e5afd97845cd280d7b564c",
+      "path": "integrations/chatgpt/pilot-fixture/oracles/hidden.php",
+      "blob": "1e15476ce5e1a396dbfe630046f1b0f1e6181775",
+      "mode": "100644",
+      "size": 502
+    },
+    {
+      "donor": "PR16",
+      "commit": "2a5adf6f573f944d69e5afd97845cd280d7b564c",
+      "path": "integrations/chatgpt/pilot-fixture/src/Stock.php",
+      "blob": "e8cd24271d537c711fef451b2e983776712f6af7",
+      "mode": "100644",
+      "size": 285
+    },
+    {
+      "donor": "PR16",
+      "commit": "2a5adf6f573f944d69e5afd97845cd280d7b564c",
+      "path": "integrations/chatgpt/pilot-fixture/tests/public.php",
+      "blob": "78634a20c4c0e8c457734630adceae6e17bc5c75",
+      "mode": "100644",
+      "size": 412
+    },
+    {
+      "donor": "PR16",
+      "commit": "2a5adf6f573f944d69e5afd97845cd280d7b564c",
+      "path": "integrations/chatgpt/qualification.py",
+      "blob": "48a91d61fa8ad9fec51945dc0b3b6de2d08d5e86",
+      "mode": "100644",
+      "size": 2978
+    },
+    {
+      "donor": "PR16",
+      "commit": "2a5adf6f573f944d69e5afd97845cd280d7b564c",
+      "path": "integrations/chatgpt/routing.json",
+      "blob": "6920f732a1c429fbaf3dc3acd6124eed4df024ae",
+      "mode": "100644",
+      "size": 2781
+    },
+    {
+      "donor": "PR16",
+      "commit": "2a5adf6f573f944d69e5afd97845cd280d7b564c",
+      "path": "integrations/chatgpt/scoped_broker.py",
+      "blob": "9ccddbf59ea4c748bdbf1d7b1684e179b10cde8c",
+      "mode": "100644",
+      "size": 12588
+    },
+    {
+      "donor": "PR16",
+      "commit": "2a5adf6f573f944d69e5afd97845cd280d7b564c",
+      "path": "integrations/chatgpt/test_engineering_service.py",
+      "blob": "9f465b27802e15334855c385a092f4dabf4b22b8",
+      "mode": "100644",
+      "size": 26083
+    },
+    {
+      "donor": "PR16",
+      "commit": "2a5adf6f573f944d69e5afd97845cd280d7b564c",
+      "path": "integrations/chatgpt/test_host_autonomy.py",
+      "blob": "aa43606e208eca49c849df4c16828b63284b5f6c",
+      "mode": "100644",
+      "size": 18717
+    },
+    {
+      "donor": "PR16",
+      "commit": "2a5adf6f573f944d69e5afd97845cd280d7b564c",
+      "path": "integrations/chatgpt/test_r5_service_edges.py",
+      "blob": "d7d4409eb607b57b3d2ae9d01dd1956606b4c18d",
+      "mode": "100644",
+      "size": 7239
+    },
+    {
+      "donor": "PR20",
+      "commit": "fbc228ede2da3b4963af773d4db643c4b272d982",
+      "path": "experiments/assurance_r2b/README.md",
+      "blob": "8188c3aac209110938c8a32844eccf061e8433e1",
+      "mode": "100644",
+      "size": 5206
+    },
+    {
+      "donor": "PR20",
+      "commit": "fbc228ede2da3b4963af773d4db643c4b272d982",
+      "path": "experiments/assurance_r2b/__init__.py",
+      "blob": "6bc6eeb5f5523accb0f465ef6a7699d694c5cf11",
+      "mode": "100644",
+      "size": 80
+    },
+    {
+      "donor": "PR20",
+      "commit": "fbc228ede2da3b4963af773d4db643c4b272d982",
+      "path": "experiments/assurance_r2b/cli.py",
+      "blob": "d2f62537aaa180e19ffd9055bf92fa0a50bd4eb1",
+      "mode": "100644",
+      "size": 1264
+    },
+    {
+      "donor": "PR20",
+      "commit": "fbc228ede2da3b4963af773d4db643c4b272d982",
+      "path": "experiments/assurance_r2b/contracts/claim-request.schema.json",
+      "blob": "8588f3be346d60354079f56884885ca1ca307dd7",
+      "mode": "100644",
+      "size": 7796
+    },
+    {
+      "donor": "PR20",
+      "commit": "fbc228ede2da3b4963af773d4db643c4b272d982",
+      "path": "experiments/assurance_r2b/fixtures/r2a-green-cafe.json",
+      "blob": "e466dfa486427c0a9f6a758b222dc00db7a586dc",
+      "mode": "100644",
+      "size": 3728
+    },
+    {
+      "donor": "PR20",
+      "commit": "fbc228ede2da3b4963af773d4db643c4b272d982",
+      "path": "experiments/assurance_r2b/fixtures/r2a-green-retail.json",
+      "blob": "0c6bc71b149c444d8cd03705d9961d282a59e6ac",
+      "mode": "100644",
+      "size": 3720
+    },
+    {
+      "donor": "PR20",
+      "commit": "fbc228ede2da3b4963af773d4db643c4b272d982",
+      "path": "experiments/assurance_r2b/fixtures/r2a-green-talibon.json",
+      "blob": "e6a3690624a933c21cd44f753e2407898055a3f6",
+      "mode": "100644",
+      "size": 3802
+    },
+    {
+      "donor": "PR20",
+      "commit": "fbc228ede2da3b4963af773d4db643c4b272d982",
+      "path": "experiments/assurance_r2b/fixtures/r2a-red-cafe.json",
+      "blob": "df3e5ff157619f6d852c6cfb388fb69535cb94ef",
+      "mode": "100644",
+      "size": 3762
+    },
+    {
+      "donor": "PR20",
+      "commit": "fbc228ede2da3b4963af773d4db643c4b272d982",
+      "path": "experiments/assurance_r2b/fixtures/r2a-red-retail.json",
+      "blob": "7491a544133e8cd3b9fd6c7219abde8d59861a6e",
+      "mode": "100644",
+      "size": 5294
+    },
+    {
+      "donor": "PR20",
+      "commit": "fbc228ede2da3b4963af773d4db643c4b272d982",
+      "path": "experiments/assurance_r2b/fixtures/r2a-red-talibon.json",
+      "blob": "41bbbfbde1418c492c02398c8df2436e470e2aa5",
+      "mode": "100644",
+      "size": 5501
+    },
+    {
+      "donor": "PR20",
+      "commit": "fbc228ede2da3b4963af773d4db643c4b272d982",
+      "path": "experiments/assurance_r2b/policies/cafe.json",
+      "blob": "53bc67ccf53ac6b938f1bb2f097f7529a77b308d",
+      "mode": "100644",
+      "size": 881
+    },
+    {
+      "donor": "PR20",
+      "commit": "fbc228ede2da3b4963af773d4db643c4b272d982",
+      "path": "experiments/assurance_r2b/policies/retail.json",
+      "blob": "c624a5972884128239fc36ad651602d0aa6219f2",
+      "mode": "100644",
+      "size": 2307
+    },
+    {
+      "donor": "PR20",
+      "commit": "fbc228ede2da3b4963af773d4db643c4b272d982",
+      "path": "experiments/assurance_r2b/policies/talibon.json",
+      "blob": "1a76b502a0b6dc01fa84b402f0bc92fac6c6d004",
+      "mode": "100644",
+      "size": 998
+    },
+    {
+      "donor": "PR20",
+      "commit": "fbc228ede2da3b4963af773d4db643c4b272d982",
+      "path": "experiments/assurance_r2b/requirements.txt",
+      "blob": "9486e9c8959a7459f34091a41e546e758a43a1be",
+      "mode": "100644",
+      "size": 20
+    },
+    {
+      "donor": "PR20",
+      "commit": "fbc228ede2da3b4963af773d4db643c4b272d982",
+      "path": "experiments/assurance_r2b/tests/test_verifier.py",
+      "blob": "e0ea1430b5b20c438a4a0b14b04de681e9ba9bc8",
+      "mode": "100644",
+      "size": 22283
+    },
+    {
+      "donor": "PR20",
+      "commit": "fbc228ede2da3b4963af773d4db643c4b272d982",
+      "path": "experiments/assurance_r2b/verifier.py",
+      "blob": "9cd3a10eaf326918d5e2d4cf62c9d7dda37c64f6",
+      "mode": "100644",
+      "size": 18630
+    }
+  ]
+}

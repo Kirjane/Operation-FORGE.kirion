@@ -1,0 +1,102 @@
+{
+  "schema_version": "r2a-0.2-test-case",
+  "fixture": {
+    "id": "R2A-GREEN-TALIBON",
+    "pair_id": "TALIBON",
+    "polarity": "positive",
+    "synthetic": true,
+    "not_live_authority": true,
+    "historical_references": [
+      "https://github.com/Project-Intra-Smithy/engineering-hub/issues/188",
+      "https://github.com/Project-Intra-Smithy/ONE-TALIBON-intra.office.system-STABLE-v1-10-18-2026/pull/66"
+    ],
+    "limitations": [
+      "Historical inspiration, synthetic isolated test vectors only; no live evidence independently retrieved or replayed"
+    ]
+  },
+  "untrusted_request": {
+    "schema_version": "r2a-0.2-draft",
+    "mission": {
+      "mission_id": "FORGE-HARNESS-ASSURANCE-CONTRACT-R2A",
+      "repository": "Project-Intra-Smithy/ONE-TALIBON-intra.office.system-STABLE-v1-10-18-2026",
+      "candidate_sha": "0c79eba15a470de0c47522c4353cd4c20d5eecc2",
+      "authority_hint": "https://github.com/Kirjane/Operation-FORGE.kirion/issues/19"
+    },
+    "claim": {
+      "claim_id": "R2A-GREEN-TALIBON-claim",
+      "type": "AUTOMATED_VALIDATION",
+      "statement": "Pint and path allowlist checks passed for this scoped candidate, not source content identity",
+      "target": {
+        "kind": "ci-validation",
+        "environment": "synthetic GitHub Actions path/Pint job",
+        "data_authority": "source",
+        "validation_scope": "path allowlist and Pint only"
+      },
+      "requested_evidence_level": "E4"
+    },
+    "offered_evidence_ids": [
+      "tal-path-only"
+    ]
+  },
+  "simulated_resolver_context": {
+    "synthetic_only": true,
+    "authorization_snapshot": {
+      "authority_ref": "https://github.com/Kirjane/Operation-FORGE.kirion/issues/19",
+      "candidate_sha": "0c79eba15a470de0c47522c4353cd4c20d5eecc2",
+      "repository": "Project-Intra-Smithy/ONE-TALIBON-intra.office.system-STABLE-v1-10-18-2026",
+      "resolver_source": "SYNTHETIC_TEST_HARNESS_NOT_AUTHORIZED_FOR_LIVE"
+    },
+    "pinned_policy": {
+      "path": "policies/talibon.json",
+      "sha256": "c5a42875b2a20b22a155923b904aa95789f94c4d5b7c2df39dd43947646fab09",
+      "policy_id": "R2A-SIM-TALIBON",
+      "policy_mode": "SYNTHETIC_TEST_ONLY_NOT_PROJECT_AUTHORITY"
+    },
+    "evidence_records": [
+      {
+        "evidence_id": "tal-path-only",
+        "evidence_level": "E4",
+        "evidence_type": "STATIC_ANALYSIS",
+        "provenance": "AUTOMATED",
+        "candidate_sha": "0c79eba15a470de0c47522c4353cd4c20d5eecc2",
+        "environment": "synthetic GitHub Actions path/Pint job",
+        "command_or_scenario": "synthetic bounded scenario: tal-path-only",
+        "result": "PASS",
+        "artifact_reference": "fixture://talibon/tal-path-only",
+        "observed_at": "2026-11-24T04:58:00+08:00",
+        "limitations": [
+          "SYNTHETIC fixture; not a live CI, reviewer, runner or product acceptance record"
+        ],
+        "issuer_resolution": {
+          "channel": "SIMULATED_GITHUB_ACTIONS",
+          "issuer_id": "fixture-control",
+          "trust_class": "SIMULATED_RESOLVED_FIXTURE_ONLY"
+        },
+        "observed_target": {
+          "kind": "ci-validation",
+          "environment": "synthetic GitHub Actions path/Pint job",
+          "data_authority": "source",
+          "validation_scope": "path allowlist and Pint only"
+        }
+      }
+    ],
+    "gate_observations": [
+      {
+        "gate_id": "TALIBON_PATH_FORMAT_CI",
+        "observed_status": "PASS",
+        "evidence_ids": [
+          "tal-path-only"
+        ],
+        "resolved_by": "SIMULATED_POLICY_EVIDENCE_RESOLVER"
+      }
+    ]
+  },
+  "expected_oracle": {
+    "verdict": "CLAIM_SUPPORTED",
+    "reason_codes": [
+      "SCOPED_EVIDENCE_MATCH"
+    ],
+    "explanation": "Fixture-level limited E4 path/format checks only.",
+    "live_product_outcome": "NOT_TESTED"
+  }
+}

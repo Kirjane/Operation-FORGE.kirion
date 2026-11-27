@@ -1,0 +1,4 @@
+# R4 Repair 1 — retained before-and-after evidence
+Initial source candidate: 03ae31e98ec72765cf60ca71ffff381507595dec tree 98d9c500c964437aee2498411a4f892aba1dd47a.
+First QA run: https://github.com/Kirjane/Operation-FORGE.kirion/actions/runs/44821827600 (FAIL overall); canonical core/A–E six comparative jobs PASSED; R4 host test 38/39 PASS, disabled-boundary test passed no arguments and raised Python TypeError before runtime enforcement; also ResourceWarning from unclosed SQLite connections. This is a test-harness issue, not evidence of a bypass.
+Repair: correct test invocation, use explicit SQLite close semantics and atomic SQL transaction for model concurrency reservations. No upstream benchmark or factory modification, no plugin activation. Repeat same tests on next exact SHA and preserve raw first-run logs.

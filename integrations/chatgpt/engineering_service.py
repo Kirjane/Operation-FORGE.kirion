@@ -576,6 +576,11 @@ class EngineeringPilotService:
                           or not getattr(self.broker,"require_service_actor",False)
                           or self.dispatch.vault_path is None):
             raise Denied("EXCLUSIVE_CREDENTIAL_OR_MODEL_AUTHORIZATION_REQUIRED")
+        if self.live:
+            # This donor uses legacy mission verification and separate ledgers;
+            # do not reach paid model or repository effects until canonical
+            # operational authority and resource fencing are composed.
+            raise Denied("CANONICAL_OPERATIONAL_FENCE_REQUIRED")
         if not isinstance(task,str) or not 1<=len(task)<=16000 or not re.fullmatch(r"[a-z0-9-]{8,40}",nonce_prefix):
             raise Denied("TASK_OR_NONCE_INVALID")
         if writer_packet["repo_name"]!=reviewer_packet["repo_name"] or writer_packet["repo_name"]!=self.broker.repo:
@@ -633,7 +638,8 @@ class EngineeringPilotService:
                 worker="jane-r5",paths=[x["path"] for x in edits],
                 expected=target_sha,target=candidate_sha,tree=candidate_tree,
                 actor=self.remote.actor,repository=self.remote.repository,
-                head=self.remote.head,pr=self.remote.pr,mutate=self.remote.mutate)
+                head=self.remote.head,pr=self.remote.pr,mutate=self.remote.mutate,
+                candidate_repo=self.target_repo)
             if result["status"] not in ("DONE","IDEMPOTENT"):raise Denied("NO_BROKER_CAS_RECEIPT")
             # Reviewer observes candidate and fixed test evidence, NOT Jane messages.
             reviewer={**reviewer_packet,"base_sha":candidate_sha}

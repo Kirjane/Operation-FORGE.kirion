@@ -31,7 +31,7 @@ class BrokerTests(unittest.TestCase):
         self.pr_state={"head_sha":BASE_SHA,"draft":True,"merged":False}
         self.actor_identity={"login":"Kirion-Jane","id":335897759}
         self.repo_state={"repository_full_name":REPO,"id":1377058358,"permissions":{"pull":True,"push":True}}
-        self.broker=ScopedBroker(Path(self.temp.name)/"broker.db",KEY,REPO,1377058358,BRANCH,enabled=True)
+        self.broker=ScopedBroker(Path(self.temp.name)/"broker.db",KEY,REPO,1377058358,BRANCH,enabled=True,legacy_fixture_mode=True)
         def mutate(expected,target):
             if self.state["sha"]!=expected:raise Denied("ATOMIC_CAS_CONFLICT")
             self.state.update(sha=target,tree=NEW_TREE)
@@ -49,6 +49,18 @@ class BrokerTests(unittest.TestCase):
         self.assertEqual(self.call()["status"],"DONE")
         self.assertEqual(self.call()["status"],"IDEMPOTENT")
         self.assertTrue(self.broker.valid())
+    def test_no_candidate_observation_outside_explicit_fixture(self):
+        self.broker.legacy_fixture_mode=False
+        with self.assertRaisesRegex(Denied,"OBSERVED_CANDIDATE_REQUIRED"):
+            self.call()
+        self.assertEqual(self.state["sha"],BASE_SHA)
+
+    def test_stale_packet_base_denied_before_effect(self):
+        p=dict(self.packet,base_sha="f"*40)
+        with self.assertRaisesRegex(Denied,"PACKET_BASE_DRIFT"):
+            self.call(packet=p)
+        self.assertEqual(self.state["sha"],BASE_SHA)
+
     def test_off_role_denial(self):
         p=make_valid_packet("R4-NOX","Antigravity-Nox","Reviewer")
         with self.assertRaises(Exception):self.call(packet=p)

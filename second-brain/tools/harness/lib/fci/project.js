@@ -62,13 +62,18 @@ function inspectSource(project,source){
      tracked.stdout!==source.path) return {
     status:'BLOCKED',code:'SOURCE_NOT_TRACKED',id:source.id,path:source.path
   };
-  const size=runGit(project.root,['cat-file','-s','HEAD:'+source.path]);
+  // Resolve the immutable commit's tree, not mutable HEAD or an index mode.
+  const tree=runGit(project.root,['--no-replace-objects','ls-tree',project.head,'--',source.path]);
+  const match=tree.ok&&/^(100644|100755) blob ([a-f0-9]{40})\t(.+)$/.exec(tree.stdout);
+  if(!match||match[3]!==source.path) return {status:'BLOCKED',code:'SOURCE_NOT_IN_HEAD',id:source.id,path:source.path};
+  const blob=match[2];
+  const size=runGit(project.root,['--no-replace-objects','cat-file','-s',blob]);
   if(!size.ok) return {status:'BLOCKED',code:'SOURCE_NOT_IN_HEAD',id:source.id,path:source.path};
   const bytes=Number(size.stdout);
   if(!Number.isSafeInteger(bytes)||bytes<0||bytes>MAX_SOURCE_BYTES) return {
     status:'BLOCKED',code:'SOURCE_SIZE_LIMIT',id:source.id,path:source.path,size:bytes
   };
-  const result=spawnSync('git',['-C',project.root,'show','HEAD:'+source.path],{
+  const result=spawnSync('git',['-C',project.root,'--no-replace-objects','cat-file','blob',blob],{
     windowsHide:true,encoding:null,maxBuffer:MAX_SOURCE_BYTES+8192
   });
   if(result.status!==0||result.error||!Buffer.isBuffer(result.stdout)||

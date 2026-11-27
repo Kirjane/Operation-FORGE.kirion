@@ -54,6 +54,7 @@ function checkpointValid(checkpoint){
 }
 function continuityFailure(previous,next){
   if(!previous||previous.context_manifest.status!=='RESOLVED'||next.context_manifest.status!=='RESOLVED') return null;
+  if(canonicalJson(previous.context_manifest.feature_context||null)!==canonicalJson(next.context_manifest.feature_context||null)) return 'Feature context provenance changed during lifecycle compilation.';
   const documents=new Map(next.context_manifest.documents.map(d=>[d.path,d]));
   for(const doc of previous.context_manifest.documents){
     if(doc.source!=='REQUIRED_SEED'&&doc.source!=='NOTION_SNAPSHOT') continue;
@@ -134,6 +135,8 @@ function preflightSession(session,taskInput,options={}){
   if(session.version!==SESSION_VERSION) return {ok:false,result:{verdict:'BLOCK',status:'MIGRATION_REQUIRED',reason:'Historical v1 session is readable but cannot acquire v2 stage authority; create a new session.',session}};
   const stage=session.current_stage||'BOOTSTRAP';
   const run=buildTask(taskInput,{...options,stage}),ids=computeRun(run),fresh=assertFresh(session,run,ids);
+  if(run.task.feature_context && run.context.feature_context?.evidence_ready!==true)
+    return {ok:false,result:{verdict:'BLOCK',status:'FCI_CONTEXT_UNVERIFIED',reason:run.context.feature_context?.code||'FCI_CONTEXT_NOT_VERIFIED',session}};
   if(!fresh.fresh) return {ok:false,result:{verdict:'BLOCK',status:'STALE',reason:`Harness/task/context fingerprint changed: ${fresh.changed.join(', ')}. Create a new session.`,changed:fresh.changed,session}};
   return {ok:true,run,ids};
 }

@@ -37,6 +37,14 @@ function validateRiskOverrides(value) {
 function validateSignals(value) {
   return validateControlRecord(value, 'signals', v => typeof v === 'boolean');
 }
+function normalizeFeaturePin(pin) {
+  if (!pin || typeof pin!=='object' || Array.isArray(pin) ||
+      Object.keys(pin).sort().join(',')!=='feature_id,manifest_sha256' ||
+      typeof pin.feature_id!=='string' || !/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/.test(pin.feature_id) ||
+      typeof pin.manifest_sha256!=='string' || !/^[a-f0-9]{64}$/.test(pin.manifest_sha256))
+    throw new Error('Invalid feature_context pin.');
+  return {feature_id:pin.feature_id,manifest_sha256:pin.manifest_sha256};
+}
 function normalizeTask(task) {
   if (!task || task.version !== 1 || typeof task.id !== 'string' || !task.id.trim() || typeof task.intent !== 'string' || !task.intent.trim()) {
     throw new Error('Task must contain version=1, non-empty id, and non-empty intent.');
@@ -50,7 +58,7 @@ function normalizeTask(task) {
     if (ids.has(j.id)) throw new Error(`Duplicate primary journey id: ${j.id}`);
     ids.add(j.id);
   }
-  return {version:1,id:task.id.trim(),intent:task.intent.trim(),...(task.type?{type:String(task.type).trim()}:{}),constraints:Array.isArray(task.constraints)?task.constraints.map(String):[],signals:validateSignals(task.signals),risk_overrides:validateRiskOverrides(task.risk_overrides),primary_journeys:journeys,repository:task.repository||{},acceptance:Array.isArray(task.acceptance)?task.acceptance.map(String):[]};
+  return {version:1,id:task.id.trim(),intent:task.intent.trim(),...(task.type?{type:String(task.type).trim()}:{}),constraints:Array.isArray(task.constraints)?task.constraints.map(String):[],signals:validateSignals(task.signals),risk_overrides:validateRiskOverrides(task.risk_overrides),primary_journeys:journeys,...(Object.hasOwn(task,'feature_context')?{feature_context:normalizeFeaturePin(task.feature_context)}:{}),repository:task.repository||{},acceptance:Array.isArray(task.acceptance)?task.acceptance.map(String):[]};
 }
 function loadConfig(root = repoRoot()) {
   const h = path.join(root, 'harness');

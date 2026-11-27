@@ -20,14 +20,15 @@ const {buildBootstrapToolResponse}=require('../lib/mcp-bootstrap.js');
 const store=new SessionStore();
 
 const journeySchema=z.object({id:z.string().regex(/^[a-z0-9][a-z0-9._-]*$/),description:z.string().min(1),method:z.string().optional(),path:z.string().optional()});
+const featurePinSchema=z.strictObject({feature_id:z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/),manifest_sha256:z.string().regex(/^[a-f0-9]{64}$/)});
 const taskSchema=z.object({
   version:z.literal(1),id:z.string().min(1),intent:z.string().min(1),type:z.string().optional(),
   constraints:z.array(z.string()).optional(),signals:z.record(z.string(),z.boolean()).optional(),risk_overrides:z.record(z.string(),z.number().int().min(0).max(4)).optional(),
-  primary_journeys:z.array(journeySchema).optional(),repository:z.object({path:z.string().optional(),branch:z.string().optional(),sha:z.string().optional()}).optional(),acceptance:z.array(z.string()).optional()
+  primary_journeys:z.array(journeySchema).optional(),feature_context:featurePinSchema.optional(),repository:z.object({path:z.string().optional(),branch:z.string().optional(),sha:z.string().optional()}).optional(),acceptance:z.array(z.string()).optional()
 });
 const claimSchema=z.object({status:z.enum(['PASS','FAIL','UNKNOWN']),levels:z.array(z.enum(['INTENDED','IMPLEMENTED','TESTED','OBSERVED','DURABLE','DEPLOYED','VERIFIED'])),detail:z.string().optional(),source:z.string().optional(),sha:z.string().optional(),observed_at:z.string().optional()});
 const evidenceSchema=z.object({version:z.literal(1),claims:z.record(z.string(),claimSchema)});
-const intakeSchema=z.object({intent:z.string().min(1),id:z.string().optional(),type:z.string().optional(),constraints:z.array(z.string()).optional(),signals:z.record(z.string(),z.boolean()).optional(),risk_overrides:z.record(z.string(),z.number().int().min(0).max(4)).optional(),primary_journeys:z.array(journeySchema).optional(),repository:z.object({path:z.string().optional(),branch:z.string().optional(),sha:z.string().optional()}).optional(),acceptance:z.array(z.string()).optional()});
+const intakeSchema=z.object({intent:z.string().min(1),id:z.string().optional(),type:z.string().optional(),constraints:z.array(z.string()).optional(),signals:z.record(z.string(),z.boolean()).optional(),risk_overrides:z.record(z.string(),z.number().int().min(0).max(4)).optional(),primary_journeys:z.array(journeySchema).optional(),feature_context:featurePinSchema.optional(),repository:z.object({path:z.string().optional(),branch:z.string().optional(),sha:z.string().optional()}).optional(),acceptance:z.array(z.string()).optional()});
 const stageSchema=z.enum(['BOOTSTRAP','PRE_DESIGN','PRE_IMPLEMENTATION','PRE_DELIVERY','POST_DEPLOY','POST_VERIFY']);
 
 function output(data,summary){return {content:[{type:'text',text:summary||JSON.stringify(data)}],structuredContent:data};}

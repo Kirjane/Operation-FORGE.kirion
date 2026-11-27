@@ -10,6 +10,7 @@ const {probeGitRepository,runtimeFingerprint}=require('./git');
 const {intakeTask}=require('./intake');
 const {createLearningCandidate}=require('./learning');
 const {compileSemanticContext,semanticProviderDoctor}=require('./semantic-provider');
+const {resolveFeatureContext,validateFeature}=require('./fci/resolve');
 
 function configFingerprint(cfg){
   return sha256(canonicalJson({manifest:cfg.manifest,lanes:cfg.lanes,taskTypes:cfg.taskTypes,risk:cfg.risk,routing:cfg.routing,gates:cfg.gates,evidence:cfg.evidence,semanticProvider:cfg.semanticProvider,routePack:cfg.routePack}));
@@ -26,6 +27,38 @@ function resolveTargetRepository(task,taskBaseDir){
 function semanticOptions(cfg,options={}){
   return {provider:options.semanticProvider||process.env.PSB_SEMANTIC_PROVIDER||cfg.semanticProvider.default_provider,snapshotPath:options.semanticSnapshot||process.env.PSB_NOTION_SNAPSHOT,controlPlane:cfg.semanticProvider,routePack:cfg.routePack};
 }
+// A task carries only a content-addressed reference. Host-side lookup and
+// attesters are composition dependencies, never request-supplied callbacks.
+function compileFeatureContext(task,target,options){
+  if(!task.feature_context) return null;
+  const pin=task.feature_context;
+  const blocked=code=>({status:'BLOCKED',code,feature_id:pin.feature_id,
+    manifest_sha256:pin.manifest_sha256,authority_granted:false,evidence_ready:false});
+  const host=options.featureContextHost;
+  if(!host || typeof host.loadManifest!=='function') return blocked('FCI_HOST_UNAVAILABLE');
+  try {
+    const raw=host.loadManifest(pin.feature_id,pin.manifest_sha256);
+    if(validateFeature(raw)) return blocked('FCI_MANIFEST_INVALID');
+    const feature=JSON.parse(JSON.stringify(raw));
+    if(feature.feature_id!==pin.feature_id || sha256(canonicalJson(feature))!==pin.manifest_sha256)
+      return blocked('FCI_MANIFEST_MISMATCH');
+    if(target.status!=='RESOLVED' || target.clean!==true ||
+       target.top_level!==path.resolve(feature.repository.path) ||
+       target.head!==feature.repository.head ||
+       (feature.repository.branch && target.branch!==feature.repository.branch))
+      return blocked('FCI_TARGET_MISMATCH');
+    if(!Array.isArray(host.allowed_roots) ||
+       !host.allowed_roots.some(root=>typeof root==='string' &&
+         fs.realpathSync(path.resolve(root))===fs.realpathSync(target.top_level)))
+      return blocked('FCI_TARGET_NOT_ALLOWLISTED');
+    const resolved=resolveFeatureContext(feature,{allowed_roots:[target.top_level],verifiers:host.verifiers});
+    if(resolved.status!=='RESOLVED'||resolved.action_gate?.evidence_ready!==true)
+      return blocked(resolved.code||resolved.action_gate?.code||'FCI_CONTEXT_UNVERIFIED');
+    return {status:'EVIDENCE_READY',feature_id:pin.feature_id,manifest_sha256:pin.manifest_sha256,
+      authority_granted:false,evidence_ready:true,repository:resolved.repository,
+      contract:resolved.contract,sources:resolved.sources,claims:resolved.claims};
+  } catch {return blocked('FCI_HOST_RESOLUTION_FAILED');}
+}
 function buildTask(taskInput,options={}){
   const root=options.root||repoRoot(),cfg=loadConfig(root),task=normalizeTask(taskInput),classification=classifyTask(task,cfg.taskTypes),signals=inferSignals(task);
   const harness_git=probeGitRepository(root),target_repository=resolveTargetRepository(task,options.taskBaseDir),runtime_fingerprint=runtimeFingerprint(root),config_sha256=configFingerprint(cfg);
@@ -38,7 +71,10 @@ function buildTask(taskInput,options={}){
   const risk=scoreRisk(task,classification.type,signals,cfg.risk);
   const stage=options.stage||'PRE_DESIGN';
   const route=routeTask(classification.type,signals,risk.mode,cfg.routing,cfg.lanes,cfg.manifest.control_roots,{stage});
-  const context=compileSemanticContext(root,route,cfg.manifest,semanticOptions(cfg,options));
+  let context=compileSemanticContext(root,route,cfg.manifest,semanticOptions(cfg,options));
+  const feature=compileFeatureContext(task,target_repository,options);
+  if(feature) context=feature.evidence_ready===true?{...context,feature_context:feature}:
+    {...context,status:'BLOCKED',reason:feature.code,documents:[],feature_context:feature};
   const gateCtx={task,type:classification.type,classification,signals,risk,route,context,harness_git,target_repository};
   const gates=evaluateGates(cfg.gates,gateCtx,{version:1,claims:{}},{throughStage:'PRE_DESIGN'});
   return {cfg,task,classification,signals,risk,route,context,gates,gateCtx,harness_git,target_repository,runtime_fingerprint,config_sha256};

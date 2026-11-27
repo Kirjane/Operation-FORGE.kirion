@@ -455,3 +455,43 @@ test('no required claims cannot silently produce an authorized action',()=>{
 });
 
 console.log('\n'+count+' FCI-M02 provenance tests passed.');
+
+test('source reads remain bound to the original commit rather than mutable HEAD',()=>{
+  const f=makeFixture();
+  try{
+    const project=inspectProject(f.feature.repository),source=f.feature.sources.find(x=>x.id==='code');
+    fs.appendFileSync(path.join(f.root,source.path),'// successor\n');
+    git(f.root,['add','.']);git(f.root,['commit','-qm','successor']);
+    assert.strictEqual(inspectSource(project,source).status,'VERIFIED');
+    assert.strictEqual(inspectProject(f.feature.repository).status,'STALE');
+  } finally {fs.rmSync(f.root,{recursive:true,force:true});}
+});
+
+test('declared feature context is a live lifecycle gate, not a caller evidence claim',()=>{
+  const f=makeFixture();
+  try{
+    const {canonicalJson}=require('../lib/io');
+    const {buildTask}=require('../lib/runtime');
+    const {createSession,advanceSession}=require('../lib/lifecycle');
+    const task={version:1,id:'feature-context-lifecycle',intent:'Fix a rendering bug',type:'BUG_FIX',
+      repository:{path:f.root},feature_context:{feature_id:f.feature.feature_id,manifest_sha256:sha256(canonicalJson(f.feature))}};
+    const host={allowed_roots:[f.root],loadManifest:()=>f.feature,verifiers:{authority:authorityFor(f)}};
+    const options={semanticProvider:'GIT',featureContextHost:host};
+    const missing=buildTask(task,{semanticProvider:'GIT'});
+    assert.strictEqual(missing.gates.verdict,'BLOCK');
+    assert.strictEqual(missing.context.feature_context.code,'FCI_HOST_UNAVAILABLE');
+    const bound=buildTask(task,options);
+    assert.strictEqual(bound.context.feature_context.evidence_ready,true);
+    assert.strictEqual(bound.context.feature_context.authority_granted,false);
+    assert.strictEqual(bound.gates.results.find(x=>x.id==='FEATURE_CONTEXT_PROVENANCE').status,'PASS');
+    const session=createSession(task,{version:1,claims:{}},options);
+    assert.strictEqual(session.status,'ACTIVE');
+    host.verifiers={authority:()=>null};
+    const next=advanceSession(session,task,{version:1,claims:{}},'PRE_DESIGN',options);
+    assert.strictEqual(next.verdict,'BLOCK');
+    assert.strictEqual(next.status,'FCI_CONTEXT_UNVERIFIED');
+    host.verifiers={authority:authorityFor(f)};
+    f.feature.claims[0].value='changed';
+    assert.strictEqual(buildTask(task,options).context.feature_context.code,'FCI_MANIFEST_MISMATCH');
+  } finally {fs.rmSync(f.root,{recursive:true,force:true});}
+});

@@ -78,6 +78,17 @@ function evaluateGates(gatesCfg,ctx,evidence={version:1,claims:{}},options={}){
     const r=checkRequirement(gate.requirement,ctx,claims);
     results.push({id:gate.id,stage:gate.stage,severity:gate.severity,description:gate.description,status:r.pass?'PASS':'FAIL',reason:r.reason||''});
   }
+  // Declared feature provenance is a non-configurable cognition gate. A
+  // reported evidence claim cannot satisfy it or grant Forge authority.
+  if(ctx.task.feature_context){
+    const feature=ctx.context?.feature_context;
+    const pass=feature?.evidence_ready===true && feature.status==='EVIDENCE_READY' &&
+      feature.authority_granted===false && feature.feature_id===ctx.task.feature_context.feature_id &&
+      feature.manifest_sha256===ctx.task.feature_context.manifest_sha256;
+    results.push({id:'FEATURE_CONTEXT_PROVENANCE',stage:'BOOTSTRAP',severity:'BLOCK',
+      description:'Resolve exact feature provenance at the target revision.',
+      status:pass?'PASS':'FAIL',reason:pass?'':feature?.code||'FCI_CONTEXT_NOT_VERIFIED'});
+  }
   const blocking=results.filter(x=>x.severity==='BLOCK'&&x.status==='FAIL');
   return {verdict:blocking.length?'BLOCK':'PASS',through_stage:throughStage||'ALL',blocking_failures:blocking.length,results};
 }

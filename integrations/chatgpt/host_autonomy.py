@@ -160,7 +160,13 @@ class IsolatedOrchestrator:
             db.execute("BEGIN IMMEDIATE")
             old=db.execute("SELECT 1 FROM contexts WHERE nonce=?",(nonce,)).fetchone()
             if old:raise Denied("CONTEXT_NONCE_REPLAY")
-            active=db.execute("SELECT COUNT(*) FROM contexts WHERE state='IN_FLIGHT'").fetchone()[0]
+            # This historical pilot has no canonical cross-host effect index.
+            # Conservatively fence the entire repository within this ledger
+            # until a possibly invoked context is reconciled; a fresh nonce
+            # or mission name is not evidence of quiescence.
+            unresolved=db.execute("SELECT 1 FROM contexts WHERE repo_id=? AND state IN ('UNKNOWN','IN_FLIGHT') LIMIT 1",(repo_id,)).fetchone()
+            if unresolved:raise Denied("REPOSITORY_CONTEXT_RECONCILIATION_REQUIRED")
+            active=db.execute("SELECT COUNT(*) FROM contexts WHERE state IN ('IN_FLIGHT','UNKNOWN')").fetchone()[0]
             if active>=2:raise Denied("MAX_THREE_INCLUDING_PRIMARY")
             db.execute("""INSERT INTO contexts(nonce,request_hash,mission,persona,repo_id,sha,state)
                           VALUES(?,?,?,?,?,?,'IN_FLIGHT')""",(nonce,h,packet["mission_id"],persona,repo_id,sha))

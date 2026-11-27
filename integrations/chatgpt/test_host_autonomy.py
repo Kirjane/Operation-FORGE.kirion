@@ -231,6 +231,18 @@ class LauncherTests(unittest.TestCase):
         self.host.transport=lost
         with self.assertRaises(TimeoutError):self.launch()
         with self.assertRaisesRegex(Denied,"CONTEXT_NONCE_REPLAY"):self.launch()
+    def test_uncertain_context_blocks_new_nonce_and_mission(self):
+        calls=[]
+        def lost(req):
+            calls.append(req)
+            raise TimeoutError("unknown provider invocation")
+        self.host.transport=lost
+        with self.assertRaises(TimeoutError):self.launch()
+        for packet in (self.packet, make_valid_packet("R4-RENAMED-MISSION")):
+            with self.assertRaisesRegex(Denied,"REPOSITORY_CONTEXT_RECONCILIATION_REQUIRED"):
+                self.launch(packet=packet,nonce="launch-nonce-000002")
+        self.assertEqual(len(calls),1)
+
     def test_untrusted_result_cannot_override_signed_sha(self):
         self.tamper["sha"]=NEW_SHA
         with self.assertRaisesRegex(Denied,"ATTESTED_SCOPE_MISMATCH"):self.launch()

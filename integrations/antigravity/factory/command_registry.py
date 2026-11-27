@@ -7,7 +7,7 @@ Natural language discovery remains a Maintainer interaction, not an executable c
 from dataclasses import dataclass
 from types import MappingProxyType
 
-from .authority import ALLOWED_TRANSITIONS, CANONICAL_STATES, VALID_FORMAL_ROLES
+from .authority import ALLOWED_TRANSITIONS, CANONICAL_STATES, VALID_FORMAL_ROLES, validate_lifecycle_transition
 
 
 @dataclass(frozen=True)
@@ -20,7 +20,7 @@ class Command:
     entrypoint: str
 
 
-ROLES = frozenset(VALID_FORMAL_ROLES) | {"Engineer"}
+ROLES = frozenset(VALID_FORMAL_ROLES) | {"Engineer", "Acceptance Agent"}
 STAGES = frozenset(CANONICAL_STATES)
 COMMANDS = MappingProxyType({
     "forge": Command(("/forge",), frozenset({"Maintainer", "Engineer"}), STAGES,
@@ -34,16 +34,16 @@ COMMANDS = MappingProxyType({
     "plan": Command(("/forge.plan",), frozenset({"Maintainer"}), frozenset({"PLANNED"}),
                     "READ", None, "protocols/reconnaissance.md"),
     "assign": Command(("/forge.assign",), frozenset({"Maintainer"}), frozenset({"PLANNED"}),
-                      "LOCAL_ARTIFACT", "AUTHORIZED", "factory:supervised-handoff"),
+                      "LOCAL_ARTIFACT", None, "factory:supervised-handoff"),
     "write": Command(("/forge.write",), frozenset({"Code Writer", "Integration Writer"}), frozenset({"AUTHORIZED"}),
                      "SOURCE_WRITE", "ACTIVE", "protocols/writer-execution.md"),
     "review": Command(("/forge.review",), frozenset({"Reviewer"}), frozenset({"READY"}),
-                      "READ", "UNDER_REVIEW", "factory:inspect-candidate"),
+                      "READ", None, "factory:inspect-candidate"),
     "repair": Command(("/forge.repair",), frozenset({"Code Writer", "Integration Writer"}), frozenset({"REWORK"}),
                       "SOURCE_WRITE", "ACTIVE", "self_healing_repair"),
     "verify": Command(("/forge.verify",), ROLES, frozenset({"READY", "UNDER_REVIEW"}),
                       "PROCESS_TEST", None, "factory:test"),
-    "accept": Command(("/forge.accept",), frozenset({"Engineer", "Maintainer"}), frozenset({"UNDER_REVIEW"}),
+    "accept": Command(("/forge.accept",), frozenset({"Engineer", "Acceptance Agent"}), frozenset({"UNDER_REVIEW"}),
                       "LOCAL_ARTIFACT", "ACCEPTED", "roles/acceptance.md"),
     "deliver": Command(("/forge.deliver",), frozenset({"Maintainer"}), frozenset({"ACCEPTED", "INTEGRATED"}),
                        "REMOTE_EFFECT", None, "protocols/promotion.md"),
@@ -55,6 +55,12 @@ def _aliases(commands):
     for name, item in commands.items():
         if item.next_stage is not None and any(item.next_stage not in ALLOWED_TRANSITIONS[stage] for stage in item.stages):
             raise ValueError("ILLEGAL_CANONICAL_TRANSITION")
+        if item.next_stage is not None:
+            if item.effect in {"READ", "NETWORK_READ"}:
+                raise ValueError("READ_COMMAND_CANNOT_PROPOSE_MUTATION")
+            for role in item.roles:
+                for stage in item.stages:
+                    validate_lifecycle_transition(stage, item.next_stage, actor_role=role, is_author=False)
         for alias in item.aliases:
             if alias in aliases:
                 raise ValueError("DUPLICATE_COMMAND_ALIAS")

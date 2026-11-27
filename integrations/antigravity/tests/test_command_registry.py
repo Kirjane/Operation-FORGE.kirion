@@ -1,6 +1,6 @@
 import unittest
 
-from integrations.antigravity.factory.authority import ALLOWED_TRANSITIONS
+from integrations.antigravity.factory.authority import ALLOWED_TRANSITIONS, AuthorityError, validate_lifecycle_transition
 from integrations.antigravity.factory.command_registry import (
     ALIASES, COMMANDS, ROLES, STAGES, _aliases, describe_commands, propose_command,
 )
@@ -47,6 +47,28 @@ class CommandRegistryTests(unittest.TestCase):
                          "PROCESS_TEST")
         self.assertEqual(propose_command("/forge.deliver", observed_role="Maintainer", observed_stage="ACCEPTED")["effect"],
                          "REMOTE_EFFECT")
+
+    def test_independent_authority_and_readonly_transition_expectations(self):
+        for role in ("Engineer", "Acceptance Agent"):
+            result = propose_command("/forge.accept", observed_role=role, observed_stage="UNDER_REVIEW")
+            self.assertEqual((result["status"], result["effect"], result["next_stage"]),
+                             ("PROPOSED", "LOCAL_ARTIFACT", "ACCEPTED"))
+            self.assertEqual(validate_lifecycle_transition("UNDER_REVIEW", "ACCEPTED",
+                             actor_role=role, is_author=False), "ACCEPTED")
+            with self.assertRaises(AuthorityError):
+                validate_lifecycle_transition("UNDER_REVIEW", "ACCEPTED",
+                                              actor_role=role, is_author=True)
+        for role in ("Maintainer", "Reviewer", "Code Writer", "Integration Writer"):
+            self.assertEqual(propose_command("/forge.accept", observed_role=role,
+                                            observed_stage="UNDER_REVIEW")["status"], "BLOCKED")
+            with self.assertRaises(AuthorityError):
+                validate_lifecycle_transition("UNDER_REVIEW", "ACCEPTED", actor_role=role)
+        for alias, role, stage in (("/forge.review", "Reviewer", "READY"),
+                                   ("/forge.assign", "Maintainer", "PLANNED")):
+            result = propose_command(alias, observed_role=role, observed_stage=stage)
+            self.assertEqual(result["status"], "PROPOSED")
+            self.assertEqual(result["next_stage"], stage)
+            self.assertFalse(result["authority_granted"])
 
     def test_duplicate_alias_rejected(self):
         with self.assertRaisesRegex(ValueError, "DUPLICATE_COMMAND_ALIAS"):

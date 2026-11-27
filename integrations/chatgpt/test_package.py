@@ -1,9 +1,13 @@
 """Package source-selection regression; no installation or provider invocation."""
+import hashlib
+import json
+import tempfile
+from pathlib import Path
 import subprocess
 import unittest
 
 from integrations.chatgpt.package import (
-    SOURCE, TREE, VERSION, CONVERGED_BASE, CONVERGED_VERSION, select_package_source,
+    SOURCE, TREE, VERSION, CONVERGED_BASE, CONVERGED_VERSION, select_package_source, release_inputs, RELEASE_MANIFESTS,
 )
 
 
@@ -54,6 +58,32 @@ class PackageSourceTests(unittest.TestCase):
         self.ancestors.remove(CONVERGED_BASE)
         with self.assertRaises(subprocess.CalledProcessError):
             select_package_source(self.git, self.candidate, self.tree)
+
+    def test_converged_external_manifest_bytes_and_builder_pinned(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            builder=b"approved builder"
+            digest=lambda raw:hashlib.sha256(raw).hexdigest()
+            original=b'{"name":"kirion-forge-chatgpt","version":"baseline"}'
+            for name in RELEASE_MANIFESTS:
+                f=root/name
+                f.parent.mkdir(exist_ok=True)
+                f.write_bytes(original)
+            inventory=root/"approved.json"
+            inventory.write_text(json.dumps({"schema":"forge.release-inputs.v1","candidate":self.candidate,
+                "tree":self.tree,"builder_sha256":digest(builder),
+                "manifests":{name:digest(original) for name in RELEASE_MANIFESTS}}))
+            pin=digest(inventory.read_bytes())
+            data,custody=release_inputs(root,inventory,pin,self.candidate,self.tree,builder)
+            self.assertEqual(data["plugin.json"],original)
+            self.assertEqual(custody["inventory_sha256"],pin)
+            with self.assertRaisesRegex(SystemExit,"identity mismatch"):
+                release_inputs(root,inventory,pin,self.candidate,self.tree,b"other builder")
+            (root/"plugin.json").write_bytes(original+b" ")
+            with self.assertRaisesRegex(SystemExit,"manifest digest mismatch"):
+                release_inputs(root,inventory,pin,self.candidate,self.tree,builder)
+            with self.assertRaisesRegex(SystemExit,"inventory digest mismatch"):
+                release_inputs(root,inventory,"f"*64,self.candidate,self.tree,builder)
 
     def test_dirty_moved_or_symbolic_source_rejected(self):
         with self.assertRaises(SystemExit):

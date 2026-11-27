@@ -123,6 +123,14 @@ class FixtureAssuranceResolver:
                 plan["target"]["branch"] == packet["permitted_branch"], "PLAN_TARGET_MISMATCH")
         require(is_valid_git_sha(plan["candidate_sha"]) and is_valid_git_sha(plan["tree_sha"]),
                 "PLAN_SOURCE_UNANCHORED")
+        adapter=binding.get("adapter_binding", {})
+        if adapter.get("kind") == "LOCAL_GIT_CAS":
+            result=json.loads(attempt["result_json"])
+            require(plan["candidate_sha"] == adapter.get("candidate") and
+                    plan["tree_sha"] == adapter.get("tree"), "LOCAL_EFFECT_CANDIDATE_MISMATCH")
+            require(result.get("receipt", {}).get("binding") == adapter and
+                    result.get("receipt", {}).get("reservation_id") == attempt["reservation_id"],
+                    "LOCAL_EFFECT_RESULT_MISMATCH")
         require(plan["author_actor_id"] == attempt["actor_id"], "AUTHOR_GRANT_MISMATCH")
         require(type(plan["oracles"]) is dict, "ORACLE_PLAN_UNAVAILABLE")
         now = dt.datetime.now(dt.timezone.utc)

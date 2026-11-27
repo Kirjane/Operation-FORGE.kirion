@@ -13,12 +13,19 @@ BRAIN = ROOT / "second-brain"
 SHARED = ("SYSTEM_BOUNDARY.md", "EVIDENCE_CROSSWALK.md")
 
 
-def run(label: str, cmd: list[str], cwd: Path) -> bool:
+def run(label: str, cmd: list[str], cwd: Path, cases: list[str]) -> bool:
     print(f"\n=== {label} ===")
-    p = subprocess.run(cmd, cwd=cwd)
+    p = subprocess.run(cmd, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    print(p.stdout,end="")
     if p.returncode != 0:
         print(f"ENTITY FAIL: {label} exited {p.returncode}")
         return False
+    cases.append(label)
+    if label in {"Second Brain harness", "Second Brain feature context provenance", "Second Brain Notion adversarial provider"}:
+        rows=[line[5:] for line in p.stdout.splitlines() if line.startswith("PASS ")]
+        if not rows or len(set(rows))!=len(rows):
+            return False
+        cases.extend(label+": "+row for row in rows)
     return True
 
 
@@ -88,8 +95,10 @@ def main() -> int:
         ("Second Brain MCP adapter syntax", ["node", "--check", "tools/harness/mcp/server.mjs"], BRAIN),
     ]
     ok = shared_contracts()
+    cases = ["Shared contracts"] if ok else []
     for label, cmd, cwd in checks:
-        ok = run(label, cmd, cwd) and ok
+        ok = run(label, cmd, cwd, cases) and ok
+    print("FORGE_ENTITY_RESULTS "+json.dumps(cases))
     print("\nENTITY VALIDATION: " + ("PASS" if ok else "FAIL"))
     return 0 if ok else 1
 

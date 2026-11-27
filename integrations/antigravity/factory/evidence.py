@@ -8,6 +8,8 @@ import re
 import subprocess
 import platform
 import tempfile
+import stat
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -84,6 +86,41 @@ def translate_harness_capabilities_to_forge(
     }
 
 
+@contextmanager
+def _publication_lock(bucket, digest):
+    """Serialize cooperating publishers on a stable lock inode; never unlink it."""
+    if os.name != "posix":
+        yield False
+        return
+    import fcntl
+    fd = os.open(bucket / (digest + ".lock"), os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
+    try:
+        info = os.fstat(fd)
+        if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1 or info.st_uid != os.getuid():
+            raise AuthorityError("ARTIFACT_LOCK_UNSAFE")
+        fcntl.flock(fd, fcntl.LOCK_EX)
+        yield True
+    finally:
+        os.close(fd)
+
+
+def _recover_stage(staging, final, raw):
+    if not os.path.lexists(staging):
+        return
+    info = staging.lstat()
+    if not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid():
+        raise AuthorityError("ARTIFACT_STAGE_UNSAFE")
+    if os.path.lexists(final):
+        dest = final.lstat()
+        if (not stat.S_ISREG(dest.st_mode) or
+                (dest.st_dev, dest.st_ino) != (info.st_dev, info.st_ino) or
+                info.st_nlink != 2 or staging.read_bytes() != raw):
+            raise AuthorityError("ARTIFACT_STAGE_CONFLICT")
+    elif info.st_nlink != 1:
+        raise AuthorityError("ARTIFACT_STAGE_CONFLICT")
+    staging.unlink()
+
+
 class TrustedEvidenceRunner:
     """Executes validation commands in a sanitized environment and emits hash-addressed EvidenceEnvelopes."""
 
@@ -111,41 +148,41 @@ class TrustedEvidenceRunner:
         if bucket.is_symlink() or bucket.resolve(strict=True) != bucket:
             raise AuthorityError("ARTIFACT_BUCKET_UNSAFE")
         blob_path = bucket / f"{digest}.log"
-        # Publish a complete, flushed object, never a partially written final
-        # name. Same-directory staging + link provides no-clobber publication.
-        # A failed or unsupported link is not silently replaced by an unsafe
-        # overwrite. A crash between link and unlink leaves a multiply linked
-        # object which the existing readback guard deliberately rejects.
-        if not os.path.lexists(blob_path):
-            fd, staging_name = tempfile.mkstemp(prefix=".artifact-", suffix=".pending", dir=bucket)
-            staging = Path(staging_name)
-            try:
-                with os.fdopen(fd, "wb") as stream:
-                    stream.write(raw_bytes)
-                    stream.flush()
-                    os.fsync(stream.fileno())
+        with _publication_lock(bucket, digest) as locked:
+            staging = bucket / (".artifact-" + digest + ".pending")
+            if locked:
+                _recover_stage(staging, blob_path, raw_bytes)
+            if not os.path.lexists(blob_path):
+                if locked:
+                    fd = os.open(staging, os.O_CREAT | os.O_EXCL | os.O_WRONLY | os.O_NOFOLLOW, 0o600)
+                else:
+                    fd, staging_name = tempfile.mkstemp(prefix=".artifact-", suffix=".pending", dir=bucket)
+                    staging = Path(staging_name)
                 try:
-                    os.link(staging, blob_path)
-                except FileExistsError:
-                    pass
-            finally:
-                staging.unlink()
-        if os.name == "posix":
-            # Persist directory entries on filesystems that implement fsync.
-            # Failure propagates rather than claiming durable custody.
-            for directory in (bucket, self.artifact_store_root):
-                directory_fd = os.open(directory, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
-                try:
-                    os.fsync(directory_fd)
+                    with os.fdopen(fd, "wb") as stream:
+                        stream.write(raw_bytes)
+                        stream.flush()
+                        os.fsync(stream.fileno())
+                    try:
+                        os.link(staging, blob_path)
+                    except FileExistsError:
+                        pass
                 finally:
-                    os.close(directory_fd)
-        if (blob_path.is_symlink() or blob_path.resolve(strict=True) != blob_path or
-                not blob_path.is_file() or blob_path.stat().st_nlink != 1):
-            raise AuthorityError("ARTIFACT_PATH_UNSAFE")
-        with blob_path.open("rb") as stream:
-            stored = stream.read(len(raw_bytes) + 1)
-        if stored != raw_bytes:
-            raise AuthorityError("ARTIFACT_CONTENT_MISMATCH")
+                    staging.unlink()
+            if os.name == "posix":
+                for directory in (bucket, self.artifact_store_root):
+                    directory_fd = os.open(directory, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+                    try:
+                        os.fsync(directory_fd)
+                    finally:
+                        os.close(directory_fd)
+            if (blob_path.is_symlink() or blob_path.resolve(strict=True) != blob_path or
+                    not blob_path.is_file() or blob_path.stat().st_nlink != 1):
+                raise AuthorityError("ARTIFACT_PATH_UNSAFE")
+            with blob_path.open("rb") as stream:
+                stored = stream.read(len(raw_bytes) + 1)
+            if stored != raw_bytes:
+                raise AuthorityError("ARTIFACT_CONTENT_MISMATCH")
         return blob_path, len(raw_bytes), digest
 
     def capture_fixture_oracle_artifact(self, *, binding, observe_positive, observe_negative):

@@ -1,5 +1,7 @@
 """Local artifact custody regressions; not restricted-holdout qualification."""
 import hashlib
+import os
+from concurrent.futures import ThreadPoolExecutor
 import platform
 import tempfile
 import unittest
@@ -50,6 +52,38 @@ class ArtifactPublicationTests(unittest.TestCase):
         second = self.runner._store_artifact(self.raw.decode())
         self.assertEqual(first, second)
         self.assertEqual(self.target.stat().st_nlink, 1)
+
+    @unittest.skipUnless(os.name == "posix", "POSIX publication lock")
+    def test_recovers_exact_interrupted_link_without_overwrite(self):
+        self.target.parent.mkdir()
+        stage=self.target.parent/(".artifact-"+self.digest+".pending")
+        stage.write_bytes(self.raw)
+        os.link(stage,self.target)
+        inode=self.target.stat().st_ino
+        self.runner._store_artifact(self.raw.decode())
+        self.assertFalse(stage.exists())
+        self.assertEqual(self.target.stat().st_ino,inode)
+        self.assertEqual(self.target.stat().st_nlink,1)
+
+    @unittest.skipUnless(os.name == "posix", "POSIX publication lock")
+    def test_concurrent_publishers_share_exact_object(self):
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            results=list(pool.map(self.runner._store_artifact,[self.raw.decode()]*16))
+        self.assertTrue(all(row==results[0] for row in results))
+        self.assertEqual(self.target.stat().st_nlink,1)
+
+    @unittest.skipUnless(os.name == "posix", "POSIX publication lock")
+    def test_unknown_link_preserved_and_denied(self):
+        self.target.parent.mkdir()
+        stage=self.target.parent/(".artifact-"+self.digest+".pending")
+        stage.write_bytes(self.raw)
+        other=self.target.parent/"other"
+        os.link(stage,other)
+        with self.assertRaises(AuthorityError):
+            self.runner._store_artifact(self.raw.decode())
+        self.assertTrue(stage.exists())
+        self.assertTrue(other.exists())
+        self.assertFalse(self.target.exists())
 
     def test_default_versions_do_not_invent_toolchain(self):
         self.assertEqual(self.runner.environment_versions, {"forge_python": platform.python_version()})

@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from tools.qualify_completion import counts, run_suite, environment, pinned
+from tools.qualify_completion import counts, run_suite, environment, pinned, actual_cases, approved_inventory
 from tools.verify_source_imports import verify, APPROVED_IMPORT
 
 
@@ -25,6 +25,18 @@ class QualificationReceiptTests(unittest.TestCase):
             self.assertEqual(receipt["exit_code"],0)
             self.assertEqual(receipt["status"],"INCOMPLETE")
             self.assertEqual(receipt["tests"],0)
+
+    def test_case_inventory_and_exclusions(self):
+        raw=b'Ran 2 tests in 0.1s\nOK\nFORGE_CASE_RESULTS [{"id":"a","status":"PASS"},{"id":"b","status":"PASS"}]\n'
+        self.assertEqual(actual_cases(raw,"unittest"),["a","b"])
+        self.assertEqual(actual_cases(raw.replace(b'"PASS"',b'"XFAIL"'),"unittest"),[])
+        self.assertEqual(actual_cases(b"ok 1 - skipped # TODO later\n","tap"),[])
+        self.assertEqual(counts(b"Ran 1 test in 0.1s\nOK (expected failures=1)\n","unittest"),(1,1))
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            receipt=run_suite("partial",[sys.executable,"-c","print("+repr(raw.decode())+")"],
+                              "unittest",environment(root),root,["a","c"])
+            self.assertEqual(receipt["status"],"INCOMPLETE")
 
     def test_dirty_checkout_rejected(self):
         with patch("tools.qualify_completion.git",side_effect=[b"a"*40,b"b"*40,b"M path"]):

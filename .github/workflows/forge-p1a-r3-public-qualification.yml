@@ -227,7 +227,7 @@ jobs:
               # Same process has passed all denial checks and benign dispatch.
               class Receipt(unittest.TextTestResult):
                   def addSubTest(self,test,subtest,err):
-                      print("SUBTEST", "PASS" if err is None else "FAIL", str(subtest),flush=True)
+                      print("\nSUBTEST", "PASS" if err is None else "FAIL", str(subtest),flush=True)
                       super().addSubTest(test,subtest,err)
               sys.path.insert(0,"/source")
               suite=unittest.defaultTestLoader.discover("/source",pattern="test_contract_records.py",top_level_dir="/source")
@@ -318,23 +318,30 @@ jobs:
           done
           test "$before" = "$(sha256sum "$D/source/"*)"
           python3 -I -B - "$D" <<'PY'
-          import hashlib,json,pathlib,sys
+          import ast,collections,hashlib,json,pathlib,re,sys
           d=pathlib.Path(sys.argv[1]); ids=json.loads((d/"public-ids.json").read_text())
+          coverage_ok=True
           for opt in (0,1):
               log=(d/("candidate-"+str(opt)+".log")).read_text()
-              lines=[x for x in log.splitlines() if x.startswith("SUBTEST ")]
-              good=[x for x in lines if x.startswith("SUBTEST PASS ")]
-              passed=[]
-              for cid in ids:
-                  if any("case_id="+repr(cid) in x and ("test_all_raw_cases" in x or "test_all_semantic_cases" in x) for x in good): passed.append(cid)
+              seen=collections.defaultdict(list)
+              for line in log.splitlines():
+                  m=re.search(r"(?:^| \.\.\. )SUBTEST (PASS|FAIL) test_all_(?:raw|semantic)_cases .* \(case_id=(.+)\)$",line)
+                  if m:
+                      cid=ast.literal_eval(m.group(2))
+                      if not isinstance(cid,str): raise RuntimeError("invalid public case receipt")
+                      seen[cid].append(m.group(1))
+              passed=[cid for cid in ids if seen.get(cid)==["PASS"]]
+              extra=sorted(set(seen)-set(ids))
               print("PUBLIC_CASES_PASSED",opt,len(passed),"/",len(ids))
-              print("MISSING_OR_FAILED",opt,json.dumps(sorted(set(ids)-set(passed))))
+              print("MISSING_FAILED_OR_DUPLICATE",opt,json.dumps(sorted(set(ids)-set(passed))))
+              print("UNEXPECTED_CASES",opt,json.dumps(extra))
+              coverage_ok=coverage_ok and len(passed)==len(ids) and not extra
               for line in log.splitlines():
                   if line.startswith("RUNTIME_ORIGIN "):
                       _,_,path,expected=line.split(" ",3)
                       p=pathlib.Path(path) if path.startswith("/usr/") else d/path.lstrip("/")
                       if not p.is_file() or hashlib.sha256(p.read_bytes()).hexdigest()!=expected: raise RuntimeError("runtime/source origin drift "+path)
-              if len(passed)!=len(ids): raise RuntimeError("public case coverage")
+          if not coverage_ok: raise RuntimeError("public case coverage")
           PY
           test "$overall" = 0
           echo 'PUBLIC_QUALIFICATION_COMPLETE; PRIVATE_HOLDOUT_NOT_RUN'

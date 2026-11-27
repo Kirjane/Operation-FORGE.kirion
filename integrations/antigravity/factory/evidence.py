@@ -6,6 +6,8 @@ import hashlib
 import os
 import re
 import subprocess
+import platform
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -88,7 +90,8 @@ class TrustedEvidenceRunner:
     def __init__(self, artifact_store_root: Path, environment_versions: dict[str, str] | None = None) -> None:
         self.artifact_store_root = artifact_store_root.resolve()
         self.artifact_store_root.mkdir(parents=True, exist_ok=True)
-        self.environment_versions = environment_versions or {"python": "3.13.5", "dotnet": "10.0.401", "php": "8.4.25"}
+        self.environment_versions = (dict(environment_versions) if environment_versions is not None
+                                     else {"forge_python": platform.python_version()})
 
     def _read_git_state(self, cwd: Path) -> tuple[str, str, bool]:
         head_p = subprocess.run(["git", "rev-parse", "HEAD"], cwd=cwd, capture_output=True, text=True)
@@ -108,15 +111,34 @@ class TrustedEvidenceRunner:
         if bucket.is_symlink() or bucket.resolve(strict=True) != bucket:
             raise AuthorityError("ARTIFACT_BUCKET_UNSAFE")
         blob_path = bucket / f"{digest}.log"
-        # Content-addressed objects are immutable. Never follow or overwrite
-        # a preexisting symlink, hardlink or different byte sequence.
-        try:
-            with blob_path.open("xb") as stream:
-                stream.write(raw_bytes)
-                stream.flush()
-                os.fsync(stream.fileno())
-        except FileExistsError:
-            pass
+        # Publish a complete, flushed object, never a partially written final
+        # name. Same-directory staging + link provides no-clobber publication.
+        # A failed or unsupported link is not silently replaced by an unsafe
+        # overwrite. A crash between link and unlink leaves a multiply linked
+        # object which the existing readback guard deliberately rejects.
+        if not os.path.lexists(blob_path):
+            fd, staging_name = tempfile.mkstemp(prefix=".artifact-", suffix=".pending", dir=bucket)
+            staging = Path(staging_name)
+            try:
+                with os.fdopen(fd, "wb") as stream:
+                    stream.write(raw_bytes)
+                    stream.flush()
+                    os.fsync(stream.fileno())
+                try:
+                    os.link(staging, blob_path)
+                except FileExistsError:
+                    pass
+            finally:
+                staging.unlink()
+        if os.name == "posix":
+            # Persist directory entries on filesystems that implement fsync.
+            # Failure propagates rather than claiming durable custody.
+            for directory in (bucket, self.artifact_store_root):
+                directory_fd = os.open(directory, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+                try:
+                    os.fsync(directory_fd)
+                finally:
+                    os.close(directory_fd)
         if (blob_path.is_symlink() or blob_path.resolve(strict=True) != blob_path or
                 not blob_path.is_file() or blob_path.stat().st_nlink != 1):
             raise AuthorityError("ARTIFACT_PATH_UNSAFE")

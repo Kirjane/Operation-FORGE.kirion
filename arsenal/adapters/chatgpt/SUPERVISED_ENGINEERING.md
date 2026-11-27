@@ -1,16 +1,13 @@
 # Supervised ChatGPT engineering
 
-The native workflow bridge is unavailable. The safe usable route is a
-human-supervised separate conversation using existing GitHub connectors and
-the actual target project's approved issue authority. No automatic chat
-creation, account switching, tool interception or live dispatch is implied.
+The native workflow bridge is unavailable until an actual trusted host binding is qualified. Use the existing approved issue authority and available authorized GitHub connector or native executor route. The executor owns fallback and reconciliation; never require an operator to move ordinary source or reopen a helper session. A GitHub review request is not a launched session. No automatic chat creation, account switching, tool interception or live dispatch is implied.
 
 ## Start and resume
 
 1. Maintainer creates or verifies a bounded issue directive and exact target
    repository ID/name, branch and HEAD; freezes the authorized Forge registry
    SHA, v2 mission JSON and stage context. Do not use a moving branch as a pin.
-2. Use the authorized worker's separate ChatGPT conversation and [WORKER_START](WORKER_START.md).
+2. The executor selects an available authorized route, with [WORKER_START](WORKER_START.md) for an actual supported separate ChatGPT session. If that route is unavailable, use another authorized route or report the missing prerequisite without replaying uncertain effects.
    Verify the connector's actual login/numeric ID, directive author,
    exact current remote head and permitted role/scope before any connector write.
    Publish one START on the authorized issue. If scope or actor cannot be
@@ -26,13 +23,11 @@ creation, account switching, tool interception or live dispatch is implied.
    unexpected semantic changes, apply only allowed source changes on the
    assigned branch and read back the exact tree/parent/head. Require an
    expected-head ref update where available; if unavailable or moved, stop.
-   These are manual/operator-controlled connector actions, not a native
-   enforcement or CAS guarantee by this package. Frontend writes requiring
+   These are authorized connector actions, not a native enforcement or CAS guarantee by this package. Frontend writes requiring
    trusted native actor grants remain blocked by the harness; source-only
    proposals remain available. Do not merge, deploy or mutate main.
 5. Record actual evidence, test commands/results or NOT_RUN, exact final SHA,
-   and one CLOSE. A different authorized nonauthor reviewer opens a separate
-   session and checks the frozen candidate. No self-review or acceptance.
+   and one CLOSE. Request a different authorized nonauthor reviewer through the supported review route; independent execution must be observed before credit. The reviewer checks the frozen candidate. No self-review or acceptance.
 
 ## Local source-only helper
 
@@ -51,7 +46,7 @@ a patch or establish remote state. Both helpers have no credential provider,
 native grant, delivery transport or independent acceptance. A frontend
 candidate can be inspected even if path policy remains unauthorized.
 
-Context JSON is operator-reported, keyed internally by exact contract digest.
+Context JSON is supplied by the host or executor, keyed internally by exact contract digest; it is not authenticated merely by being present.
 Supply actual run_id, revision, profile, host="chatgpt", stage, task,
 max_context_bytes, actor_id, host_id, context_id, attempt_ordinal, and
 required_extra including "kirion-session-host". Set include_routes and

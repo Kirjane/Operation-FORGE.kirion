@@ -23,6 +23,7 @@ Do not use a moving branch as the execution pin; discover and record the SHA
 before dispatch. If the source ref moved, report drift rather than silently upgrade.
 Use arsenal/CHATGPT_BOOTSTRAP.md and arsenal/PROJECT_STATES.md for state-aware first-run routing when needed. For ongoing governed projects, resume the current work and do not repeat the original Nest setup.
 Load kirion-core, kirion-dispatch, kirion-session-host and only relevant specialists.
+The canonical .agents/skills distribution is resolved through the pinned manifest; do not substitute a moving path for its per-entry source pin.
 Use this chat's available VM for safe disposable source/tests. No assumption
 that other chats share its files, Git credentials or runtime.
 Work only within authorized scope. Report real tests/NOT_RUN and exact SHA.
@@ -37,4 +38,4 @@ The user may configure the compact Project instruction in `arsenal/adapters/chat
 
 For frontend assignments, use the pinned frontend_web declaration and explicit domain IDs; the frontend policy requires a verified v2 grant and host observation for new writes. No Iris GitHub identity is assigned. Historical Lucien receipts remain historical and the suspended account must not be used for new work.
 
-For converged supervised execution, see [supervised engineering](SUPERVISED_ENGINEERING.md) and [skill loading](../../SKILL_LOADING.md). A retrieved input or operator report is not a native consumption receipt. The user opens the separate chat; the harness does not claim autonomous control of the session.
+For converged supervised execution, see [supervised engineering](SUPERVISED_ENGINEERING.md) and [skill loading](../../SKILL_LOADING.md). A retrieved input or operator report is not a native consumption receipt. The executor owns selection and reconciliation of a supported authorized route; an unavailable separate session is not an instruction for the operator to relay work. Record a precise blocker only if no safe route exists. The harness does not claim autonomous control of an unobserved session.

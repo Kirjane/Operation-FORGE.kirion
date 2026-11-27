@@ -35,6 +35,23 @@ Then emit the installation handshake defined in [BOOTSTRAP.md](BOOTSTRAP.md), us
 
 Load the authorized Forge [semantic naming and readability rule](AGENTS.md#semantic-naming-and-readability) at role activation. Writers apply it before delivery; reviewers and Acceptance apply it to the actual candidate. This includes work for other Kirjane repositories, not only Forge itself. A session that cannot load the rule must report that limitation rather than claim compliance.
 
+## Command proposals and executor-owned routing
+
+The existing factory CLI exposes the command catalog and role/state-aware proposals:
+
+```sh
+python -m integrations.antigravity.factory.cli commands
+python -m integrations.antigravity.factory.cli resolve-command --alias /resume --observed-role Maintainer --observed-stage READY
+```
+
+These are deterministic proposals, not authenticated role observations, grants,
+dispatch or acceptance. Use the canonical lifecycle, mission preflight and
+journal before applying effects. Natural-language discovery remains a
+Maintainer interaction. The executor chooses an authorized supported route or
+records the actual blocker; do not turn an unavailable helper into operator
+file transfer. Public source handoffs use exact Git objects and private
+qualification requires an independently controlled persistent execution route.
+
 ## Persistent Memory
 
 Persistent product memory may retain stable workflow preferences such as using Forge and Maintainer/Code Writer separation. It must not be used as authority for changing SHAs, active branches, test results, deployments, incidents, or current project state.

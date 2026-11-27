@@ -7,6 +7,8 @@ Natural language discovery remains a Maintainer interaction, not an executable c
 from dataclasses import dataclass
 from types import MappingProxyType
 
+from .authority import ALLOWED_TRANSITIONS, CANONICAL_STATES, VALID_FORMAL_ROLES
+
 
 @dataclass(frozen=True)
 class Command:
@@ -18,10 +20,10 @@ class Command:
     entrypoint: str
 
 
-ROLES = frozenset({"MAINTAINER", "WRITER", "REVIEWER", "ENGINEER"})
-STAGES = frozenset({"DISCOVERY", "PLANNED", "ASSIGNED", "CANDIDATE", "REVIEWED", "ACCEPTED"})
+ROLES = frozenset(VALID_FORMAL_ROLES) | {"Engineer"}
+STAGES = frozenset(CANONICAL_STATES)
 COMMANDS = MappingProxyType({
-    "forge": Command(("/forge",), frozenset({"MAINTAINER", "ENGINEER"}), STAGES,
+    "forge": Command(("/forge",), frozenset({"Maintainer", "Engineer"}), STAGES,
                      "READ", None, "BOOTSTRAP_CHATGPT.md"),
     "help": Command(("/help.forge", "/forge.help"), ROLES, STAGES,
                     "READ", None, "command_registry"),
@@ -29,21 +31,21 @@ COMMANDS = MappingProxyType({
                       "READ", None, "protocols/recovery.md"),
     "status": Command(("/forge.status",), ROLES, STAGES,
                       "READ", None, "factory:status"),
-    "plan": Command(("/forge.plan",), frozenset({"MAINTAINER"}), frozenset({"DISCOVERY", "PLANNED"}),
-                    "READ", "PLANNED", "protocols/reconnaissance.md"),
-    "assign": Command(("/forge.assign",), frozenset({"MAINTAINER"}), frozenset({"PLANNED"}),
-                      "SOURCE_WRITE", "ASSIGNED", "factory:supervised-handoff"),
-    "write": Command(("/forge.write",), frozenset({"WRITER"}), frozenset({"ASSIGNED"}),
-                     "SOURCE_WRITE", "CANDIDATE", "protocols/writer-execution.md"),
-    "review": Command(("/forge.review",), frozenset({"REVIEWER"}), frozenset({"CANDIDATE"}),
-                      "READ", "REVIEWED", "factory:inspect-candidate"),
-    "repair": Command(("/forge.repair",), frozenset({"WRITER"}), frozenset({"CANDIDATE", "REVIEWED"}),
-                      "SOURCE_WRITE", "CANDIDATE", "self_healing_repair"),
-    "verify": Command(("/forge.verify",), ROLES, frozenset({"CANDIDATE", "REVIEWED"}),
+    "plan": Command(("/forge.plan",), frozenset({"Maintainer"}), frozenset({"PLANNED"}),
+                    "READ", None, "protocols/reconnaissance.md"),
+    "assign": Command(("/forge.assign",), frozenset({"Maintainer"}), frozenset({"PLANNED"}),
+                      "LOCAL_ARTIFACT", "AUTHORIZED", "factory:supervised-handoff"),
+    "write": Command(("/forge.write",), frozenset({"Code Writer", "Integration Writer"}), frozenset({"AUTHORIZED"}),
+                     "SOURCE_WRITE", "ACTIVE", "protocols/writer-execution.md"),
+    "review": Command(("/forge.review",), frozenset({"Reviewer"}), frozenset({"READY"}),
+                      "READ", "UNDER_REVIEW", "factory:inspect-candidate"),
+    "repair": Command(("/forge.repair",), frozenset({"Code Writer", "Integration Writer"}), frozenset({"REWORK"}),
+                      "SOURCE_WRITE", "ACTIVE", "self_healing_repair"),
+    "verify": Command(("/forge.verify",), ROLES, frozenset({"READY", "UNDER_REVIEW"}),
                       "PROCESS_TEST", None, "factory:test"),
-    "accept": Command(("/forge.accept",), frozenset({"ENGINEER", "MAINTAINER"}), frozenset({"REVIEWED"}),
-                      "SOURCE_WRITE", "ACCEPTED", "roles/acceptance.md"),
-    "deliver": Command(("/forge.deliver",), frozenset({"MAINTAINER"}), frozenset({"REVIEWED", "ACCEPTED"}),
+    "accept": Command(("/forge.accept",), frozenset({"Engineer", "Maintainer"}), frozenset({"UNDER_REVIEW"}),
+                      "LOCAL_ARTIFACT", "ACCEPTED", "roles/acceptance.md"),
+    "deliver": Command(("/forge.deliver",), frozenset({"Maintainer"}), frozenset({"ACCEPTED", "INTEGRATED"}),
                        "REMOTE_EFFECT", None, "protocols/promotion.md"),
 })
 
@@ -51,6 +53,8 @@ COMMANDS = MappingProxyType({
 def _aliases(commands):
     aliases = {}
     for name, item in commands.items():
+        if item.next_stage is not None and any(item.next_stage not in ALLOWED_TRANSITIONS[stage] for stage in item.stages):
+            raise ValueError("ILLEGAL_CANONICAL_TRANSITION")
         for alias in item.aliases:
             if alias in aliases:
                 raise ValueError("DUPLICATE_COMMAND_ALIAS")

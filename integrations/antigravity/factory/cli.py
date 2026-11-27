@@ -56,7 +56,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="KIRION Forge Antigravity Software Factory CLI")
     parser.add_argument(
         "command",
-        choices=["verify-plugin", "status", "test", "supervised-handoff", "inspect-candidate", "commands", "resolve-command"],
+        choices=["verify-plugin", "status", "test", "supervised-handoff", "inspect-candidate", "commands", "resolve-command", "invoke-local-git", "recover-local-git"],
         help="Factory command to execute",
     )
     parser.add_argument("--journal", type=Path, help="Read-only contract journal projection for status")
@@ -69,7 +69,35 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--alias")
     parser.add_argument("--observed-role")
     parser.add_argument("--observed-stage")
+    parser.add_argument("--reservation-id")
     args = parser.parse_args(argv)
+    if args.command in {"invoke-local-git", "recover-local-git"}:
+        from .dispatch_preflight import ContractJournal
+        from .local_git_command import LocalGitCommandAdapter
+        if not all((args.packet, args.journal, args.target_root, args.context_config)):
+            parser.error("local execution requires --packet, --journal, --target-root and --context-config")
+        try:
+            config = json.loads(args.context_config.read_bytes())
+            if set(config) != {"grant_file", "issuer_key_file", "trusted_verifiers"}:
+                raise ValueError("Invalid trusted local configuration")
+            adapter = LocalGitCommandAdapter(repository=args.target_root,
+                grant_file=Path(config["grant_file"]), issuer_key=Path(config["issuer_key_file"]).read_bytes(),
+                trusted_verifiers=config["trusted_verifiers"])
+            journal = ContractJournal(args.journal)
+            raw = args.packet.read_bytes()
+            if args.command == "recover-local-git":
+                if not args.reservation_id:
+                    parser.error("--reservation-id is required for recovery")
+                result = journal.reconcile_local_git(raw, args.reservation_id, adapter)
+            else:
+                result = journal.dispatch_fixture(raw, adapter)
+            print(json.dumps(result, indent=2))
+            return 0 if result["status"] in {"COMPLETED", "RECONCILED"} else 1
+        except (Exception,) as exc:
+            # No raw configuration, signer key or arbitrary subprocess output.
+            print(json.dumps({"status": "BLOCKED_OR_RECOVERY_REQUIRED",
+                              "error_type": type(exc).__name__, "promotion_authorized": False}))
+            return 1
     if args.command in {"commands", "resolve-command"}:
         from .command_registry import describe_commands, propose_command
         if args.command == "commands":

@@ -56,7 +56,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="KIRION Forge Antigravity Software Factory CLI")
     parser.add_argument(
         "command",
-        choices=["verify-plugin", "status", "test", "supervised-handoff", "inspect-candidate"],
+        choices=["verify-plugin", "status", "test", "supervised-handoff", "inspect-candidate", "commands", "resolve-command"],
         help="Factory command to execute",
     )
     parser.add_argument("--packet", type=Path)
@@ -65,7 +65,18 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--target-root", type=Path)
     parser.add_argument("--candidate-sha")
     parser.add_argument("--workflow", default="feature_delivery")
+    parser.add_argument("--alias")
+    parser.add_argument("--observed-role")
+    parser.add_argument("--observed-stage")
     args = parser.parse_args(argv)
+    if args.command in {"commands", "resolve-command"}:
+        from .command_registry import describe_commands, propose_command
+        if args.command == "commands":
+            print(json.dumps(describe_commands(), indent=2))
+            return 0
+        result = propose_command(args.alias, observed_role=args.observed_role, observed_stage=args.observed_stage)
+        print(json.dumps(result, indent=2))
+        return 0 if result["status"] == "PROPOSED" else 1
     if args.command in {"supervised-handoff", "inspect-candidate"}:
         from .authority import AuthorityError
         from .mission_contract import parse_mission_packet

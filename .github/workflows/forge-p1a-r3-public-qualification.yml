@@ -1,8 +1,8 @@
-name: FORGE P1a R3 public qualification
+name: FORGE P1a R4 public qualification
 on:
   push:
     branches: [infra/forge-p1a-hosted-qualification]
-    paths: ['.forge-qualification/R3-STATIC-READY']
+    paths: ['.forge-qualification/R4-STATIC-READY']
 permissions: {}
 jobs:
   public-qualification:
@@ -23,8 +23,8 @@ jobs:
           export GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null GIT_TERMINAL_PROMPT=0
           git -c core.hooksPath=/dev/null init --bare --quiet "$D/repo"
           git -C "$D/repo" fetch --quiet --no-tags --depth=1 https://github.com/Kirjane/Operation-FORGE.kirion.git "$GITHUB_SHA"
-          git -C "$D/repo" cat-file blob "$GITHUB_SHA:.forge-qualification/R3-STATIC-READY" > "$D/release"
-          grep -Ex '170a4acea502f6f1905fa4063acfae72dfd6757a [0-9]{10}' "$D/release"
+          git -C "$D/repo" cat-file blob "$GITHUB_SHA:.forge-qualification/R4-STATIC-READY" > "$D/release"
+          grep -Ex '10083ae9941551fdc88f7a572e82e12826845246 [0-9]{10}' "$D/release"
           test "$(wc -l < "$D/release")" = 1
           cat "$D/release"
           # A text marker alone is insufficient. Authenticate the actual public review
@@ -32,7 +32,7 @@ jobs:
           python3 -I -B - "$D/release" <<'PY'
           import json, pathlib, re, sys, urllib.request
           API="https://api.github.com/repos/Kirjane/Operation-FORGE.kirion"
-          C="170a4acea502f6f1905fa4063acfae72dfd6757a"
+          C="10083ae9941551fdc88f7a572e82e12826845246"
           reviewer=339503629
           def require(ok,msg):
               if not ok: raise RuntimeError("FAIL_CLOSED: "+msg)
@@ -83,20 +83,23 @@ jobs:
           print("AUTHENTICATED_STATIC_RELEASE",receipt_id,C)
           PY
           F=928d08edc691dfaeccd4929d2a6566d1f3a3a789
-          C=170a4acea502f6f1905fa4063acfae72dfd6757a
-          git -C "$D/repo" fetch --quiet --no-tags --depth=4 https://github.com/Kirjane/Operation-FORGE.kirion.git "$C"
+          C=10083ae9941551fdc88f7a572e82e12826845246
+          git -C "$D/repo" fetch --quiet --no-tags --depth=5 https://github.com/Kirjane/Operation-FORGE.kirion.git "$C"
           test "$(git -C "$D/repo" rev-parse FETCH_HEAD)" = "$C"
+          R3=170a4acea502f6f1905fa4063acfae72dfd6757a
           R=1bccfe63821e3af09131f89a1efd98d3edd490ec
           R1=deeeddd95c785b7d23ef7af6e75d165beff99634
-          test "$(git -C "$D/repo" rev-list --parents -n 1 "$C")" = "$C $R"
+          test "$(git -C "$D/repo" rev-list --parents -n 1 "$C")" = "$C $R3"
+          test "$(git -C "$D/repo" rev-list --parents -n 1 "$R3")" = "$R3 $R"
           test "$(git -C "$D/repo" rev-list --parents -n 1 "$R")" = "$R $R1"
           test "$(git -C "$D/repo" rev-list --parents -n 1 "$R1")" = "$R1 $F"
           test "$(git -C "$D/repo" rev-parse "$R1^{tree}")" = '1a90797f72a13c362f9f9851e77627d09e7684b4'
           test "$(git -C "$D/repo" rev-parse "$R^{tree}")" = '03216302f3c6c9e172209b7915c1bbb5111a16a7'
-          test "$(git -C "$D/repo" rev-parse "$C^{tree}")" = '3313addbc84e9793f1139ac4b7a11a04f1a4903c'
+          test "$(git -C "$D/repo" rev-parse "$R3^{tree}")" = '3313addbc84e9793f1139ac4b7a11a04f1a4903c'
+          test "$(git -C "$D/repo" rev-parse "$C^{tree}")" = '98a6266bed369a5e598eb94ca40e4f790b8aa3fa'
           test "$(git -C "$D/repo" rev-parse "$F^{tree}")" = '5c3c6a5557b9faa7f7dfbb66d226afa38f17d4b4'
           git -C "$D/repo" diff-tree --no-commit-id --name-status --no-renames -r "$F" "$C" > "$D/diff"
-          git -C "$D/repo" diff-tree --no-commit-id --name-status --no-renames -r "$R" "$C" > "$D/successor-diff"
+          git -C "$D/repo" diff-tree --no-commit-id --name-status --no-renames -r "$R3" "$C" > "$D/successor-diff"
           export D F C
           python3 -I -B - <<'PY'
           import ast, base64, hashlib, json, os, pathlib, subprocess
@@ -106,7 +109,7 @@ jobs:
               "record.schema.json":(75585,"04c44eb4fcc8634e8b3659c4fe95919443f2e7236542924d0c8f7ad301f8d060","1ceb42412dfd8f14eeb8c18d4a83a206a3bdc9b5"),
               "contract_records.py":(47898,"3520336e9fafbb219994e946232d12a09dec1044be1e62b8e0c08cb2fc958876","32ff406c3ab218e9fd15e83c817e68548a8325c4"),
               "vectors.json":(4725515,"da69134eec26977258d8a066fe807a9414a8f15deebacd9932ba893ef12d9a2b","9187a1c8de53d07be1b55a3dd17371b95dd24ea1"),
-              "test_contract_records.py":(42987,"363a576dbd8dcc1da43046e610a3155dda7b822c499a7d5a1e084f0af83a3d65","09dfae1cdac77f8fb91f1935c78e59262dd0870a"),
+              "test_contract_records.py":(44040,"0adcf47222106c634952caf2d314909b30f350e79a8ed21cfd036d5211243996","d9ec84d52f99e21ead866ced045964088e7e6e59"),
           }
           def req(ok,msg):
               if not ok: raise RuntimeError("FAIL_CLOSED: "+msg)
@@ -114,7 +117,7 @@ jobs:
           diff=(d/"diff").read_text().splitlines()
           req(len(diff)==5 and set(diff)=={"A\t"+prefix+n for n in expected},"exact diff")
           successor=(d/"successor-diff").read_text().splitlines()
-          req(len(successor)==2 and set(successor)=={"M\t"+prefix+n for n in ("contract_records.py","test_contract_records.py")},"exact successor diff")
+          req(len(successor)==1 and set(successor)=={"M\t"+prefix+"test_contract_records.py"},"exact successor diff")
           for n,(size,digest,blob) in expected.items():
               p=prefix+n
               req(git("ls-tree",c,"--",p).decode().strip()=="100644 blob "+blob+"\t"+p,"mode/blob "+n)

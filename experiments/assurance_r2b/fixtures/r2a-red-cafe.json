@@ -1,0 +1,102 @@
+{
+  "schema_version": "r2a-0.2-test-case",
+  "fixture": {
+    "id": "R2A-RED-CAFE",
+    "pair_id": "CAFE",
+    "polarity": "negative",
+    "synthetic": true,
+    "not_live_authority": true,
+    "historical_references": [
+      "https://github.com/Kirjane/Dev-Salryn-Cafe/issues/36",
+      "https://github.com/Kirjane/Dev-Salryn-Cafe/issues/44"
+    ],
+    "limitations": [
+      "Historical inspiration, synthetic isolated test vectors only; no live evidence independently retrieved or replayed"
+    ]
+  },
+  "untrusted_request": {
+    "schema_version": "r2a-0.2-draft",
+    "mission": {
+      "mission_id": "FORGE-HARNESS-ASSURANCE-CONTRACT-R2A",
+      "repository": "Kirjane/Dev-Salryn-Cafe",
+      "candidate_sha": "04c4dc5d28df60ced6bb13913e21adc0209aaf8a",
+      "authority_hint": "https://github.com/Kirjane/Operation-FORGE.kirion/issues/19"
+    },
+    "claim": {
+      "claim_id": "R2A-RED-CAFE-claim",
+      "type": "RUNTIME_ACCEPTANCE",
+      "statement": "Installed Cafe runtime /cafe/ is proven by this offered legacy mock test result",
+      "target": {
+        "kind": "runtime-entrypoint",
+        "environment": "Windows installed Cafe host",
+        "data_authority": "installed-runtime",
+        "entrypoint": "http://localhost:5399/cafe/",
+        "artifact_digest_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      },
+      "requested_evidence_level": "E5"
+    },
+    "offered_evidence_ids": [
+      "cafe-legacy-ci"
+    ]
+  },
+  "simulated_resolver_context": {
+    "synthetic_only": true,
+    "authorization_snapshot": {
+      "authority_ref": "https://github.com/Kirjane/Operation-FORGE.kirion/issues/19",
+      "candidate_sha": "04c4dc5d28df60ced6bb13913e21adc0209aaf8a",
+      "repository": "Kirjane/Dev-Salryn-Cafe",
+      "resolver_source": "SYNTHETIC_TEST_HARNESS_NOT_AUTHORIZED_FOR_LIVE"
+    },
+    "pinned_policy": {
+      "path": "policies/cafe.json",
+      "sha256": "e6421d75125b9ca5e711e9ed7de128cffe3784dd536ba3d7b1fdebc0fc687ae3",
+      "policy_id": "R2A-SIM-CAFE",
+      "policy_mode": "SYNTHETIC_TEST_ONLY_NOT_PROJECT_AUTHORITY"
+    },
+    "evidence_records": [
+      {
+        "evidence_id": "cafe-legacy-ci",
+        "evidence_level": "E4",
+        "evidence_type": "BROWSER",
+        "provenance": "AUTOMATED",
+        "candidate_sha": "04c4dc5d28df60ced6bb13913e21adc0209aaf8a",
+        "environment": "legacy synthetic Vitest/Playwright",
+        "command_or_scenario": "synthetic bounded scenario: cafe-legacy-ci",
+        "result": "PASS",
+        "artifact_reference": "fixture://cafe/cafe-legacy-ci",
+        "observed_at": "2026-11-24T04:58:00+08:00",
+        "limitations": [
+          "SYNTHETIC fixture; not a live CI, reviewer, runner or product acceptance record"
+        ],
+        "issuer_resolution": {
+          "channel": "SIMULATED_GITHUB_ACTIONS",
+          "issuer_id": "fixture-control",
+          "trust_class": "SIMULATED_RESOLVED_FIXTURE_ONLY"
+        },
+        "observed_target": {
+          "kind": "ci-validation",
+          "environment": "legacy synthetic Vitest/Playwright",
+          "data_authority": "mock-fixture",
+          "entrypoint": "http://localhost:5299/",
+          "validation_scope": "legacy Retail mock/browser suite"
+        }
+      }
+    ],
+    "gate_observations": [
+      {
+        "gate_id": "CAFE_INSTALLED_MOUNTED_RUNTIME",
+        "observed_status": "UNKNOWN",
+        "evidence_ids": [],
+        "resolved_by": "SIMULATED_POLICY_EVIDENCE_RESOLVER"
+      }
+    ]
+  },
+  "expected_oracle": {
+    "verdict": "CLAIM_CONTRADICTED",
+    "reason_codes": [
+      "WRONG_EXECUTABLE_TARGET"
+    ],
+    "explanation": "Actual installed Cafe operation not tested; evidence substitution contradicted.",
+    "live_product_outcome": "NOT_TESTED"
+  }
+}

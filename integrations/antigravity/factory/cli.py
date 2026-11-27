@@ -56,13 +56,93 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="KIRION Forge Antigravity Software Factory CLI")
     parser.add_argument(
         "command",
-        choices=["verify-plugin", "status", "test"],
+        choices=["verify-plugin", "status", "test", "supervised-handoff", "inspect-candidate", "commands", "resolve-command", "invoke-local-git", "recover-local-git"],
         help="Factory command to execute",
     )
+    parser.add_argument("--journal", type=Path, help="Read-only contract journal projection for status")
+    parser.add_argument("--packet", type=Path)
+    parser.add_argument("--context-config", type=Path)
+    parser.add_argument("--source-root", type=Path, default=REPO_ROOT)
+    parser.add_argument("--target-root", type=Path)
+    parser.add_argument("--candidate-sha")
+    parser.add_argument("--workflow", default="feature_delivery")
+    parser.add_argument("--alias")
+    parser.add_argument("--observed-role")
+    parser.add_argument("--observed-stage")
+    parser.add_argument("--reservation-id")
     args = parser.parse_args(argv)
+    if args.command in {"invoke-local-git", "recover-local-git"}:
+        from .dispatch_preflight import ContractJournal
+        from .local_git_command import LocalGitCommandAdapter
+        if not all((args.packet, args.journal, args.target_root, args.context_config)):
+            parser.error("local execution requires --packet, --journal, --target-root and --context-config")
+        try:
+            config = json.loads(args.context_config.read_bytes())
+            if set(config) != {"grant_file", "issuer_key_file", "trusted_verifiers"}:
+                raise ValueError("Invalid trusted local configuration")
+            adapter = LocalGitCommandAdapter(repository=args.target_root,
+                grant_file=Path(config["grant_file"]), issuer_key=Path(config["issuer_key_file"]).read_bytes(),
+                trusted_verifiers=config["trusted_verifiers"])
+            journal = ContractJournal(args.journal)
+            raw = args.packet.read_bytes()
+            if args.command == "recover-local-git":
+                if not args.reservation_id:
+                    parser.error("--reservation-id is required for recovery")
+                result = journal.reconcile_local_git(raw, args.reservation_id, adapter)
+            else:
+                result = journal.dispatch_fixture(raw, adapter)
+            print(json.dumps(result, indent=2))
+            return 0 if result["status"] in {"COMPLETED", "RECONCILED"} else 1
+        except (Exception,) as exc:
+            # No raw configuration, signer key or arbitrary subprocess output.
+            print(json.dumps({"status": "BLOCKED_OR_RECOVERY_REQUIRED",
+                              "error_type": type(exc).__name__, "promotion_authorized": False}))
+            return 1
+    if args.command in {"commands", "resolve-command"}:
+        from .command_registry import describe_commands, propose_command
+        if args.command == "commands":
+            print(json.dumps(describe_commands(), indent=2))
+            return 0
+        result = propose_command(args.alias, observed_role=args.observed_role, observed_stage=args.observed_stage)
+        print(json.dumps(result, indent=2))
+        return 0 if result["status"] == "PROPOSED" else 1
+    if args.command in {"supervised-handoff", "inspect-candidate"}:
+        from .authority import AuthorityError
+        from .mission_contract import parse_mission_packet
+        from .skill_registry import PinnedGitSources, SkillRegistry, parse_json
+        from .supervised import (FORGE_REPOSITORY_ID, FORGE_REPOSITORY,
+                                 supervised_handoff, inspect_supervised_candidate)
+        if args.packet is None:
+            parser.error("--packet is required")
+        try:
+            raw = args.packet.read_bytes()
+            if args.command == "supervised-handoff":
+                if args.context_config is None:
+                    parser.error("--context-config is required")
+                packet = parse_mission_packet(raw)
+                sources = PinnedGitSources({FORGE_REPOSITORY_ID: (FORGE_REPOSITORY, args.source_root)})
+                registry = SkillRegistry(sources, repository_id=FORGE_REPOSITORY_ID,
+                    repository_name=FORGE_REPOSITORY, registry_commit=packet["selected_skills"]["skill_source_sha"])
+                result = supervised_handoff(raw, registry, parse_json(args.context_config.read_bytes()),
+                                            workflow=args.workflow)
+            else:
+                if args.target_root is None or args.candidate_sha is None:
+                    parser.error("--target-root and --candidate-sha are required")
+                result = inspect_supervised_candidate(raw, target_root=args.target_root, candidate_sha=args.candidate_sha)
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+            return 0
+        except (AuthorityError, OSError, KeyError, TypeError, ValueError) as exc:
+            print(json.dumps({"status": "BLOCKED", "reason": str(exc),
+                              "native_execution": "UNAVAILABLE", "promotion_authorized": False}))
+            return 1
     if args.command == "verify-plugin":
         return cmd_verify_plugin()
     if args.command == "status":
+        if args.journal is not None:
+            from .operational_state import read_contract_board
+            result = read_contract_board(args.journal)
+            print(json.dumps(result, indent=2))
+            return 0 if result["status"] == "PROJECTED" else 1
         return cmd_status()
     if args.command == "test":
         return cmd_test()

@@ -20,6 +20,7 @@ REGISTRY_PATH = "arsenal/manifest.json"
 MAX_FILE_BYTES = 256 * 1024
 MAX_REGISTRY_BYTES = 512 * 1024
 MAX_FILES = 8
+MAX_REFERENCE_FILES = 16
 STAGES = ("PRE_DESIGN", "PRE_IMPLEMENTATION", "PRE_DELIVERY", "POST_DEPLOY")
 HOSTS = {"chatgpt", "codex", "antigravity", "fixture"}
 MODES = {"MANUAL", "ADVISORY_ONLY", "UNAVAILABLE", "FIXTURE"}
@@ -121,7 +122,8 @@ class PinnedGitSources:
         require(type(repo_id) is int and repo_id in self._repos and
                 self._repos[repo_id][0] == repo_name, "SOURCE_REPOSITORY_UNTRUSTED")
         require(sha_ok(commit), "SOURCE_COMMIT_INVALID")
-        if path != REGISTRY_PATH:
+        if path not in {REGISTRY_PATH, 'standards/frontend/activation.json',
+                        'integrations/antigravity/profiles/frontend_web.json'}:
             canonical_path(path)
         root = self._repos[repo_id][1]
         actual = self._git(root, "rev-parse", "--verify", commit + "^{commit}").decode("ascii").strip()
@@ -162,6 +164,7 @@ class SkillRegistry:
         require(type(entries) is list and 0 < len(entries) <= 128 and m.get("candidate_count") == len(entries),
                 "REGISTRY_INVENTORY_INVALID")
         self._sources = sources
+        self._frontend_activation = deepcopy(m.get('frontend_activation'))
         self._entries = {}
         seen_paths = set()
         seen_digests = set()
@@ -208,6 +211,37 @@ class SkillRegistry:
     @property
     def identity(self):
         return deepcopy(self._identity)
+
+    def frontend_activation(self):
+        return deepcopy(self._frontend_activation)
+
+    def read_declared_source(self, source, authorities):
+        require(type(source) is dict and set(source) == {"repository_id", "repository_name", "commit_sha",
+                "path", "blob_sha", "bytes", "sha256"}, "DECLARATION_SOURCE_INVALID")
+        require(self.source_authorized(source, authorities), "DECLARATION_SOURCE_NOT_AUTHORIZED")
+        return self._sources.read(source["repository_id"], source["repository_name"], source["commit_sha"],
+                source["path"], expected_blob=source["blob_sha"], expected_bytes=source["bytes"],
+                expected_sha256=source["sha256"])
+
+    @staticmethod
+    def source_authorized(src, authorities):
+        return any(a["repository_id"] == src["repository_id"] and
+                   a["repository_name"] == src["repository_name"] and
+                   a["commit_sha"] == src["commit_sha"] and
+                   any(src["path"] == scope.rstrip("/") or
+                       src["path"].startswith(scope.rstrip("/") + "/") for scope in a["scope"])
+                   for a in authorities)
+
+    def entry_kind(self, name):
+        require(name in self._entries, 'SKILL_UNKNOWN')
+        return self._entries[name]['kind']
+
+    def reference_for(self, source, path):
+        found = [name for name, e in self._entries.items() if e["kind"] == "reference" and
+                 e["source"]["path"] == path and all(e["source"][k] == source[k] for k in
+                 ("repository_id", "repository_name", "commit_sha"))]
+        require(len(found) == 1, "FRONTEND_REFERENCE_PIN_MISSING_OR_AMBIGUOUS")
+        return found[0]
 
     def inventory(self):
         return [{"id": name, "kind": e["kind"], "path": e["source"]["path"],
@@ -268,13 +302,20 @@ class SkillRegistry:
         return raw, identity
 
     def plan(self, required, optional=(), *, host, stage, task="general", max_bytes,
-             context_used_bytes=0, max_files=MAX_FILES, source_authorities=(), include_routes=True):
+             context_used_bytes=0, max_files=MAX_FILES, source_authorities=(), include_routes=True,
+             max_reference_files=MAX_REFERENCE_FILES, max_documents=None):
         require(host in HOSTS and stage in STAGES and task in self._task, "SKILL_ROUTE_OR_HOST_UNKNOWN")
         require(type(max_bytes) is int and type(context_used_bytes) is int and
                 0 <= context_used_bytes <= max_bytes <= 8 * 1024 * 1024 and type(max_files) is int
                 and 1 <= max_files <= MAX_FILES, "SKILL_BUDGET_INVALID")
         require(type(required) in (list, tuple) and type(optional) in (list, tuple)
                 and all(type(n) is str for n in [*required, *optional]), "SKILL_SELECTION_INVALID")
+        require(type(max_reference_files) is int and 0 <= max_reference_files <= MAX_REFERENCE_FILES,
+                "REFERENCE_DOCUMENT_BUDGET_INVALID")
+        if max_documents is None:
+            max_documents = max_files + max_reference_files
+        require(type(max_documents) is int and 1 <= max_documents <= MAX_FILES + MAX_REFERENCE_FILES,
+                "TOTAL_DOCUMENT_BUDGET_INVALID")
         required = self._closure(required)
         optional = list(dict.fromkeys([*optional, *(self._stage[stage] if include_routes else []),
                                       *(self._task[task] if include_routes else [])]))
@@ -300,8 +341,12 @@ class SkillRegistry:
                 reject("SKILL_HOST_ADVISORY_ONLY" if all(m == "ADVISORY_ONLY" for m in unavailable)
                        else "SKILL_HOST_UNAVAILABLE")
                 return
-            if len(selected) + len(todo) > max_files or used + sum(
-                    self._entries[n]["source"]["bytes"] for n in todo) > max_bytes:
+            combined = [*contents, *todo]
+            skill_count = sum(self._entries[n]["kind"] == "skill" for n in combined)
+            reference_count = len(combined) - skill_count
+            if (skill_count > max_files or reference_count > max_reference_files or
+                    len(combined) > max_documents or used + sum(
+                    self._entries[n]["source"]["bytes"] for n in todo) > max_bytes):
                 reject("SKILL_CONTEXT_BUDGET_EXCEEDED")
                 return
             pending = []
@@ -319,7 +364,7 @@ class SkillRegistry:
                 contents[n] = raw
                 used += len(raw)
                 selected.append({"id": n, "required": n in required, "source": identity,
-                                 "dependencies": list(self._entries[n]["dependencies"]),
+                                 "dependencies": list(self._entries[n]["dependencies"]), "kind": self._entries[n]["kind"],
                                  "selection_status": "SELECTED", "host_mode": self._entries[n]["hosts"][host],
                                  "status": "RETRIEVED", "loading_status": "NOT_LOADED"})
         add_group(required, True)
@@ -328,6 +373,9 @@ class SkillRegistry:
         plan = {"schema_version": 1, "registry": self.identity, "host": host, "stage": stage, "task": task,
                 "required": required, "selected": selected, "omitted": omitted, "max_files": max_files,
                 "max_context_bytes": max_bytes, "prior_context_bytes": context_used_bytes,
-                "skill_bytes": used - context_used_bytes, "total_context_bytes": used,
+                "max_reference_files": max_reference_files, "max_documents": max_documents,
+                "reference_bytes": sum(x["source"]["bytes"] for x in selected if x["kind"] == "reference"),
+                "skill_bytes": sum(x["source"]["bytes"] for x in selected if x["kind"] == "skill"),
+                "total_retrieved_bytes": used - context_used_bytes, "total_context_bytes": used,
                 "status": "RETRIEVED_NOT_LOADED", "promotion_authorized": False}
         return plan, contents

@@ -1,0 +1,212 @@
+{
+  "mission": "FORGE-CHATGPT-SOFTWARE-FACTORY-PORT-R1",
+  "source": {
+    "commit": "0e8765de6e0e87ea9b4503714f08fa650e1a79c6",
+    "tree": "80eaa7a4f879871e5df533203b8b60b563f8b782",
+    "blobs": 1489,
+    "coreSkills": 16,
+    "specialistSkills": 16,
+    "personas": 10,
+    "selectedInheritedBlobs": 105
+  },
+  "mockedAdapterTests": [
+    {
+      "name": "identity_match",
+      "expected": "ALLOW",
+      "observed": "ALLOW",
+      "pass": true
+    },
+    {
+      "name": "wrong_id",
+      "expected": "ACTOR_MISMATCH",
+      "observed": "ACTOR_MISMATCH",
+      "pass": true
+    },
+    {
+      "name": "wrong_login",
+      "expected": "ACTOR_MISMATCH",
+      "observed": "ACTOR_MISMATCH",
+      "pass": true
+    },
+    {
+      "name": "unknown_actor",
+      "expected": "ACCOUNT_UNBOUND",
+      "observed": "ACCOUNT_UNBOUND",
+      "pass": true
+    },
+    {
+      "name": "unbound_actor",
+      "expected": "ACCOUNT_UNBOUND",
+      "observed": "ACCOUNT_UNBOUND",
+      "pass": true
+    },
+    {
+      "name": "suspended",
+      "expected": "403",
+      "observed": "403",
+      "pass": true
+    },
+    {
+      "name": "repo_denied",
+      "expected": "REPOSITORY_READ_DENIED",
+      "observed": "REPOSITORY_READ_DENIED",
+      "pass": true
+    },
+    {
+      "name": "wrong_repo",
+      "expected": "REPOSITORY_READ_DENIED",
+      "observed": "REPOSITORY_READ_DENIED",
+      "pass": true
+    },
+    {
+      "name": "write_denied",
+      "expected": "REPOSITORY_WRITE_DENIED",
+      "observed": "REPOSITORY_WRITE_DENIED",
+      "pass": true
+    },
+    {
+      "name": "write_string",
+      "expected": "REPOSITORY_WRITE_DENIED",
+      "observed": "REPOSITORY_WRITE_DENIED",
+      "pass": true
+    },
+    {
+      "name": "bad_permission_argument",
+      "expected": "INVALID_PERMISSION_REQUEST",
+      "observed": "INVALID_PERMISSION_REQUEST",
+      "pass": true
+    },
+    {
+      "name": "invalid_repo",
+      "expected": "INVALID_REPOSITORY",
+      "observed": "INVALID_REPOSITORY",
+      "pass": true
+    },
+    {
+      "name": "exact_pin",
+      "expected": "ALLOW",
+      "observed": "ALLOW",
+      "pass": true
+    },
+    {
+      "name": "head_drift",
+      "expected": "EXACT_HEAD_OR_TREE_DRIFT",
+      "observed": "EXACT_HEAD_OR_TREE_DRIFT",
+      "pass": true
+    },
+    {
+      "name": "tree_drift",
+      "expected": "EXACT_HEAD_OR_TREE_DRIFT",
+      "observed": "EXACT_HEAD_OR_TREE_DRIFT",
+      "pass": true
+    },
+    {
+      "name": "zero_sha",
+      "expected": "INVALID_OBJECT_ID",
+      "observed": "INVALID_OBJECT_ID",
+      "pass": true
+    },
+    {
+      "name": "ref_alias",
+      "expected": "INVALID_BRANCH",
+      "observed": "INVALID_BRANCH",
+      "pass": true
+    },
+    {
+      "name": "branch_mismatch",
+      "expected": "EXACT_HEAD_OR_TREE_DRIFT",
+      "observed": "EXACT_HEAD_OR_TREE_DRIFT",
+      "pass": true
+    },
+    {
+      "name": "no_fake_context",
+      "expected": "ALLOW",
+      "observed": "ALLOW",
+      "pass": true
+    },
+    {
+      "name": "delivery_unbound",
+      "expected": "CORE_BROKER_AND_DURABLE_HOST_BRIDGE_REQUIRED",
+      "observed": "CORE_BROKER_AND_DURABLE_HOST_BRIDGE_REQUIRED",
+      "pass": true
+    }
+  ],
+  "liveConnectorReadProbes": [
+    {
+      "login": "Kirch-Nairu",
+      "identity": {
+        "login": "Kirch-Nairu",
+        "id": 291564617
+      },
+      "access": {
+        "identity": {
+          "login": "Kirch-Nairu",
+          "id": 291564617
+        },
+        "repo": "Kirch-Nairu/Operation-FORGE.kirion",
+        "pull": true,
+        "push": true
+      }
+    },
+    {
+      "login": "Kirion-Jane",
+      "identity": {
+        "login": "Kirion-Jane",
+        "id": 335897759
+      },
+      "accessError": "NOT_FOUND: Error code: NOT_FOUND; Error: GitHub API error 404: {\"message\":\"Not Found\",\"documentation_url\":\"https://docs.github.com/rest/repos/repos#get-a-repository\",\"status\":\"404\"}"
+    },
+    {
+      "login": "Kirion-Nox",
+      "identity": {
+        "login": "Kirion-Nox",
+        "id": 339503629
+      },
+      "access": {
+        "identity": {
+          "login": "Kirion-Nox",
+          "id": 339503629
+        },
+        "repo": "Kirch-Nairu/Operation-FORGE.kirion",
+        "pull": true,
+        "push": true
+      }
+    },
+    {
+      "login": "Kirion-Lucien",
+      "identityError": "FORBIDDEN: Error code: FORBIDDEN; Error: GitHub API error 403: {\n  \"message\": \"Sorry. Your account was suspended\",\n  \"documentation_url\": \"https://docs.github.com/rest\",\n  \"status\": \"403\"\n}\n"
+    },
+    {
+      "login": "k3nchinxd",
+      "identity": {
+        "login": "k3nchinxd",
+        "id": 319460416
+      },
+      "accessError": "NOT_FOUND: Error code: NOT_FOUND; Error: GitHub API error 404: {\"message\":\"Not Found\",\"documentation_url\":\"https://docs.github.com/rest/repos/repos#get-a-repository\",\"status\":\"404\"}"
+    }
+  ],
+  "livePinnedBranch": {
+    "identity": {
+      "login": "Kirch-Nairu",
+      "id": 291564617
+    },
+    "repo": "Kirch-Nairu/Operation-FORGE.kirion",
+    "pull": true,
+    "push": true,
+    "branch": "feat/chatgpt-software-factory-port-r1",
+    "sha": "0e8765de6e0e87ea9b4503714f08fa650e1a79c6",
+    "tree": "80eaa7a4f879871e5df533203b8b60b563f8b782"
+  },
+  "nativeSubagents": "NOT_DISCOVERED",
+  "nativeHooks": "NOT_VERIFIED",
+  "checkout": "BLOCKED: sandbox git ls-remote failed Could not resolve host: github.com",
+  "runtime": "PHP 8.4.24 CLI without PDO drivers; composer and dotnet missing",
+  "priorLocalAdvisory": {
+    "v021Original": "58/58",
+    "additionalBefore": "4/31",
+    "additionalAfter": "31/31",
+    "originalAfter": "58/58",
+    "status": "supplemental only; not canonical test results"
+  },
+  "upstreamBenchmarks": "NOT_RUN locally; reported upstream results are reference only"
+}

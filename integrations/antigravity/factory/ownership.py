@@ -286,13 +286,13 @@ class LeaseManager:
             conn.close()
 
     @contextmanager
-    def hold_owned_paths(self, packet, worker_id, acquired, paths):
+    def hold_owned_paths(self, packet, worker_id, acquired, paths, *, trusted_grant=None, observed_actor=None):
         """Fence cooperating lease users for one bounded local operation.
 
         This lock is not an OS sandbox or a native host authorization.
         A stale lease or a path outside the declared ownership never enters.
         """
-        assert_paths_within_ownership(packet, paths)
+        assert_paths_within_ownership(packet, paths, trusted_grant=trusted_grant, observed_actor=observed_actor)
         expected = {item["lease_id"]: item["version"] for item in acquired}
         conn = self._connect()
         try:

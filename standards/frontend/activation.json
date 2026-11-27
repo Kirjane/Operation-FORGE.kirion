@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "profile_id": "frontend_web",
+  "personas": [
+    "Antigravity-Lucien",
+    "Antigravity-Iris"
+  ],
+  "source_repository": {
+    "id": 1377058358,
+    "name": "Kirjane/Operation-FORGE.kirion"
+  },
+  "source_revision": "mission_pinned",
+  "entrypoint": "standards/frontend/README.md",
+  "required_domains": [
+    "evidence"
+  ],
+  "domains": {
+    "design": [
+      "standards/frontend/design-discovery.md",
+      "standards/frontend/visual-system.md"
+    ],
+    "interaction": [
+      "standards/frontend/interaction-and-motion.md",
+      "standards/frontend/responsive-accessibility.md"
+    ],
+    "architecture": [
+      "standards/frontend/frontend-architecture.md",
+      "standards/frontend/implementation-workflow.md"
+    ],
+    "integration": [
+      "standards/frontend/product-integration.md",
+      "standards/frontend/frontend-architecture.md"
+    ],
+    "evidence": [
+      "standards/frontend/acceptance-and-evidence.md"
+    ],
+    "diagnosis": [
+      "standards/frontend/patterns/catalog.md",
+      "standards/frontend/patterns/anti-patterns.md"
+    ],
+    "research": [
+      "standards/frontend/provenance.md",
+      "standards/frontend/skill-adoption.md"
+    ],
+    "civic": [
+      "standards/frontend/case-studies/one-talibon.md"
+    ],
+    "transactional": [
+      "standards/frontend/case-studies/salryn-cafe.md"
+    ]
+  },
+  "selection_order": [
+    "design",
+    "interaction",
+    "architecture",
+    "integration",
+    "evidence",
+    "diagnosis",
+    "research",
+    "civic",
+    "transactional"
+  ],
+  "rules": {
+    "explicit_domains_required": true,
+    "unknown_domain": "DENY",
+    "deduplicate": "first_occurrence",
+    "budget": "generic_loader_authorized_actual_bytes",
+    "required_missing": "DENY",
+    "optional_unavailable": "REPORT_NOT_LOADED_ONLY_IF_SEPARATELY_MARKED_OPTIONAL_BY_GENERIC_PLAN",
+    "receipt": "verified_consumption_only",
+    "execution": "NO_LIVE_ACTIVATION_UNTIL_COMBINED_QUALIFICATION",
+    "explicit_selected_domains_required": true
+  }
+}

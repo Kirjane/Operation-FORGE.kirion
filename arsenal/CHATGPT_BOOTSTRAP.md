@@ -21,7 +21,7 @@ This is a prompt convention, **not** a built-in command or independent permissio
 ## Exact startup sequence
 
 1. **Authenticate the actor:** check the actual connected GitHub login and its assigned role. The conversation label Nox/Jane/Nairu is not authentication. A Maintainer who authored a patch cannot become an independent reviewer by switching accounts in the same chat.
-2. **Pin Forge skills:** resolve the authorized Forge source to an immutable 40-character commit SHA. Read the matching SKILL.md files for kirion-core, kirion-dispatch and (for ChatGPT connected workers) kirion-session-host. Do not silently upgrade an existing project's approved pin.
+2. **Pin Forge skills:** resolve the authorized Forge source to an immutable 40-character commit SHA. Read the pinned Arsenal registry, then the exact per-entry source commit/blob for kirion-core, kirion-dispatch and (for ChatGPT connected workers) kirion-session-host. Do not silently upgrade an existing project's approved pin.
 3. **Inspect target truth:** if a repo exists, fetch its AGENTS/authority, current branch and exact commit, active issue/PR, approved contract and minimum relevant continuity. Prefer actual GitHub/host evidence over chat memory.
 4. **Classify project state:** record origin GREENFIELD, BROWNFIELD or UNKNOWN, plus work mode DISCOVERY, IN_FLIGHT, MAINTENANCE, RECOVERY, PAUSED or UNKNOWN. Takeover is a *join context*, not a new permission. See [PROJECT_STATES](PROJECT_STATES.md).
 5. **Validate task authority:** determine READ_ONLY, SCOPED_WRITE or AUTHORITY_BLOCKED from the actual assignment, owned paths, risk and project contract. Existing governed projects do not require an invented new nesting ceremony each session.
@@ -42,7 +42,8 @@ Project origin: <GREENFIELD/BROWNFIELD/UNKNOWN>
 Work mode: <DISCOVERY/IN_FLIGHT/MAINTENANCE/RECOVERY/PAUSED/UNKNOWN>
 Join context: <CONTINUATION/TAKEOVER/NEW/UNKNOWN>
 Current issue, PR and approved contract: <links or NONE VERIFIED>
-Loaded skills: <core + dispatch + session-host + selected specialists>
+Retrieved skills: <core + dispatch + session-host + selected specialists>
+Actual native consumption: UNVERIFIED unless independently observed
 Authority: <READ_ONLY/SCOPED_WRITE/AUTHORITY_BLOCKED>
 Capabilities: <actually observed>
 Next task: <one bounded action>
@@ -96,3 +97,5 @@ Use GitHub as the durable handoff store. A fresh conversation re-verifies accoun
 If shell, browser or local Git is unavailable, use only existing permitted tools and mark host-specific evidence NOT_RUN. If current SHA, ownership or authority materially differs, stop only the affected mutation, report drift and recover the correct owner decision.
 
 Do not automatically install skills globally, alter ChatGPT Project settings, promote to main, modify client repositories or claim unattended background execution.
+
+For the converged source-only/manual route see [supervised engineering](adapters/chatgpt/SUPERVISED_ENGINEERING.md).

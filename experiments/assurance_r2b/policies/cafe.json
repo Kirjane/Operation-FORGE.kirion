@@ -1,0 +1,35 @@
+{
+  "schema_version": "r2a-0.2-synthetic-policy",
+  "classification": "SYNTHETIC_TEST_ONLY_NOT_PROJECT_AUTHORITY",
+  "policy_id": "R2A-SIM-CAFE",
+  "repository": "Kirjane/Dev-Salryn-Cafe",
+  "historical_references": [
+    "https://github.com/Kirjane/Dev-Salryn-Cafe/issues/36",
+    "https://github.com/Kirjane/Dev-Salryn-Cafe/issues/44"
+  ],
+  "gates": [
+    {
+      "id": "CAFE_SCOPED_BROWSER_CI",
+      "applies_to": [
+        "AUTOMATED_VALIDATION"
+      ],
+      "minimum_level": "E4",
+      "allowed_types": [
+        "BROWSER"
+      ],
+      "target_binding": "EXACT_VALIDATION_SCOPE"
+    },
+    {
+      "id": "CAFE_INSTALLED_MOUNTED_RUNTIME",
+      "applies_to": [
+        "RUNTIME_ACCEPTANCE"
+      ],
+      "minimum_level": "E5",
+      "allowed_types": [
+        "RUNTIME",
+        "BROWSER"
+      ],
+      "target_binding": "EXACT_RUNTIME_ARTIFACT_AND_ROUTE"
+    }
+  ]
+}

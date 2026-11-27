@@ -31,6 +31,7 @@ Startup procedure:
 
 Execution rules:
 
+- Apply root `AGENTS.md` Semantic naming and readability; inspect existing domain vocabulary and ownership before naming, and actual changed paths and introduced/renamed identifiers before delivery. Report naming findings and bounded corrections in the Writer Report.
 - Observable Git/runtime state outranks remembered state and handoff assumptions about current state.
 - If exact authority differs from the handoff, STOP and return authority instead of silently rebasing the assignment.
 - Do not expand scope because implementation would be easier.

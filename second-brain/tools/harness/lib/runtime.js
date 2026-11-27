@@ -10,6 +10,7 @@ const {probeGitRepository,runtimeFingerprint}=require('./git');
 const {intakeTask}=require('./intake');
 const {createLearningCandidate}=require('./learning');
 const {compileSemanticContext,semanticProviderDoctor}=require('./semantic-provider');
+const {resolveFeatureContext,validateFeature}=require('./fci/resolve');
 
 function configFingerprint(cfg){
   return sha256(canonicalJson({manifest:cfg.manifest,lanes:cfg.lanes,taskTypes:cfg.taskTypes,risk:cfg.risk,routing:cfg.routing,gates:cfg.gates,evidence:cfg.evidence,semanticProvider:cfg.semanticProvider,routePack:cfg.routePack}));
@@ -26,6 +27,54 @@ function resolveTargetRepository(task,taskBaseDir){
 function semanticOptions(cfg,options={}){
   return {provider:options.semanticProvider||process.env.PSB_SEMANTIC_PROVIDER||cfg.semanticProvider.default_provider,snapshotPath:options.semanticSnapshot||process.env.PSB_NOTION_SNAPSHOT,controlPlane:cfg.semanticProvider,routePack:cfg.routePack};
 }
+// A task carries only a content-addressed reference. Host-side lookup and
+// attesters are composition dependencies, never request-supplied callbacks.
+function compileFeatureContext(task,target,options){
+  const pin=task.feature_context;
+  const host=options.featureContextHost;
+  const policyRequired=Boolean((options.requireFeaturePolicy||typeof host?.policyForTask==='function')&&task.repository?.path);
+  if(!pin&&!policyRequired) return null;
+  const blocked=code=>({status:'BLOCKED',code,feature_id:pin?.feature_id||null,
+    manifest_sha256:pin?.manifest_sha256||null,authority_granted:false,evidence_ready:false});
+  if(policyRequired&&!pin)return blocked('FCI_MANDATORY_PIN_MISSING');
+  if(!host || typeof host.loadManifest!=='function') return blocked('FCI_HOST_UNAVAILABLE');
+  try {
+    let policy=null;
+    if(policyRequired){
+      if(typeof host.policyForTask!=='function')return blocked('FCI_POLICY_UNAVAILABLE');
+      policy=host.policyForTask(task,target);
+      if(!policy||policy.feature_id!==pin.feature_id||policy.manifest_sha256!==pin.manifest_sha256||
+         !Array.isArray(policy.required_claim_ids)||!policy.required_claim_ids.length)
+        return blocked('FCI_POLICY_PIN_MISMATCH');
+    }
+    const raw=host.loadManifest(pin.feature_id,pin.manifest_sha256);
+    if(validateFeature(raw)) return blocked('FCI_MANIFEST_INVALID');
+    const feature=JSON.parse(JSON.stringify(raw));
+    if(feature.feature_id!==pin.feature_id || sha256(canonicalJson(feature))!==pin.manifest_sha256)
+      return blocked('FCI_MANIFEST_MISMATCH');
+    if(target.status!=='RESOLVED' || target.clean!==true ||
+       target.top_level!==path.resolve(feature.repository.path) ||
+       target.head!==feature.repository.head ||
+       (feature.repository.branch && target.branch!==feature.repository.branch))
+      return blocked('FCI_TARGET_MISMATCH');
+    if(!Array.isArray(host.allowed_roots) ||
+       !host.allowed_roots.some(root=>typeof root==='string' &&
+         fs.realpathSync(path.resolve(root))===fs.realpathSync(target.top_level)))
+      return blocked('FCI_TARGET_NOT_ALLOWLISTED');
+    if(task.repository?.sha&&task.repository.sha!==target.head)return blocked('FCI_TASK_HEAD_MISMATCH');
+    if(policy&&(!policy.required_claim_ids.every(id=>feature.required_claim_ids?.includes(id))||
+       policy.contract_revision!==feature.contract.revision))return blocked('FCI_POLICY_FLOOR_MISMATCH');
+    const resolved=resolveFeatureContext(feature,{allowed_roots:[target.top_level],verifiers:host.verifiers});
+    if(resolved.status!=='RESOLVED'||resolved.action_gate?.evidence_ready!==true)
+      return blocked(resolved.code||resolved.action_gate?.code||'FCI_CONTEXT_UNVERIFIED');
+    if(policy&&(!policy.required_claim_ids.every(id=>resolved.claims.some(c=>c.id===id&&c.status==='VERIFIED'))||
+       canonicalJson(host.policyForTask(task,target))!==canonicalJson(policy)))return blocked('FCI_POLICY_CHANGED_OR_CLAIM_UNVERIFIED');
+    return {status:'EVIDENCE_READY',feature_id:pin.feature_id,manifest_sha256:pin.manifest_sha256,
+      authority_granted:false,evidence_ready:true,repository:resolved.repository,
+      contract:resolved.contract,sources:resolved.sources,claims:resolved.claims,
+      ...(policy?{policy}:{})};
+  } catch {return blocked('FCI_HOST_RESOLUTION_FAILED');}
+}
 function buildTask(taskInput,options={}){
   const root=options.root||repoRoot(),cfg=loadConfig(root),task=normalizeTask(taskInput),classification=classifyTask(task,cfg.taskTypes),signals=inferSignals(task);
   const harness_git=probeGitRepository(root),target_repository=resolveTargetRepository(task,options.taskBaseDir),runtime_fingerprint=runtimeFingerprint(root),config_sha256=configFingerprint(cfg);
@@ -38,7 +87,10 @@ function buildTask(taskInput,options={}){
   const risk=scoreRisk(task,classification.type,signals,cfg.risk);
   const stage=options.stage||'PRE_DESIGN';
   const route=routeTask(classification.type,signals,risk.mode,cfg.routing,cfg.lanes,cfg.manifest.control_roots,{stage});
-  const context=compileSemanticContext(root,route,cfg.manifest,semanticOptions(cfg,options));
+  let context=compileSemanticContext(root,route,cfg.manifest,semanticOptions(cfg,options));
+  const feature=compileFeatureContext(task,target_repository,options);
+  if(feature) context=feature.evidence_ready===true?{...context,feature_context:feature}:
+    {...context,status:'BLOCKED',reason:feature.code,documents:[],feature_context:feature};
   const gateCtx={task,type:classification.type,classification,signals,risk,route,context,harness_git,target_repository};
   const gates=evaluateGates(cfg.gates,gateCtx,{version:1,claims:{}},{throughStage:'PRE_DESIGN'});
   return {cfg,task,classification,signals,risk,route,context,gates,gateCtx,harness_git,target_repository,runtime_fingerprint,config_sha256};

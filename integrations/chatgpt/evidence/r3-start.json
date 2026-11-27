@@ -1,0 +1,22 @@
+{
+  "mission": "FORGE-CHATGPT-AUTONOMOUS-FACTORY-R3",
+  "authority_comment": 7050629957,
+  "start_comment": 7050673930,
+  "original_candidate": "279e8f42e740b252763272c38afc81b0fbce1617",
+  "initial_review": 5999444597,
+  "mode": "SAME_CONTEXT_ADVERSARIAL",
+  "independent": false,
+  "repair_cycle": 1,
+  "actors": {
+    "maintainer": 291564617,
+    "writer": 335897759,
+    "nox": 339503629,
+    "luci3n": 359299805
+  },
+  "blocked": [
+    "native isolation",
+    "Notion entitlement",
+    "general delivery",
+    "production"
+  ]
+}

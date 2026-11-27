@@ -21,16 +21,18 @@ Acceptance may consider:
 - unresolved risks;
 - explicit product acceptance criteria.
 
+Resolve the authorized Forge [bootstrap](../BOOTSTRAP.md) and canonical [semantic naming rule](../AGENTS.md#semantic-naming-and-readability), and apply the [Acceptance Checklist](../checklists/acceptance.md) to the exact candidate. If canonical authority is unavailable or mandatory naming-review evidence is missing, record `REWORK` with the reason `ADDITIONAL EVIDENCE REQUIRED` and identify the missing authority or evidence. A confirmed unresolved material naming violation introduced by the candidate requires `REWORK` with the reason `MATERIAL NAMING VIOLATION` and exact candidate/path/identifier evidence. If both conditions apply, record both reasons. Neither condition permits acceptance. Do not infer runtime or product acceptance from naming compliance.
+
 ## Outcomes
 
-Possible outcomes include:
+Record one of the four existing outcomes in the [Acceptance Report](../templates/ACCEPTANCE_REPORT.template.md):
 
-- ACCEPT;
-- ACCEPT WITH RECORDED LIMITATION;
-- REWORK;
-- REJECT;
-- QUARANTINE;
-- ADDITIONAL EVIDENCE REQUIRED.
+- `ACCEPTED` (ACCEPT, or ACCEPT WITH RECORDED LIMITATION when permitted by the criteria);
+- `REWORK` (including ADDITIONAL EVIDENCE REQUIRED as a reason, not a separate outcome);
+- `REJECTED` (REJECT);
+- `QUARANTINED` (QUARANTINE).
+
+A recorded limitation cannot waive mandatory evidence, unresolved material naming violations, or any other blocking acceptance criterion. Naming evidence alone is not sufficient for `ACCEPTED`.
 
 ## Evidence discipline
 

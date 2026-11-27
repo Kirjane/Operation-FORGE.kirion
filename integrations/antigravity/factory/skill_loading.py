@@ -15,7 +15,8 @@ from copy import deepcopy
 
 from .mission_contract import contract_digest
 from .authority import validate_contract
-from .skill_registry import SkillRegistry, SkillError, require, canonical, digest
+from .skill_registry import SkillRegistry, SkillError, require, canonical, digest, MAX_REFERENCE_FILES
+from .policy import FRONTEND_PERSONAS
 
 
 def skill_denial(exc):
@@ -34,7 +35,7 @@ def _brain_bytes(packet, config):
     if cognition["mode"] != "INHERITED":
         require(not packet["authority"]["brain_required"] and context is None,
                 "REQUIRED_BRAIN_CONTEXT_UNAVAILABLE")
-        return other, config["max_context_bytes"], None, 8
+        return other, config["max_context_bytes"], None, 24
     require(type(context) is dict and config.get("brain_run_id") == cognition["brain_run_id"],
             "BRAIN_STAGE_CONTEXT_UNAVAILABLE")
     checkpoint = context["checkpoint"]
@@ -145,14 +146,32 @@ class FixtureSkillRuntime:
                     "SKILL_GRANT_BINDING_MISMATCH")
         used, limit, checkpoint, document_remaining = _brain_bytes(packet, cfg)
         require(document_remaining > 0, "SKILL_CONTEXT_DOCUMENT_BUDGET_EXCEEDED")
-        required = ["kirion-core", "kirion-dispatch", *STACK_SKILL_BUNDLES[cfg["profile"]],
-                    *cfg.get("required_extra", [])]
-        plan, contents = self._registry.plan(required, cfg.get("optional_extra", []), host=cfg["host"],
+        required = ["kirion-core", "kirion-dispatch", *STACK_SKILL_BUNDLES[cfg["profile"]]]
+        frontend = None
+        references, optional_references = [], []
+        if packet["assigned_persona"] in FRONTEND_PERSONAS or cfg["profile"] == "frontend_web":
+            from .frontend_activation import frontend_selection
+            require(cfg["profile"] == "frontend_web", "FRONTEND_PROFILE_REQUIRED")
+            require(all(self._registry.entry_kind(n) == "skill" for n in
+                        [*cfg.get("required_extra", []), *cfg.get("optional_extra", [])]),
+                    "FRONTEND_REFERENCE_REQUIRES_EXPLICIT_DOMAIN")
+            references, optional_references, frontend = frontend_selection(self._registry, packet, cfg, required)
+            used += frontend["metadata_bytes"]
+            document_remaining -= 2
+            require(document_remaining > 0, "FRONTEND_DECLARATION_BUDGET_EXCEEDED")
+        required += [*cfg.get("required_extra", []), *references]
+        optional = [*cfg.get("optional_extra", []), *optional_references]
+        plan, contents = self._registry.plan(required, optional, host=cfg["host"],
                 stage=cfg["stage"], task=cfg.get("task", "general"), max_bytes=limit,
                 context_used_bytes=used, max_files=min(cfg.get("max_files", 8), document_remaining),
-                source_authorities=packet["source_authorities"],
+                max_reference_files=cfg.get("max_reference_files", MAX_REFERENCE_FILES),
+                max_documents=min(document_remaining, 24),
+                source_authorities=[source for source in packet["source_authorities"]
+                    if frontend is None or source["authority_kind"] in {"CONSTRAINT", "FUNCTIONAL"}],
                 include_routes=cfg.get("include_routes", True))
-        require([s["source"]["path"] for s in plan["selected"]] == packet["selected_skills"]["files"],
+        plan["frontend_activation"] = frontend
+        require([s["source"]["path"] for s in plan["selected"] if s["kind"] == "skill"] ==
+                packet["selected_skills"]["files"],
                 "AUTHORIZED_SKILL_SELECTION_MISMATCH")
         if require_consumable:
             require(all(s["host_mode"] == "FIXTURE" for s in plan["selected"] if s["required"]),
@@ -168,6 +187,35 @@ class FixtureSkillRuntime:
         prepared = PreparedSkillContext(plan, contents, binding)
         self._prepared[prepared] = prepared.plan_sha256
         return prepared
+
+    def composition_identity(self):
+        return {"registry": self._registry.identity, "configuration_sha256": digest(self._configs)}
+
+    def observe_reference_source(self, source, prepared):
+        """Observe only exact declared files in the pinned plan; never broaden scope."""
+        pins = [e["source"] for e in prepared._plan["selected"]]
+        activation = prepared._plan.get("frontend_activation")
+        if activation:
+            pins.extend([activation["declaration"], activation["profile"]])
+        for path in source["scope"]:
+            matches = [p for p in pins if p["path"] == path and all(p[k] == source[k] for k in
+                       ("repository_id", "repository_name", "commit_sha"))]
+            require(len(matches) == 1, "FIXTURE_REFERENCE_SCOPE_NOT_EXACT")
+            self._registry.read_declared_source(matches[0], [source])
+        return {k: source[k] for k in ("repository_id", "repository_name", "commit_sha")}
+
+    def manual_context(self, packet, *, grant=None):
+        """Export verified retrieved text; neither host activation nor receipt."""
+        prepared = self.prepare(packet, grant=grant)
+        require(prepared._plan["host"] == "chatgpt", "MANUAL_CHATGPT_CONTEXT_REQUIRED")
+        cfg = self._configs[contract_digest(packet)]
+        brain = cfg.get("brain_stage_context")
+        return {"plan": prepared.summary(), "brain_documents": deepcopy(brain["documents"]) if brain else [],
+                "documents": [
+                    {"id": e["id"], "source": e["source"], "content": prepared._contents[e["id"]].decode("utf-8")}
+                    for e in prepared._plan["selected"]],
+                "status": "RETRIEVED_NOT_LOADED", "invoked": False,
+                "native_loading_verified": False, "promotion_authorized": False}
 
     def consume(self, prepared, consumer, packet):
         require(type(prepared) is PreparedSkillContext and callable(consumer)

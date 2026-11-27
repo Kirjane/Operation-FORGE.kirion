@@ -1,0 +1,145 @@
+{
+  "schema_version": "r2a-0.2-test-case",
+  "fixture": {
+    "id": "R2A-RED-RETAIL",
+    "pair_id": "RETAIL",
+    "polarity": "negative",
+    "synthetic": true,
+    "not_live_authority": true,
+    "historical_references": [
+      "https://github.com/Kirjane/Salryn/pull/105",
+      "https://github.com/Kirjane/Salryn/issues/91"
+    ],
+    "limitations": [
+      "Historical inspiration, synthetic isolated test vectors only; no live evidence independently retrieved or replayed"
+    ]
+  },
+  "untrusted_request": {
+    "schema_version": "r2a-0.2-draft",
+    "mission": {
+      "mission_id": "FORGE-HARNESS-ASSURANCE-CONTRACT-R2A",
+      "repository": "Kirjane/Salryn",
+      "candidate_sha": "607fcc4b17e2c069d0fd36d0646c554940977e2d",
+      "authority_hint": "https://github.com/Kirjane/Operation-FORGE.kirion/issues/19"
+    },
+    "claim": {
+      "claim_id": "R2A-RED-RETAIL-claim",
+      "type": "RELEASE_READY",
+      "statement": "Retail is ready for authorized production distribution",
+      "target": {
+        "kind": "release-artifact",
+        "environment": "production distribution readiness",
+        "data_authority": "installed-runtime",
+        "artifact_digest_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+      }
+    },
+    "offered_evidence_ids": [
+      "ret-pr105-source-review",
+      "ret-internal-smoke"
+    ]
+  },
+  "simulated_resolver_context": {
+    "synthetic_only": true,
+    "authorization_snapshot": {
+      "authority_ref": "https://github.com/Kirjane/Operation-FORGE.kirion/issues/19",
+      "candidate_sha": "607fcc4b17e2c069d0fd36d0646c554940977e2d",
+      "repository": "Kirjane/Salryn",
+      "resolver_source": "SYNTHETIC_TEST_HARNESS_NOT_AUTHORIZED_FOR_LIVE"
+    },
+    "pinned_policy": {
+      "path": "policies/retail.json",
+      "sha256": "96b4340c96f69f8a130018d69caf62052a3d5f1ecb95b504d9cf0a140d7a994b",
+      "policy_id": "R2A-SIM-RETAIL",
+      "policy_mode": "SYNTHETIC_TEST_ONLY_NOT_PROJECT_AUTHORITY"
+    },
+    "evidence_records": [
+      {
+        "evidence_id": "ret-pr105-source-review",
+        "evidence_level": "E1",
+        "evidence_type": "SOURCE",
+        "provenance": "DIRECTLY_OBSERVED",
+        "candidate_sha": "607fcc4b17e2c069d0fd36d0646c554940977e2d",
+        "environment": "synthetic independent source review",
+        "command_or_scenario": "synthetic bounded scenario: ret-pr105-source-review",
+        "result": "PASS",
+        "artifact_reference": "fixture://retail/ret-pr105-source-review",
+        "observed_at": "2026-11-24T04:58:00+08:00",
+        "limitations": [
+          "SYNTHETIC fixture; not a live CI, reviewer, runner or product acceptance record"
+        ],
+        "issuer_resolution": {
+          "channel": "SIMULATED_REVIEWER_API",
+          "issuer_id": "independent-fixture-reviewer",
+          "trust_class": "SIMULATED_RESOLVED_FIXTURE_ONLY"
+        },
+        "observed_target": {
+          "kind": "source-tree",
+          "environment": "synthetic independent source review",
+          "data_authority": "source"
+        }
+      },
+      {
+        "evidence_id": "ret-internal-smoke",
+        "evidence_level": "E4",
+        "evidence_type": "BUILD",
+        "provenance": "AUTOMATED",
+        "candidate_sha": "607fcc4b17e2c069d0fd36d0646c554940977e2d",
+        "environment": "internal Windows smoke synthetic",
+        "command_or_scenario": "synthetic bounded scenario: ret-internal-smoke",
+        "result": "PASS",
+        "artifact_reference": "fixture://retail/ret-internal-smoke",
+        "observed_at": "2026-11-24T04:58:00+08:00",
+        "limitations": [
+          "SYNTHETIC fixture; not a live CI, reviewer, runner or product acceptance record"
+        ],
+        "issuer_resolution": {
+          "channel": "SIMULATED_GITHUB_ACTIONS",
+          "issuer_id": "fixture-control",
+          "trust_class": "SIMULATED_RESOLVED_FIXTURE_ONLY"
+        },
+        "observed_target": {
+          "kind": "ci-validation",
+          "environment": "internal Windows smoke synthetic",
+          "data_authority": "disposable-live-host",
+          "validation_scope": "installer smoke only"
+        }
+      }
+    ],
+    "gate_observations": [
+      {
+        "gate_id": "RETAIL_NONAUTHOR_SOURCE_REVIEW",
+        "observed_status": "PASS",
+        "evidence_ids": [
+          "ret-pr105-source-review"
+        ],
+        "resolved_by": "SIMULATED_POLICY_EVIDENCE_RESOLVER"
+      },
+      {
+        "gate_id": "RETAIL_WINDOWS_LAB_ABC",
+        "observed_status": "NOT_RUN",
+        "evidence_ids": [],
+        "resolved_by": "SIMULATED_POLICY_EVIDENCE_RESOLVER"
+      },
+      {
+        "gate_id": "RETAIL_SIGNING_AUTHORIZATION",
+        "observed_status": "BLOCKED",
+        "evidence_ids": [],
+        "resolved_by": "SIMULATED_POLICY_EVIDENCE_RESOLVER"
+      }
+    ],
+    "reviewer_resolution": {
+      "resolved_by": "SIMULATED_REVIEWER_API",
+      "author_identity": "retail-author-fixture",
+      "reviewer_identity": "independent-fixture-reviewer"
+    }
+  },
+  "expected_oracle": {
+    "verdict": "CLAIM_UNVERIFIED",
+    "reason_codes": [
+      "REQUIRED_GATE_NOT_RUN",
+      "REQUIRED_GATE_BLOCKED"
+    ],
+    "explanation": "Both absent lab test and blocked signing prevent readiness; no E6 mapping.",
+    "live_product_outcome": "NOT_TESTED"
+  }
+}

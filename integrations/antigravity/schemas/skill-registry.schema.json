@@ -221,6 +221,104 @@
     },
     "noAutomaticProjectPolicyAdoption": {
       "const": true
+    },
+    "frontend_activation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "declaration",
+        "profile"
+      ],
+      "properties": {
+        "declaration": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "repository_id",
+            "repository_name",
+            "commit_sha",
+            "path",
+            "blob_sha",
+            "bytes",
+            "sha256"
+          ],
+          "properties": {
+            "repository_id": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "repository_name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "commit_sha": {
+              "type": "string",
+              "pattern": "^(?!0{40}$)[0-9a-f]{40}$"
+            },
+            "path": {
+              "type": "string",
+              "minLength": 1
+            },
+            "blob_sha": {
+              "type": "string",
+              "pattern": "^(?!0{40}$)[0-9a-f]{40}$"
+            },
+            "bytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 262144
+            },
+            "sha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            }
+          }
+        },
+        "profile": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "repository_id",
+            "repository_name",
+            "commit_sha",
+            "path",
+            "blob_sha",
+            "bytes",
+            "sha256"
+          ],
+          "properties": {
+            "repository_id": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "repository_name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "commit_sha": {
+              "type": "string",
+              "pattern": "^(?!0{40}$)[0-9a-f]{40}$"
+            },
+            "path": {
+              "type": "string",
+              "minLength": 1
+            },
+            "blob_sha": {
+              "type": "string",
+              "pattern": "^(?!0{40}$)[0-9a-f]{40}$"
+            },
+            "bytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 262144
+            },
+            "sha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            }
+          }
+        }
+      }
     }
   }
 }

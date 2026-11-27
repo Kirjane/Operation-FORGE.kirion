@@ -54,6 +54,7 @@ function checkpointValid(checkpoint){
 }
 function continuityFailure(previous,next){
   if(!previous||previous.context_manifest.status!=='RESOLVED'||next.context_manifest.status!=='RESOLVED') return null;
+  if(canonicalJson(previous.context_manifest.feature_context||null)!==canonicalJson(next.context_manifest.feature_context||null)) return 'Feature context provenance changed during lifecycle compilation.';
   const documents=new Map(next.context_manifest.documents.map(d=>[d.path,d]));
   for(const doc of previous.context_manifest.documents){
     if(doc.source!=='REQUIRED_SEED'&&doc.source!=='NOTION_SNAPSHOT') continue;
@@ -134,6 +135,8 @@ function preflightSession(session,taskInput,options={}){
   if(session.version!==SESSION_VERSION) return {ok:false,result:{verdict:'BLOCK',status:'MIGRATION_REQUIRED',reason:'Historical v1 session is readable but cannot acquire v2 stage authority; create a new session.',session}};
   const stage=session.current_stage||'BOOTSTRAP';
   const run=buildTask(taskInput,{...options,stage}),ids=computeRun(run),fresh=assertFresh(session,run,ids);
+  if((run.task.feature_context||run.context.feature_context) && run.context.feature_context?.evidence_ready!==true)
+    return {ok:false,result:{verdict:'BLOCK',status:'FCI_CONTEXT_UNVERIFIED',reason:run.context.feature_context?.code||'FCI_CONTEXT_NOT_VERIFIED',session}};
   if(!fresh.fresh) return {ok:false,result:{verdict:'BLOCK',status:'STALE',reason:`Harness/task/context fingerprint changed: ${fresh.changed.join(', ')}. Create a new session.`,changed:fresh.changed,session}};
   return {ok:true,run,ids};
 }
@@ -160,8 +163,55 @@ function advanceSession(session,taskInput,evidence,targetStage,options={}){
   if(evaluation.verdict==='BLOCK') return {verdict:'BLOCK',status:'BLOCKED',reason:`BLOCK gate failed at ${targetStage}.`,stage_context,session:sealSession({...updated,blocked_stage:targetStage,status:'BLOCKED'},options)};
   return {verdict:'PASS',status:'ADVANCED',stage_context,session:sealSession({...updated,checkpoint,context_sha256:checkpoint.context_sha256,current_stage:targetStage,blocked_stage:null,status:'ACTIVE'},options)};
 }
+function refreshFeatureSuccessor(session,taskInput,reason,options){
+  const integrity=verifySessionIntegrity(session,options);
+  const block=(status,reason)=>({verdict:'BLOCK',status,reason,session});
+  if(!integrity.valid||session.integrity_mode!=='HMAC_SHA256'||session.version!==SESSION_VERSION)
+    return block('FCI_SUCCESSOR_UNAUTHENTICATED','Signed predecessor session required.');
+  if(!session.current_stage||stageIndex(session.current_stage)<stageIndex('PRE_IMPLEMENTATION'))
+    return block('REFRESH_NOT_ALLOWED','Implementation stage has not been entered.');
+  const old=session.checkpoint?.context_manifest?.feature_context;
+  const run=buildTask(taskInput,{...options,stage:session.current_stage}),ids=computeRun(run);
+  const next=run.context.feature_context,policy=next?.policy;
+  if(!old?.policy||next?.evidence_ready!==true||!policy||
+     old.policy.intent_sha256!==policy.intent_sha256||old.feature_id!==next.feature_id||
+     policy.predecessor?.manifest_sha256!==old.manifest_sha256||
+     policy.predecessor?.head!==session.target_repository.head||
+     policy.predecessor?.contract_revision!==old.contract.revision||
+     next.contract.revision!==old.contract.revision+1||next.repository.head===old.repository.head||
+     !old.policy.required_claim_ids.every(id=>policy.required_claim_ids.includes(id)))
+    return block('FCI_SUCCESSOR_NOT_AUTHORIZED','Exact approved successor lineage and unchanged intent/claim floor required.');
+  if(['requested_path','top_level','branch','detached'].some(k=>session.target_repository[k]!==run.target_repository[k])||
+     session.runtime_sha256!==run.runtime_fingerprint.sha256||session.config_sha256!==run.config_sha256||
+     session.checkpoint.provider!==(run.context.provider||null)||session.checkpoint.source_root!==sourceRoot(run))
+    return block('FCI_SUCCESSOR_IDENTITY_DRIFT','Repository, runtime, provider or configuration changed.');
+  const previous={...session.checkpoint,context_manifest:{...session.checkpoint.context_manifest,feature_context:null}};
+  const current=stageCheckpoint(run,ids,session.current_stage);
+  const continuity=continuityFailure(previous,{...current,context_manifest:{...current.context_manifest,feature_context:null}});
+  if(continuity)return block('FCI_SUCCESSOR_CONTEXT_DRIFT',continuity);
+  const boot=buildTask(taskInput,{...options,stage:'BOOTSTRAP'}),bootIds=computeRun(boot);
+  if(boot.context.feature_context?.policy?.policy_sha256!==policy.policy_sha256||
+     targetRealityHash(boot.target_repository)!==targetRealityHash(run.target_repository)||
+     boot.runtime_fingerprint.sha256!==session.runtime_sha256||boot.config_sha256!==session.config_sha256)
+    return block('FCI_SUCCESSOR_CHANGED','Successor changed during checkpoint compilation.');
+  const checkpoint=stageCheckpoint(boot,bootIds,'BOOTSTRAP');
+  const event=makeEvent(session.history,'FEATURE_CONTEXT_SUCCESSOR',{stage:'BOOTSTRAP',reason:reason.trim(),
+    previous_checkpoint_sha256:session.checkpoint.checkpoint_sha256,
+    previous_manifest_sha256:old.manifest_sha256,manifest_sha256:next.manifest_sha256,
+    previous_target_sha256:session.accepted_target_sha256,target_repository_sha256:targetRealityHash(boot.target_repository),
+    policy_sha256:policy.policy_sha256,invalidated_evidence:true,checkpoint});
+  const updated=sealSession({...session,task_sha256:bootIds.task_sha256,context_sha256:bootIds.context_sha256,
+    checkpoint,target_repository:boot.target_repository,accepted_target_sha256:targetRealityHash(boot.target_repository),
+    current_stage:null,blocked_stage:'BOOTSTRAP',status:'BLOCKED',
+    last_evaluation:blockedEvaluation('BOOTSTRAP','Prior revision evidence invalidated; reevaluate sequential gates.'),
+    history:[...session.history,event]},options);
+  return {verdict:'PASS',status:'FEATURE_SUCCESSOR_ADOPTED',evidence_invalidated:true,session:updated};
+}
 function refreshTarget(session,taskInput,reason,options={}){
   if(typeof reason!=='string'||!reason.trim()) throw new Error('target refresh requires a non-empty reason');
+  if(session?.checkpoint?.context_manifest?.feature_context?.policy&&
+     taskInput?.feature_context?.manifest_sha256!==session.checkpoint.context_manifest.feature_context.manifest_sha256)
+    return refreshFeatureSuccessor(session,taskInput,reason,options);
   const preflight=preflightSession(session,taskInput,options);if(!preflight.ok) return preflight.result;
   const {run}=preflight,current=session.current_stage===null?-1:stageIndex(session.current_stage);
   if(current<stageIndex('PRE_IMPLEMENTATION')) return {verdict:'BLOCK',status:'REFRESH_NOT_ALLOWED',reason:'Target reality may only be refreshed after PRE_IMPLEMENTATION has been entered.',session};

@@ -1,0 +1,167 @@
+"""Reproducible, uninstalled exact-source ChatGPT candidate; no host mutation."""
+import argparse, hashlib, json, pathlib, re, subprocess, zipfile
+SOURCE="0e8765de6e0e87ea9b4503714f08fa650e1a79c6"
+TREE="80eaa7a4f879871e5df533203b8b60b563f8b782"
+PREFIX="integrations/antigravity/plugins/kirion-forge/"
+BASE="integrations/chatgpt/"
+VEND="skills/forge-port/references/upstream/"
+PORT="skills/forge-port/references/port/"
+VERSION="0.3.0-rc.2"
+CONVERGED_BASE="919b37877bce55c0960787c8819b2c9788fd5c47"
+CONVERGED_VERSION="0.4.0-rc.1"
+
+
+def full_sha(value):
+    if not isinstance(value,str) or not re.fullmatch(r"[0-9a-f]{40}",value) or value=="0"*40:
+        raise SystemExit("full nonzero Git object SHA required")
+    return value
+
+
+def select_package_source(git,candidate,converged_tree=None):
+    """Historical and converged custody checks are separate, never a fallback."""
+    full_sha(candidate)
+    if git("rev-parse",SOURCE+"^{tree}").decode().strip()!=TREE:
+        raise SystemExit("wrong upstream tree")
+    if git("rev-parse",candidate+"^{commit}").decode().strip()!=candidate:
+        raise SystemExit("candidate commit mismatch")
+    if git("rev-parse","HEAD").decode().strip()!=candidate or git("status","--porcelain"):
+        raise SystemExit("clean exact candidate checkout required")
+    candidate_tree=full_sha(git("rev-parse",candidate+"^{tree}").decode().strip())
+    if converged_tree is None:
+        git("merge-base","--is-ancestor",SOURCE,candidate)
+        if any(not path.startswith(BASE) for path in git("diff","--name-only",SOURCE,candidate).decode().splitlines()):
+            raise SystemExit("inherited source modified")
+        return SOURCE,TREE,VERSION
+    if full_sha(converged_tree)!=candidate_tree:
+        raise SystemExit("converged candidate tree mismatch")
+    git("merge-base","--is-ancestor",CONVERGED_BASE,candidate)
+    git("merge-base","--is-ancestor",SOURCE,candidate)
+    return candidate,candidate_tree,CONVERGED_VERSION
+
+RELEASE_MANIFESTS=("plugin.json",".codex-plugin/plugin.json")
+
+
+def release_inputs(release_root, inventory_path, inventory_sha256, candidate, tree, builder):
+    """Resolve independently pinned external manifest inputs before transforming them."""
+    if not inventory_path or not isinstance(inventory_sha256,str) or not re.fullmatch(r"[0-9a-f]{64}",inventory_sha256):
+        raise SystemExit("approved release input inventory and digest required")
+    raw=inventory_path.read_bytes()
+    if hashlib.sha256(raw).hexdigest()!=inventory_sha256:
+        raise SystemExit("release inventory digest mismatch")
+    inventory=json.loads(raw)
+    if not isinstance(inventory,dict) or set(inventory)!={"schema","candidate","tree","builder_sha256","manifests"}:
+        raise SystemExit("invalid release inventory")
+    if (inventory["schema"]!="forge.release-inputs.v1" or inventory["candidate"]!=candidate
+            or inventory["tree"]!=tree or inventory["builder_sha256"]!=hashlib.sha256(builder).hexdigest()):
+        raise SystemExit("release inventory identity mismatch")
+    if not isinstance(inventory["manifests"],dict) or set(inventory["manifests"])!=set(RELEASE_MANIFESTS):
+        raise SystemExit("release manifest inventory mismatch")
+    result={}
+    root=release_root.resolve()
+    for name in RELEASE_MANIFESTS:
+        path=root/name
+        if path.resolve()!=path or not path.is_file():
+            raise SystemExit("release manifest path invalid")
+        data=path.read_bytes()
+        if hashlib.sha256(data).hexdigest()!=inventory["manifests"][name]:
+            raise SystemExit("release manifest digest mismatch: "+name)
+        result[name]=data
+    return result,{"inventory_sha256":inventory_sha256,"builder_sha256":inventory["builder_sha256"],"manifests":inventory["manifests"]}
+
+
+def main():
+    p=argparse.ArgumentParser()
+    for key in ("repo","release-root","out"): p.add_argument("--"+key,type=pathlib.Path,required=True)
+    p.add_argument("--candidate",required=True)
+    p.add_argument("--converged-tree",help="Explicit exact tree pin for converged source; omission retains historical policy.")
+    p.add_argument("--release-inputs",type=pathlib.Path)
+    p.add_argument("--release-inputs-sha256")
+    a=p.parse_args()
+    root=a.repo.resolve()
+    def git(*args): return subprocess.check_output(["git","--no-replace-objects",*args],cwd=root)
+    source,tree,version=select_package_source(git,a.candidate,a.converged_tree)
+    converged=a.converged_tree is not None
+    external={}; release_custody=None
+    if converged:
+        if a.release_inputs and (a.release_inputs.resolve()==root or root in a.release_inputs.resolve().parents):
+            raise SystemExit("release inventory must be supplied outside candidate checkout")
+        builder=pathlib.Path(__file__).read_bytes()
+        if builder!=git("show",a.candidate+":"+BASE+"package.py"):
+            raise SystemExit("builder bytes differ from candidate")
+        external,release_custody=release_inputs(a.release_root,a.release_inputs,a.release_inputs_sha256,a.candidate,tree,builder)
+    if a.out.resolve()==root or root in a.out.resolve().parents: raise SystemExit("archive must be outside checkout")
+    files={}; custody={}; projected={}; counts=[0,0,0]
+    def add(name,data,mode="100644"):
+        parts=name.split("/")
+        if not name or any(x in ("",".","..") for x in parts) or "\\" in name or ":" in name or any(ord(x)<32 for x in name): raise SystemExit("unsafe package path "+name)
+        if name in files: raise SystemExit("duplicate package path "+name)
+        files[name]=(data,mode)
+    def read_tree(commit,paths=()):
+        for record in git("ls-tree","-rz",commit,"--",*paths).split(b"\0"):
+            if not record: continue
+            header,raw=record.split(b"\t",1); mode,typ,blob=header.decode().split()
+            path=raw.decode("utf-8")
+            if typ!="blob" or mode not in ("100644","100755"): raise SystemExit("unsupported Git object "+path)
+            data=git("cat-file","blob",blob)
+            if hashlib.sha1(f"blob {len(data)}\0".encode()+data).hexdigest()!=blob: raise SystemExit("blob mismatch")
+            yield path,blob,data,mode
+    def record(path,blob,data,mode,dest):
+        add(dest,data,mode)
+        custody[path]={"blob":blob,"sha256":hashlib.sha256(data).hexdigest(),"mode":mode,"package_path":dest}
+    for path,blob,data,mode in read_tree(source):
+        # One custody row per source path. Converged adapter sources belong in
+        # their port projection, while shared doctrine uses the exact source tree.
+        if converged and path.startswith(BASE):
+            record(path,blob,data,mode,PORT+path)
+            continue
+        record(path,blob,data,mode,VEND+path)
+        native=None
+        if path.startswith(".agents/skills/"):
+            native="skills/"+path[len(".agents/skills/"):]
+            if path.endswith("/SKILL.md"): counts[0]+=1
+        elif path.startswith(PREFIX+"skills/"):
+            native=path[len(PREFIX):]
+            if path.endswith("/SKILL.md"): counts[1]+=1
+        elif path.startswith(PREFIX+"agents/") and path.endswith(".md"): counts[2]+=1
+        if native:
+            add(native,data,mode); projected[native]=path
+    if counts!=[16,16,10]: raise SystemExit("incomplete skill/persona inventory: "+str(counts))
+    if not converged:
+        for path,blob,data,mode in read_tree(a.candidate,[BASE]):
+            record(path,blob,data,mode,PORT+path)
+    route=json.loads(files[PORT+BASE+"routing.json"][0])
+    def alias(name,targets,description):
+        for target in targets:
+            if not any(k==VEND+target or k.startswith(VEND+target.rstrip("/")+"/") for k in files): raise SystemExit("route target absent: "+target)
+        body="---\nname: "+name+"\ndescription: "+description+"\n---\n\nLoad ../forge-port/SKILL.md and its authority rules first. Resolve these exact canonical paths under ../forge-port/references/upstream/:\n"
+        body+="".join("- "+target+"\n" for target in targets)
+        body+="\nUse the existing canonical contract; role selection does not create a model context or authorize a GitHub mutation. Authenticate expected login and immutable ID for each authorized operation. Same-context review is non-accepting; no merge, release or production activation without independent acceptance.\n"
+        add("skills/"+name+"/SKILL.md",body.encode())
+    for name,targets in route["aliases"].items(): alias(name,targets,"Route the legacy "+name+" entry point to the exact inherited Forge doctrine.")
+    for role,target in route["personas"].items():
+        explicit="forge-persona-"+role
+        alias(explicit,[target],"Select the canonical "+role+" persona for an authorized Forge mission.")
+        legacy="kirion-"+role
+        if legacy not in route["collisions"]: alias(legacy,[target],"Route the legacy "+role+" persona invocation to the canonical contract.")
+    for name in route["legacy_skills"]:
+        if "skills/"+name+"/SKILL.md" not in files: raise SystemExit("legacy entry absent "+name)
+    for name in RELEASE_MANIFESTS:
+        original=json.loads(external[name] if converged else (a.release_root/name).read_bytes())
+        if original.get("name")!="kirion-forge-chatgpt" or original.get("version")!=route["baseline_version"]: raise SystemExit("wrong account baseline")
+        original["version"]=version
+        interface=original.get("extensions",{}).get("com.openai",{}).get("interface",{})
+        if interface:
+            interface["shortDescription"]="Evidence-gated software factory"
+            interface["longDescription"]="Exact inherited Forge doctrine and engineering engine, authenticated bounded persona routing, comparative CI and same-context adversarial review. Native independent context and production activation remain unqualified."
+            interface["defaultPrompt"]=["Activate Forge for my repository. Verify authority and execute bounded work.","Continue a Forge mission from its GitHub issue or pull request.","Run non-accepting adversarial review of an exact candidate."]
+        add(name,(json.dumps(original,ensure_ascii=False,indent=2)+"\n").encode())
+    add("skills/forge-port/SKILL.md",b"""---\nname: forge-port\ndescription: Activate the exact inherited Forge engineering factory with bounded authenticated persona routing and evidence gates.\n---\nRead references/upstream/AGENTS.md, references/upstream/BOOTSTRAP_CHATGPT.md, references/upstream/arsenal/CHATGPT_BOOTSTRAP.md, references/port/integrations/chatgpt/README.md and references/port/integrations/chatgpt/routing.json. Resolve relative canonical paths in references/upstream. Canonical skills remain byte identical; explicit persona selection uses forge-persona-* (including integrator and qa), not the colliding engineering skill names. Automatically perform bounded same-context Nox review, repair and retest as authorized, and label it non-accepting. Use only actual authenticated GitHub connections; no credential substitution, invented hooks or context IDs. G13 independent model context, generic delivery and production promotion remain blocked until proven. Do not stop feasible candidate work merely because independent acceptance is pending. Never merge, release or self-accept.\n""")
+    add("skills/forge-port/references/SOURCE_MANIFEST.json",json.dumps({"upstream":source,"tree":tree,"candidate":a.candidate,"files":custody,"projected":projected,"version":version,**({"packaging_mode":"CONVERGED_EXACT_SOURCE","historical_upstream":SOURCE,"historical_tree":TREE,"candidate_tree":tree,"release_inputs":release_custody} if converged else {})},sort_keys=True,indent=2).encode())
+    add("README.md",b"# KIRION Forge ChatGPT qualification candidate\nUninstalled; no independent acceptance. Begin with skills/forge-port/SKILL.md. The complete upstream tree is vendored as inert exact-source reference material; Antigravity hooks are not native ChatGPT hooks.\n")
+    with zipfile.ZipFile(a.out,"x",zipfile.ZIP_DEFLATED,compresslevel=9) as z:
+        for name,(data,mode) in sorted(files.items()):
+            info=zipfile.ZipInfo("kirion-forge-chatgpt/"+name,(1980,1,1,0,0,0))
+            info.compress_type=zipfile.ZIP_DEFLATED; info.external_attr=int(mode,8)<<16
+            z.writestr(info,data)
+    print(hashlib.sha256(a.out.read_bytes()).hexdigest(),a.out)
+if __name__=="__main__": main()

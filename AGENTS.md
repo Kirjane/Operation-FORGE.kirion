@@ -39,6 +39,20 @@ Primary roles are Maintainer, Code Writer, Integration Writer, Reviewer, and Acc
 
 Writers produce candidates. Maintainers govern state, decomposition, evidence, integration, recovery, and promotion. One agent may change roles only through an explicit authority transition.
 
+## Semantic naming and readability
+
+This is the canonical normative naming rule for all Kirjane repositories, languages and human or agent authors (including Antigravity, ChatGPT and Codex). It applies prospectively to new and modified code. Local conventions may refine it but may not waive it.
+
+- Name permanent software artifacts for stable business/domain meaning, engineering responsibility, observable behavior, authority, state, units and side effects. Names must make sense without delivery history.
+- Never introduce temporary phase, sprint, benchmark, mission, wave, repair round, issue number, agent/persona or arbitrary delivery-version labels into permanent filenames, directories, components, types, methods, functions, variables, CSS selectors, API routes, database identifiers, services or tests. Work identifiers belong in issues, commits, branches, plans, evidence receipts and explicitly disposable artifacts, not shipped architecture.
+- Preserve legitimate domain phases/states, protocol/API versions, migration sequences, standards, compatibility contracts, conventional framework/entrypoint identifiers and historical evidence. Digits alone do not establish a violation.
+- Avoid vague names such as new, temp, final, misc, helper, manager, handler, data, stuff or result when their scope does not make intent clear. Avoid unexplained abbreviations and redundant length. Short local idioms and established domain/technical abbreviations are legitimate when clear. Follow language/framework/project conventions; name predicates as predicates, collections as plural nouns, operations with meaningful verbs and ambiguous quantities with units.
+- Inspect domain vocabulary, existing callsites and architectural ownership first. Prefer the authorized canonical implementation; do not create duplicates distinguished only by delivery suffixes. If coexistence is necessary, name and document its real distinction. Avoid cosmetic overengineering and unnecessary abstractions.
+- Preserve public routes, APIs, serialized fields, migration identifiers, configuration keys, imports, release artifacts and persisted identifiers. Report legacy violations encountered in scope; rename only under a separately authorized dependency/migration plan and tests. No opportunistic bulk cleanup, unrelated churn, force push or frozen candidate mutation.
+- Before CLOSE/review, writers inspect actual changed paths and introduced or renamed identifiers and correct material violations within authority. Record findings, corrections, justified legitimate exceptions and any remaining limitations in the existing writer report. Reviewers must return `FIX_REQUIRED` for material newly introduced naming violations, with exact candidate evidence and a bounded correction. Acceptance must not pass an unresolved material violation; naming compliance alone does not establish product acceptance. Use precise mechanical checks only with documented exclusions; semantic intent requires judgment.
+
+For examples and engineering guidance, use the existing Second Brain [Naming and Intent](<second-brain/mesh/quality/Naming and Intent.md>) concept and [Code Quality Lane](second-brain/mesh/lanes/quality-assurance/CODE_QUALITY_LANE.md). These explain the rule; they do not replace this authority.
+
 ## Before substantial writes
 
 Verify:

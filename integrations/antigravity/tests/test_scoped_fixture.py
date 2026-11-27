@@ -5,6 +5,7 @@ import unittest
 from pathlib import Path
 
 from integrations.antigravity.factory.dispatch_preflight import ContractJournal
+from integrations.antigravity.factory.fenced_file import supported
 from integrations.antigravity.factory.dispatcher import FleetDispatcher
 from integrations.antigravity.factory.mission_contract import contract_digest
 from integrations.antigravity.factory.scoped_fixture import ScopedGitFixtureAdapter
@@ -69,6 +70,11 @@ class ScopedFixtureTests(unittest.TestCase):
         self.make_writer()
         self.authorize()
         result = self.dispatch()
+        if not supported():
+            self.assertEqual(result["status"], "BLOCKED")
+            self.assertEqual((self.adapter.repo / self.adapter.owned_file).read_bytes(), b"before\n")
+            self.assertTrue(self.journal.verify_hash_chain())
+            return
         self.assertEqual(result["status"], "COMPLETED")
         self.assertEqual(result["result"]["changed_paths"], [self.adapter.owned_file])
         self.assertEqual(result["result"]["acceptance"], "NOT_EVALUATED")
@@ -82,7 +88,7 @@ class ScopedFixtureTests(unittest.TestCase):
         self.authorize()
         self.adapter.leases.acquire_leases(self.packet, "other-worker")
         result = self.dispatch()
-        self.assertEqual(result["status"], "NO_EFFECT")
+        self.assertEqual(result["status"], "NO_EFFECT" if supported() else "BLOCKED")
         self.assertEqual((self.adapter.repo / self.adapter.owned_file).read_bytes(), b"before\n")
         self.assertTrue(self.journal.verify_hash_chain())
 
@@ -103,6 +109,11 @@ class ScopedFixtureTests(unittest.TestCase):
 
         self.make_writer()
         self.authorize()
+        if not supported():
+            self.assertEqual(self.dispatch()["status"], "BLOCKED")
+            self.assertEqual((self.adapter.repo / self.adapter.owned_file).read_bytes(), b"before\n")
+            self.assertTrue(self.journal.verify_hash_chain())
+            return
         real_git = self.adapter._git
 
         def fail_after_write(*args):

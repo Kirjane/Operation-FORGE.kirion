@@ -291,7 +291,7 @@ def select_skills_for_mission(
     plan = resolve_skill_plan(profile_key, skill_source_sha=skill_source_sha,
                              extra_specialists=extra_specialists, repo_root=repo_root, **options)
     return {"skill_source_sha": skill_source_sha,
-            "files": [entry["source"]["path"] for entry in plan["selected"]]}
+            "files": [entry["source"]["path"] for entry in plan["selected"] if entry["kind"] == "skill"]}
 
 
 class FleetDispatcher:
@@ -357,7 +357,12 @@ class FleetDispatcher:
         result = journal.dispatch_fixture(packet, fixture_adapter)
         # Existing bounded historical fixture calls are preserved. They do not
         # establish that a selected skill was loaded by a host.
-        return {**result, "skill_consumption_status": "NOT_VERIFIED_BY_GENERIC_DISPATCH"}
+        from .scoped_fixture import ScopedGitFixtureAdapter
+        consumed = (type(fixture_adapter) is ScopedGitFixtureAdapter and
+                    fixture_adapter.composition_binding() is not None and not result.get("cached") and
+                    result.get("status") == "COMPLETED")
+        return {**result, "skill_consumption_status": "FIXTURE_CONSUMED" if consumed else
+                "NOT_VERIFIED_BY_GENERIC_DISPATCH"}
 
     def prepare_worker_skills(self, raw, runtime=None):
         """Generic composition seam: verify W1 packet against independently pinned skill plan."""

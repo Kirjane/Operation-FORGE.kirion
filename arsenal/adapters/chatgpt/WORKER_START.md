@@ -5,22 +5,25 @@ Use this as a **short copied mission header** and fill the blanks using real ass
 KIRION FORGE — ACTIVATE [NAIRU / JANE / NOX / LUCIEN]
 Role / mission: [read-only reviewer OR bounded writer OR Maintainer]
 Target repo: [owner/repo]
-GitHub identity expected: [Kirch-Nairu / Kirion-Jane / Kirion-Nox / Kirion-Lucien]
+GitHub identity expected: [Kirch-Nairu / Kirion-Jane / Kirion-Nox / Kirion-Luci3n]
+GitHub numeric ID expected: [from WORKER_IDENTITIES.md]
 Issue / PR / contract: [actual links]
 Starting SHA: [full SHA, or DISCOVER_CURRENT]
 Project origin: [GREENFIELD / BROWNFIELD / AUTO]
 Work mode: [DISCOVERY / IN_FLIGHT / MAINTENANCE / RECOVERY / PAUSED / AUTO]
 Join context: [NEW / CONTINUATION / TAKEOVER]
 Owned paths: [authorized allowlist]
-Skill source: Kirch-Nairu/Operation-FORGE.kirion @ [PINNED_40_CHARACTER_SKILL_COMMIT_SHA]
+Skill source: Kirjane/Operation-FORGE.kirion @ [PINNED_40_CHARACTER_SKILL_COMMIT_SHA]
 Do not adopt this proposed skill set as new project policy.
-Use the connected GitHub app first. Verify its login. Read target AGENTS.md,
-contract/issue, current remote SHA; then fetch .agents/skills skill
-source at that exact pinned commit (repository path: .agents/skills/<name>/SKILL.md).
+Use the connected GitHub app first. Verify its login and numeric ID; stop on mismatch. Read target AGENTS.md,
+contract/issue, current remote SHA; then read the pinned Arsenal manifest and
+resolve each selected entry's exact source repository, commit, path and blob.
+A registry commit is not necessarily the source commit for each skill.
 Do not use a moving branch as the execution pin; discover and record the SHA
 before dispatch. If the source ref moved, report drift rather than silently upgrade.
 Use arsenal/CHATGPT_BOOTSTRAP.md and arsenal/PROJECT_STATES.md for state-aware first-run routing when needed. For ongoing governed projects, resume the current work and do not repeat the original Nest setup.
 Load kirion-core, kirion-dispatch, kirion-session-host and only relevant specialists.
+The canonical .agents/skills distribution is resolved through the pinned manifest; do not substitute a moving path for its per-entry source pin.
 Use this chat's available VM for safe disposable source/tests. No assumption
 that other chats share its files, Git credentials or runtime.
 Work only within authorized scope. Report real tests/NOT_RUN and exact SHA.
@@ -32,3 +35,7 @@ or production mutation without explicit project/human authorization.
 The **skill SHA must be a real, observed 40-character Git commit** obtained via GitHub before dispatch; the optional proposal branch is for locating candidates, not a pinned execution source. Recheck the commit exists and the expected files can be read. The **GitHub identity must be observed**, not assumed from the prompt. A ChatGPT session does not automatically gain the other workers' credentials. If no GitHub connector/VM is available, report the limitation and use only permitted narrower actions.
 
 The user may configure the compact Project instruction in `arsenal/adapters/chatgpt/PROJECT_INSTRUCTIONS.fragment.md`; this repo proposal does **not** edit the user's ChatGPT Project or global settings. After a chat reset, recheck remote HEAD and fetch affected state delta rather than replaying old conversations.
+
+For frontend assignments, use the pinned frontend_web declaration and explicit domain IDs; the frontend policy requires a verified v2 grant and host observation for new writes. No Iris GitHub identity is assigned. Historical Lucien receipts remain historical and the suspended account must not be used for new work.
+
+For converged supervised execution, see [supervised engineering](SUPERVISED_ENGINEERING.md) and [skill loading](../../SKILL_LOADING.md). A retrieved input or operator report is not a native consumption receipt. The executor owns selection and reconciliation of a supported authorized route; an unavailable separate session is not an instruction for the operator to relay work. Record a precise blocker only if no safe route exists. The harness does not claim autonomous control of an unobserved session.

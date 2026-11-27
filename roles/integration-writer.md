@@ -32,6 +32,8 @@ The Integration Writer:
 - records integration fixes as distinct commits where practical;
 - reports final integration authority and unresolved risks.
 
+For introduced or renamed artifacts in integration fixes, apply the canonical [semantic naming rule](../AGENTS.md#semantic-naming-and-readability) and inspect the actual integration diff before delivery. Record violations and bounded corrections; do not rename legacy or immutable candidate artifacts without authority.
+
 ## Prohibited behavior
 
 Do not silently redesign accepted writer features during integration.

@@ -12,6 +12,7 @@ function intakeTask(input){
     signals:validateSignals(input.signals),
     risk_overrides:validateRiskOverrides(input.risk_overrides),
     primary_journeys:Array.isArray(input.primary_journeys)?input.primary_journeys:[],
+    ...(Object.hasOwn(input,'feature_context')?{feature_context:input.feature_context}:{}),
     repository:input.repository&&typeof input.repository==='object'?input.repository:{},
     acceptance:Array.isArray(input.acceptance)?input.acceptance.map(String):[]
   };

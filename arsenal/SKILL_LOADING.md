@@ -1,4 +1,4 @@
-# Arsenal W5 loading contract (draft, not adopted)
+# Arsenal skill loading contract (draft, not adopted)
 
 The existing Arsenal manifest is the sole candidate registry. A pinned manifest
 commit identifies a set of candidate entries; it does not activate them. Every
@@ -24,7 +24,8 @@ external code, license grant, global installation or project adoption is implied
   checks the authorized packet against independently configured profile/stage,
   actor/context, budget, registry and actual W3B stage documents. This is
   RETRIEVED_NOT_LOADED. Budget counts raw UTF-8 bytes of selected skill files
-  plus prior verified Brain document bytes and configured other context bytes;
+  plus selected reference bytes, frontend metadata bytes, verified Brain
+document bytes and configured other context bytes;
   no token-count, prompt framing or native host-limit claim.
 - **Actual consumption:** FixtureSkillRuntime supplies a bounded read-only
   FixtureSkillInput; reads deliver text and establish fixture-only consumption.
@@ -48,10 +49,12 @@ The existing v2 source_authorities must cover its exact repository, commit
 and canonical path. Independently configured required_extra selects the
 reference ID when applicable; optional_extra is discretionary. Missing source
 objects, an unauthorized scope or an incompatible required host deny use.
-No fallback, copying or implicit discovery of PR #33 is implemented. Lucien's
-actual frontend standard and role policy remain outside Lane A. A later
-integration writer must explicitly register approved source pins and reconcile
-profile requirements before real frontend activation.
+No working-tree fallback or implicit PR discovery is implemented. Convergence
+registers exact PR #35 source pins for the declaration, profile and fifteen
+canonical frontend references. Frontend required and optional references are
+selected through explicit domain IDs; mandatory entrypoint and evidence are
+included. Constraint or functional source authority is required. Native
+frontend activation remains denied pending qualification.
 
 ## Host semantics
 
@@ -61,7 +64,8 @@ UNAVAILABLE denies required loading. FIXTURE is the only supported observed
 consumption mode here. Native ChatGPT, Codex and Antigravity load attestations
 remain unimplemented; availability or retrieval never establishes host rights.
 An in-process trusted test callback is not a security boundary against arbitrary
-Python execution. Nox owns the independent native composition and later wiring.
+Python execution. The scoped disposable boundary is composed with this loader. Live native
+actor and consumption attestation remain unavailable.
 
 ## Failure-to-intervention ledger (#19 / #25)
 
@@ -78,3 +82,7 @@ Python execution. Nox owns the independent native composition and later wiring.
 All ADAPT decisions here are implementation hypotheses, not independent
 adoption or promotion decisions. See issues #19 and #25 and the existing
 Arsenal ADOPTION.md for promotion constraints.
+
+## Convergence
+
+The versioned registry includes exact Lucien skill and standard source pins. The eight-skill limit is separate from at most sixteen reference documents and twenty-four combined selected documents; the cognition document budget may reduce this. Profile/declaration bytes are charged to the context. See [supervised engineering](adapters/chatgpt/SUPERVISED_ENGINEERING.md) for a manual route. Native frontend role activation remains unqualified.

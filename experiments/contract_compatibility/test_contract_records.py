@@ -606,14 +606,29 @@ class PublicOracleTests(unittest.TestCase):
     def test_r3_n7_evidence_wrong_selected_grant_is_unknown(self):
         i=self._r3_wrong_selected_grant('exact-positive-evidence')
         self._writer_result(self._receipt(i),'MODEL_UNKNOWN',reason='EXPECTED_ATTEMPT_BINDING')
+        original=self._copy(i['evidence'])
+        self.assertIn(original,i['graph'])
         i['evidence']['body']['verdict']='UNKNOWN'
+        self.assertNotEqual(i['evidence'],original)
+        # R4: a changed verdict with the original graph identity must reject.
+        self._writer_result(self._receipt(i),'MODEL_REJECTED',reason='GRAPH_SUBMISSION_CONFLICT')
+        i['evidence']['record_id']='fixture:r4-unknown-evidence'
+        self._writer_result(model.validate_graph(i['graph']+[i['evidence']]),'MODEL_CONSISTENT')
         self._writer_result(self._receipt(i),'MODEL_UNKNOWN',reason='EXPECTED_ATTEMPT_BINDING')
         i['auxiliary']['logical_index'][0]['tip_attempt_ref']=None
         self._writer_result(self._receipt(i),'MODEL_REJECTED',reason='INDEX_TIP')
 
     def test_r3_n7_acceptance_wrong_selected_grant_is_unknown(self):
         i=self._r3_wrong_selected_grant('both-controls')
+        original=self._copy(i['acceptance'])
+        self.assertIn(original,i['graph'])
+        self._writer_result(self._accept(i),'MODEL_UNKNOWN',reason='EXPECTED_ATTEMPT_BINDING')
         i['acceptance']['body']['verdict']='MODEL_UNKNOWN'
+        self.assertNotEqual(i['acceptance'],original)
+        # Keep the same-key divergent-bytes denial as an explicit control.
+        self._writer_result(self._accept(i),'MODEL_REJECTED',reason='GRAPH_SUBMISSION_CONFLICT')
+        i['acceptance']['record_id']='fixture:r4-unknown-acceptance'
+        self._writer_result(model.validate_graph(i['graph']+[i['acceptance']]),'MODEL_CONSISTENT')
         self._writer_result(self._accept(i),'MODEL_UNKNOWN',reason='EXPECTED_ATTEMPT_BINDING')
         i['auxiliary']['logical_index'][0]['tip_attempt_ref']=None
         self._writer_result(self._accept(i),'MODEL_REJECTED',reason='INDEX_TIP')

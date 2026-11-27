@@ -59,6 +59,20 @@ class OperationalStateTests(unittest.TestCase):
             db.execute("UPDATE contract_attempts SET status='UNKNOWN'")
         self.assertEqual(read_contract_board(self.path)["reason"], "ATTEMPT_PROJECTION_MISMATCH")
 
+    def test_materialized_observations_are_not_authority(self):
+        self.journal.dispatch_fixture(json.dumps(self.packet), self.adapter(lambda p: {"ok": True}))
+        with sqlite3.connect(self.path) as db:
+            db.execute("UPDATE contract_observations SET material_digest='tampered'")
+        self.assertEqual(read_contract_board(self.path)["reason"], "OBSERVATION_PROJECTION_MISMATCH")
+        with self.assertRaisesRegex(Exception, "materialization"):
+            self.journal.dispatch_fixture(json.dumps(self.packet), self.adapter(lambda p: {"ok": True}))
+
+    def test_deleted_blocker_invalidates_projection(self):
+        self.journal.block_unavailable_bridge(json.dumps(self.packet))
+        with sqlite3.connect(self.path) as db:
+            db.execute("DELETE FROM contract_blockers")
+        self.assertEqual(read_contract_board(self.path)["reason"], "BLOCKER_PROJECTION_MISMATCH")
+
     def test_absent_database_is_not_created(self):
         missing = self.path.with_name("missing.sqlite")
         self.assertEqual(read_contract_board(missing)["status"], "BLOCKED")

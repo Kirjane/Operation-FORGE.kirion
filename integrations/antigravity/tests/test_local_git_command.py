@@ -150,15 +150,31 @@ class LocalGitCommandTests(unittest.TestCase):
         self.assertEqual(self.head(), self.base)
 
     def test_grant_change_after_reservation_denied(self):
-        claim = self.journal.reserve_dispatch(self.raw(), self.adapter)
-        self.assertEqual(claim["status"], "RESERVED")
-        grant = json.loads(self.grant_file.read_bytes())["grant"]
-        grant["revoked"] = True
-        self.grant_file.write_text(json.dumps({"grant": grant, "mac": grant_mac(self.key, grant)}))
-        with self.assertRaises(SchedulerError):
-            self.adapter.invoke(self.packet, before_invoke=lambda: None,
-                                reservation_id=claim["reservation_id"], journal=self.journal)
+        original=self.adapter.invoke
+        def revoked(*args,**kwargs):
+            grant=json.loads(self.grant_file.read_bytes())["grant"]
+            grant["revoked"]=True
+            self.grant_file.write_text(json.dumps({"grant":grant,"mac":grant_mac(self.key,grant)}))
+            return original(*args,**kwargs)
+        with patch.object(self.adapter,"invoke",side_effect=revoked):
+            result=self.journal.dispatch_fixture(self.raw(),self.adapter)
+        self.assertEqual(result["status"],"NO_EFFECT")
+        self.assertIn("GRANT_CHANGED",result["reason"])
         self.assertEqual(self.head(), self.base)
+
+    def test_pending_resource_claim_blocks_independent_journal(self):
+        original=self.adapter._git
+        def interrupted(*args,**kwargs):
+            if args[:2]==("update-ref","--stdin") and b"\nupdate refs/heads/" in kwargs.get("data",b""):
+                raise TimeoutError("lost effect before CAS")
+            return original(*args,**kwargs)
+        with patch.object(self.adapter,"_git",side_effect=interrupted):
+            with self.assertRaises(TimeoutError):
+                self.journal.dispatch_fixture(self.raw(),self.adapter)
+        self.assertEqual(self.head(),self.base)
+        other=ContractJournal(self.root/"other.sqlite")
+        self.assertEqual(other.dispatch_fixture(self.raw(),self.adapter)["status"],"BLOCKED")
+        self.assertEqual(self.head(),self.base)
 
     def test_deleted_reservation_cannot_clear_fence(self):
         claim = self.journal.reserve_dispatch(self.raw(), self.adapter)

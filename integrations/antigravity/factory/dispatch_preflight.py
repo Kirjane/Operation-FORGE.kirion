@@ -256,13 +256,19 @@ class ContractJournal(FactoryJournal):
             previous = _compute_event_chain_hash(row)
         # The event stream, not a mutable attempt row, determines whether a
         # reservation exists. Deleting UNKNOWN/RESERVED cannot clear the fence.
-        projected = {}
+        projected, blockers, observations = {}, set(), {}
         for row in conn.execute("SELECT * FROM journal_events ORDER BY seq"):
             kind = row["event_type"]
+            item = json.loads(row["payload_json"])
+            if kind == "DISPATCH_BLOCKED":
+                blockers.add((row["mission_id"], item["contract_sha256"],
+                              item["prerequisite_fingerprint"], item["reason"]))
+            elif kind == "CAPABILITY_OBSERVED":
+                observations[(item["contract_sha256"], item["capability_id"], item["worker_id"])] = (
+                    item["observed_at"], item["material_digest"])
             if kind not in {"DISPATCH_RESERVED", "DISPATCH_RUNNING", "DISPATCH_COMPLETED",
                             "DISPATCH_UNKNOWN", "DISPATCH_NO_EFFECT", "DISPATCH_RECONCILED"}:
                 continue
-            item = json.loads(row["payload_json"])
             rid = item["reservation_id"]
             status = kind.removeprefix("DISPATCH_")
             if status == "RESERVED":
@@ -290,6 +296,14 @@ class ContractJournal(FactoryJournal):
         stored = {row["reservation_id"]: dict(row) for row in conn.execute("SELECT * FROM contract_attempts")}
         if stored != projected:
             raise SchedulerError("Attempt materialization differs from canonical events.")
+        actual_blockers = {tuple(row) for row in conn.execute(
+            "SELECT mission_id,digest,fingerprint,reason FROM contract_blockers")}
+        actual_observations = {tuple(row)[:3]:tuple(row)[3:] for row in conn.execute(
+            "SELECT digest,capability_id,worker_id,observed_at,material_digest FROM contract_observations")}
+        if actual_blockers != blockers or actual_observations != observations:
+            # Pre-event observation journals require explicit migration or archival;
+            # never silently bless their unauthenticated observation rows.
+            raise SchedulerError("Blocker or capability materialization differs from canonical events.")
 
     def _blocked(self, conn, packet, digest, reason, material):
         fingerprint = digest_json({"contract": digest, "reason": reason, "prerequisites": material})
@@ -441,12 +455,19 @@ class ContractJournal(FactoryJournal):
                         conn.execute("""UPDATE contract_observations SET material_digest='CONFLICT'
                             WHERE digest=? AND capability_id=? AND worker_id=?""",
                             (digest, cid, grant["worker_id"]))
+                        self._event(conn, packet, digest, "CAPABILITY_OBSERVED",
+                                    {"capability_id":cid,"worker_id":grant["worker_id"],
+                                     "observed_at":prior["observed_at"],"material_digest":"CONFLICT","fixture_only":True})
                         fact["status"] = "STALE_OBSERVATION"
                     else:
                         conn.execute("""INSERT INTO contract_observations VALUES (?,?,?,?,?)
                          ON CONFLICT(digest,capability_id,worker_id) DO UPDATE SET
                          observed_at=excluded.observed_at,material_digest=excluded.material_digest""",
                          (digest, cid, grant["worker_id"], at.isoformat(), fact_digest))
+                        if not prior or prior["observed_at"] != at.isoformat() or prior["material_digest"] != fact_digest:
+                            self._event(conn, packet, digest, "CAPABILITY_OBSERVED",
+                                        {"capability_id":cid,"worker_id":grant["worker_id"],
+                                         "observed_at":at.isoformat(),"material_digest":fact_digest,"fixture_only":True})
                         if now >= expiry:
                             fact["status"] = "EXPIRED_OR_INVALID"
                         elif fact["status"] == "AVAILABLE":
@@ -731,6 +752,8 @@ class ContractJournal(FactoryJournal):
                 # claim. Never infer host quiescence or automatically retry.
                 self._change_attempt(conn, packet, reservation, {"RUNNING"}, "UNKNOWN")
             raise
+        if type(adapter) is LocalGitCommandAdapter:
+            adapter.release_completed_claim(packet, reservation, result, self)
         return {"status": "COMPLETED", "fixture_only": True, "result": result,
                 "reservation_id": reservation, "contract_sha256": claim["contract_sha256"]}
 
@@ -923,16 +946,21 @@ class ContractJournal(FactoryJournal):
         packet = parse_mission_packet(raw)
         with adapter.lock(), self._transaction() as conn:
             self._assert_chain(conn)
-            attempt, binding = self._reservation_binding(conn, packet, reservation_id, {"RUNNING", "UNKNOWN"})
+            attempt, binding = self._reservation_binding(conn, packet, reservation_id, {"RUNNING", "UNKNOWN", "COMPLETED", "RECONCILED"})
             if binding.get("adapter_binding") != adapter.binding(packet):
                 raise SchedulerError("Recovery resource binding mismatch.")
             grant = adapter.resolve_grant(packet, attempt["digest"], dt.datetime.now(dt.timezone.utc))
             if not grant or digest_json(grant) != binding["grant_sha256"]:
                 raise SchedulerError("Recovery grant mismatch.")
             result = adapter.recover_result(packet, reservation_id)
-            if attempt["status"] == "RUNNING":
-                self._change_attempt(conn, packet, reservation_id, {"RUNNING"}, "UNKNOWN")
-            self._change_attempt(conn, packet, reservation_id, {"UNKNOWN"}, "RECONCILED", result)
+            if attempt["status"] in {"COMPLETED", "RECONCILED"}:
+                if json.loads(attempt["result_json"])!=result:
+                    raise SchedulerError("Canonical completion result mismatch.")
+            else:
+                if attempt["status"] == "RUNNING":
+                    self._change_attempt(conn, packet, reservation_id, {"RUNNING"}, "UNKNOWN")
+                self._change_attempt(conn, packet, reservation_id, {"UNKNOWN"}, "RECONCILED", result)
+        adapter.release_completed_claim(packet, reservation_id, result, self)
         return {"status": "RECONCILED", "fixture_only": True, "result": result,
                 "replay_permitted": False, "promotion_authorized": False}
 

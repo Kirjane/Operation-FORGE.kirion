@@ -529,17 +529,27 @@ class EngineeringPilotService:
     def __init__(self,*,forge_repo,forge_sha,forge_tree,target_repo,
                  host:IsolatedOrchestrator,dispatch:SignedEngineeringDispatch,
                  broker:ScopedBroker,remote,oracle:FixedOracle,
-                 live_approved=False,service_credentials_exclusive=False):
-        if forge_sha!=UPSTREAM_SHA or forge_tree!=UPSTREAM_TREE:
-            raise Denied("FORGE_CANONICAL_SOURCE_MISMATCH")
+                 live_approved=False,service_credentials_exclusive=False,
+                 converged_source=False):
         self.forge_repo=pathlib.Path(forge_repo)
+        if converged_source:
+            from integrations.chatgpt.package import select_package_source
+            try:
+                selected=select_package_source(lambda *args:git(self.forge_repo,"--no-replace-objects",*args),forge_sha,forge_tree)
+            except (SystemExit,subprocess.SubprocessError,Denied) as exc:
+                raise Denied("FORGE_CONVERGED_SOURCE_MISMATCH") from exc
+            if selected[:2]!=(forge_sha,forge_tree):
+                raise Denied("FORGE_CONVERGED_SOURCE_MISMATCH")
+        elif forge_sha!=UPSTREAM_SHA or forge_tree!=UPSTREAM_TREE:
+            raise Denied("FORGE_CANONICAL_SOURCE_MISMATCH")
+        self.forge_sha,self.forge_tree=forge_sha,forge_tree
         self.target_repo=pathlib.Path(target_repo)
         self.host,self.dispatch,self.broker,self.remote,self.oracle=host,dispatch,broker,remote,oracle
         self.live=live_approved
         self.exclusive=service_credentials_exclusive
     def forge_snapshot(self,packet,persona):
         paths=list(FIXED_GOVERNANCE)+[ROLES[persona][0]]+packet["selected_skills"]["files"]
-        return GitSnapshot(self.forge_repo,UPSTREAM_SHA,UPSTREAM_TREE,exposed=paths)
+        return GitSnapshot(self.forge_repo,self.forge_sha,self.forge_tree,exposed=paths)
     def launch_role(self,packet,ctx,nonce,repo_id,sha,previous=None):
         self.dispatch.register(nonce,ctx)
         output=self.host.launch(packet,repo_id=repo_id,sha=sha,nonce=nonce,

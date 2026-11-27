@@ -29,6 +29,7 @@ def _require(condition, reason):
 def _project(conn):
     _require(storage_catalog(conn) == _CONTRACT_STORAGE_CATALOG, "UNSUPPORTED_JOURNAL_CATALOG")
     heads, attempts, revisions = {}, {}, {}
+    blockers, observations = set(), {}
     prior_hash, event_count, unbound_blockers = GENESIS_EVENT_HASH, 0, 0
     for event in conn.execute("SELECT * FROM journal_events ORDER BY seq"):
         event_count += 1
@@ -65,6 +66,7 @@ def _project(conn):
                           "depends_on": packet["depends_on"], "last_blocker": None}
             continue
         if kind == "DISPATCH_BLOCKED":
+            blockers.add((mid,digest,payload["prerequisite_fingerprint"],payload["reason"]))
             if head is None or head["digest"] != digest or head["revision"] != revision:
                 _require(version == (head["state_version"] if head else 1),
                          "UNBOUND_BLOCKER_CHANGED_STATE")
@@ -81,6 +83,10 @@ def _project(conn):
             continue
         _require(head is not None and head["digest"] == digest and head["revision"] == revision,
                  "EVENT_CONTRACT_MISMATCH")
+        if kind == "CAPABILITY_OBSERVED":
+            _require(version == head["state_version"], "OBSERVATION_VERSION_MISMATCH")
+            observations[(digest,payload["capability_id"],payload["worker_id"])] = (payload["observed_at"],payload["material_digest"])
+            continue
         if kind == "PREREQUISITES_REVALIDATED":
             _require(head["state"] == "BLOCKED" and version == head["state_version"] + 1,
                      "REVALIDATION_SEQUENCE_MISMATCH")
@@ -141,6 +147,8 @@ def _project(conn):
     for reservation, row in stored_attempts.items():
         _require(all(attempts[reservation].get(key) == value for key, value in row.items()),
                  "ATTEMPT_PROJECTION_MISMATCH")
+    _require({tuple(row) for row in conn.execute("SELECT mission_id,digest,fingerprint,reason FROM contract_blockers")} == blockers, "BLOCKER_PROJECTION_MISMATCH")
+    _require({tuple(row)[:3]:tuple(row)[3:] for row in conn.execute("SELECT digest,capability_id,worker_id,observed_at,material_digest FROM contract_observations")} == observations, "OBSERVATION_PROJECTION_MISMATCH")
     missions = []
     for mid, head in sorted(heads.items()):
         rows = [{key: value for key, value in attempt.items() if key != "result_json"}

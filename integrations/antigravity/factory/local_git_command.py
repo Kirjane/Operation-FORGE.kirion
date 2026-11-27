@@ -132,6 +132,9 @@ class LocalGitCommandAdapter(FixtureDispatchAdapter):
     def _ref(self, scope):
         return "refs/heads/" + scope["branch"]
 
+    def _pending_ref(self, scope):
+        return "refs/forge/pending/" + hashlib.sha256(scope["branch"].encode()).hexdigest()
+
     def _receipt_ref(self, scope):
         # Logical resource+base, not mission/nonce/candidate, and in the same
         # Git ref transaction as the effect. Different journals cannot repeat it.
@@ -147,6 +150,8 @@ class LocalGitCommandAdapter(FixtureDispatchAdapter):
         grant = self._grant(packet)
         scope = grant["local_command"]
         self._candidate(packet, scope)
+        if self._git("for-each-ref", "--format=%(refname)", self._pending_ref(scope)).strip():
+            raise AuthorityError("RESOURCE_EFFECT_UNRECONCILED")
         if self._git("rev-parse", "--verify", self._ref(scope)).decode().strip() != scope["base"]:
             raise AuthorityError("LOCAL_REF_DRIFT")
         sources = {}
@@ -245,7 +250,12 @@ class LocalGitCommandAdapter(FixtureDispatchAdapter):
             before_invoke()
             blob = self._git("hash-object", "-w", "--stdin", data=raw).decode().strip()
             journal.authorize_local_invocation(packet, reservation_id, self)
-            transaction = ("start\nupdate " + self._ref(scope) + " " + scope["candidate"] +
+            # The branch-wide durable claim is shared across journal processes.
+            # It remains until canonical completion or positive reconciliation.
+            self._git("update-ref", "--stdin", data=("start\nverify "+self._ref(scope)+" "+scope["base"]+
+                      "\ncreate "+self._pending_ref(scope)+" "+blob+"\nprepare\ncommit\n").encode("ascii"))
+            journal.authorize_local_invocation(packet, reservation_id, self)
+            transaction = ("start\nverify "+self._pending_ref(scope)+" "+blob+"\nupdate " + self._ref(scope) + " " + scope["candidate"] +
                            " " + scope["base"] + "\ncreate " + self._receipt_ref(scope) +
                            " " + blob + "\nprepare\ncommit\n").encode("ascii")
             self._git("update-ref", "--stdin", data=transaction)
@@ -263,6 +273,21 @@ class LocalGitCommandAdapter(FixtureDispatchAdapter):
             raise AuthorityError("LOCAL_EFFECT_RECEIPT_MISMATCH")
         if self._git("rev-parse", "--verify", self._ref(scope)).decode().strip() != scope["candidate"]:
             raise AuthorityError("LOCAL_EFFECT_HEAD_DRIFT")
+
+    def release_completed_claim(self, packet, reservation_id, result, journal):
+        # Do not clear the resource fence on a receipt alone: canonical
+        # completion/reconciliation must already be durable.
+        with self.lock():
+            if type(journal) is not ContractJournal:
+                raise AuthorityError("CANONICAL_RESERVATION_REQUIRED")
+            attempt=journal.inspect_attempt(canonical_json(packet),reservation_id)
+            if attempt["status"] not in {"COMPLETED","RECONCILED"} or attempt["result"]!=result:
+                raise AuthorityError("CANONICAL_COMPLETION_REQUIRED")
+            self.verify_result(packet, result, reservation_id)
+            scope = self._grant(packet)["local_command"]
+            pending = self._pending_ref(scope)
+            if self._git("for-each-ref", "--format=%(refname)", pending).strip():
+                self._git("update-ref", "-d", pending, result["receipt_blob"])
 
     def recover_result(self, packet, reservation_id):
         # Positive receipt only. Head equality alone never establishes provenance;
